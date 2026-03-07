@@ -77,7 +77,7 @@ export function Dashboard({ wallet }: DashboardProps) {
           <StatCard
             label="Your Debt"
             value={
-              !wallet.connected ? '—' : isLoading ? '' : `${formatCredits(totalDebt)} ALEO`
+              !wallet.connected ? '—' : isLoading ? '' : `${formatCredits(totalDebt)} USDCx`
             }
             loading={isLoading}
           />
@@ -100,7 +100,7 @@ export function Dashboard({ wallet }: DashboardProps) {
                 ? '—'
                 : isLoading
                 ? ''
-                : `${formatCredits(Math.max(0, maxBorrow))} ALEO`
+                : `${formatCredits(Math.max(0, maxBorrow))} USDCx`
             }
             loading={isLoading}
           />
@@ -120,7 +120,7 @@ export function Dashboard({ wallet }: DashboardProps) {
           />
           <StatCard
             label="Total Borrowed"
-            value={stats ? `${formatCredits(stats.totalBorrowed)} ALEO` : '—'}
+            value={stats ? `${formatCredits(stats.totalBorrowed)} USDCx` : '—'}
             loading={statsLoading}
           />
           <StatCard

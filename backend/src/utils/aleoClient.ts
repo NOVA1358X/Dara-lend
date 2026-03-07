@@ -1,6 +1,6 @@
 import { config } from './config.js';
 
-const GLOBAL_KEY = '1field';
+const GLOBAL_KEY = '0u8';
 
 export async function getMappingValue(
   mapping: string,

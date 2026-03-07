@@ -30,3 +30,8 @@ npm-debug.log*
 
 # Lock files (optional - keep if you want reproducible installs)
 # package-lock.json
+projects.md
+WAVE_ANALYSIS.md
+
+# TypeScript build info
+*.tsbuildinfo

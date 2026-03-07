@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useProtocolStats } from '@/hooks/useProtocolStats';
-import { formatCredits, formatField } from '@/utils/formatting';
+import { formatCredits } from '@/utils/formatting';
 import { PRECISION } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
@@ -9,6 +9,10 @@ import { CheckIcon } from '@/components/icons/CheckIcon';
 
 export function ProtocolStats() {
   const { data: stats, isLoading } = useProtocolStats();
+
+  const isSolvent = stats
+    ? stats.totalCollateral >= stats.totalBorrowed
+    : false;
 
   return (
     <div className="space-y-8">
@@ -28,7 +32,7 @@ export function ProtocolStats() {
           />
           <StatCard
             label="Total Borrowed"
-            value={stats ? `${formatCredits(stats.totalBorrowed)} ALEO` : '—'}
+            value={stats ? `${formatCredits(stats.totalBorrowed)} USDCx` : '—'}
             loading={isLoading}
           />
           <StatCard
@@ -78,7 +82,7 @@ export function ProtocolStats() {
         </div>
       </motion.div>
 
-      {/* Solvency Verification */}
+      {/* Protocol Solvency */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,32 +93,42 @@ export function ProtocolStats() {
           <div className="flex items-center gap-2">
             <ShieldIcon size={20} className="text-accent" />
             <h3 className="font-heading text-lg font-semibold text-text-primary">
-              Solvency Verification
+              Protocol Solvency
             </h3>
           </div>
           <PrivacyBadge variant="verified" />
         </div>
 
         <p className="text-sm text-text-secondary leading-relaxed mb-4">
-          The protocol publishes a BHP256 commitment hash on-chain that proves total
-          collateral exceeds total debt — without revealing individual positions. Anyone
-          can verify this hash against the public aggregate mappings.
+          All positions are stored as encrypted private records on Aleo. Collateral and 
+          debt totals are tracked in public mappings for transparency — anyone can verify 
+          the protocol remains solvent without seeing individual positions.
         </p>
 
-        <div className="p-4 rounded-lg bg-bg-secondary mb-4">
-          <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
-            Solvency Commitment Hash
-          </p>
-          <p className="font-mono text-sm text-text-primary break-all tabular-nums">
-            {stats?.solvencyCommitment
-              ? formatField(stats.solvencyCommitment)
-              : '—'}
-          </p>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="p-4 rounded-lg bg-bg-secondary">
+            <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
+              Total Collateral
+            </p>
+            <p className="font-mono text-sm text-text-primary tabular-nums">
+              {stats ? `${formatCredits(stats.totalCollateral)} ALEO` : '—'}
+            </p>
+          </div>
+          <div className="p-4 rounded-lg bg-bg-secondary">
+            <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
+              Total Debt
+            </p>
+            <p className="font-mono text-sm text-text-primary tabular-nums">
+              {stats ? `${formatCredits(stats.totalBorrowed)} USDCx` : '—'}
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 text-accent-success">
+        <div className={`flex items-center gap-2 ${isSolvent ? 'text-accent-success' : 'text-accent-danger'}`}>
           <CheckIcon size={16} />
-          <span className="text-sm font-medium">Verifiable On-Chain</span>
+          <span className="text-sm font-medium">
+            {isSolvent ? 'Protocol is Solvent — Verifiable On-Chain' : 'Warning: Under-collateralized'}
+          </span>
         </div>
       </motion.div>
     </div>

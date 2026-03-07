@@ -46,6 +46,7 @@ export function parseAleoU64(value: string): number {
   if (!value) return 0;
   const cleaned = value
     .replace('u64', '')
+    .replace('u128', '')
     .replace('.public', '')
     .replace('.private', '')
     .replace(/"/g, '')
@@ -74,6 +75,10 @@ export function parseAleoAddress(value: string): string {
 
 export function microCreditsToInput(amount: number): string {
   return `${amount}u64`;
+}
+
+export function microCreditsToU128Input(amount: number): string {
+  return `${amount}u128`;
 }
 
 export function fieldToInput(value: string | number): string {

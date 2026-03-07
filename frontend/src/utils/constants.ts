@@ -10,15 +10,16 @@ export const LIQUIDATION_THRESHOLD = 800_000;
 export const MIN_COLLATERAL = 100_000;
 export const MICROCREDITS_PER_CREDIT = 1_000_000;
 
+export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
+
 export const MAPPING_KEYS = {
-  GLOBAL: '1field',
+  GLOBAL: '0u8',
 } as const;
 
 export const MAPPINGS = {
   VAULT_TOTAL_COLLATERAL: 'vault_total_collateral',
   TOTAL_BORROWED: 'total_borrowed',
   LOAN_COUNT: 'loan_count',
-  SOLVENCY_COMMITMENT: 'solvency_commitment',
   ORACLE_PRICE: 'oracle_price',
   USED_NONCES: 'used_nonces',
   PROTOCOL_ADMIN: 'protocol_admin',
@@ -26,7 +27,6 @@ export const MAPPINGS = {
 } as const;
 
 export const TRANSITIONS = {
-  INITIALIZE: 'initialize',
   UPDATE_ORACLE_PRICE: 'update_oracle_price',
   SUPPLY_COLLATERAL: 'supply_collateral',
   BORROW: 'borrow',

@@ -18,8 +18,8 @@ import toast from 'react-hot-toast';
 interface BorrowFormProps {
   wallet: {
     requestRecords?: (program: string) => Promise<unknown[]>;
-    requestTransaction?: (transaction: unknown) => Promise<string>;
-    transactionStatus?: (txId: string) => Promise<string>;
+    requestTransaction?: (transaction: any) => Promise<{ transactionId: string } | undefined>;
+    transactionStatus?: (txId: string) => Promise<{ status: string }>;
     connected: boolean;
     address?: string | null;
   };
@@ -119,7 +119,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               Borrow
             </h2>
             <p className="text-xs text-text-secondary">
-              Borrow ALEO against your encrypted collateral
+              Borrow USDCx against your encrypted ALEO collateral
             </p>
           </div>
         </div>
@@ -160,7 +160,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               Max Borrow
             </p>
             <p className="font-mono text-sm text-text-primary tabular-nums">
-              {formatCredits(maxBorrowAmount)} ALEO
+              {formatCredits(maxBorrowAmount)} USDCx
             </p>
           </div>
         </div>

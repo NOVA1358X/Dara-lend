@@ -1,29 +1,29 @@
 import { useCallback } from 'react';
 import { PROGRAM_ID, TX_FEE, TRANSITIONS } from '@/utils/constants';
-import { microCreditsToInput, fieldToInput } from '@/utils/formatting';
+import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import toast from 'react-hot-toast';
 
 interface WalletExecute {
-  requestTransaction?: (transaction: unknown) => Promise<string>;
-  transactionStatus?: (txId: string) => Promise<string>;
+  requestTransaction?: (transaction: unknown) => Promise<{ transactionId: string } | undefined>;
+  transactionStatus?: (txId: string) => Promise<{ status: string }>;
   connected: boolean;
 }
 
-interface TransactionOptions {
-  programId: string;
-  functionName: string;
+interface TransactionParams {
+  program: string;
+  function: string;
   inputs: string[];
   fee: number;
+  privateFee: boolean;
 }
 
-function createAleoTransaction(options: TransactionOptions) {
+function createAleoTransaction(programId: string, functionName: string, inputs: string[], fee: number): TransactionParams {
   return {
-    type: 'execute',
-    programId: options.programId,
-    functionName: options.functionName,
-    inputs: options.inputs,
-    fee: options.fee,
+    program: programId,
+    function: functionName,
+    inputs,
+    fee,
     privateFee: false,
   };
 }
@@ -43,16 +43,15 @@ export function useTransaction(wallet: WalletExecute) {
         setTransactionPending(true);
         setTransactionStep('encrypting');
 
-        const tx = createAleoTransaction({
-          programId: PROGRAM_ID,
-          functionName,
-          inputs,
-          fee,
-        });
+        const tx = createAleoTransaction(PROGRAM_ID, functionName, inputs, fee);
 
         setTransactionStep('proving');
 
-        const txId = await wallet.requestTransaction(tx);
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) {
+          throw new Error('No transaction ID returned');
+        }
         setTransactionId(txId);
         setTransactionStep('broadcasting');
 
@@ -79,9 +78,8 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const supplyCollateral = useCallback(
-    async (creditRecord: string, amount: number, nonce: number) => {
+    async (amount: number, nonce: number) => {
       return executeTransaction(TRANSITIONS.SUPPLY_COLLATERAL, [
-        creditRecord,
         microCreditsToInput(amount),
         fieldToInput(nonce),
       ]);
@@ -98,7 +96,7 @@ export function useTransaction(wallet: WalletExecute) {
     ) => {
       return executeTransaction(TRANSITIONS.BORROW, [
         collateralRecord,
-        microCreditsToInput(borrowAmount),
+        microCreditsToU128Input(borrowAmount),
         microCreditsToInput(currentPrice),
         orchestrator,
       ]);
@@ -107,8 +105,8 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const repay = useCallback(
-    async (debtRecord: string, paymentRecord: string) => {
-      return executeTransaction(TRANSITIONS.REPAY, [debtRecord, paymentRecord]);
+    async (debtRecord: string) => {
+      return executeTransaction(TRANSITIONS.REPAY, [debtRecord]);
     },
     [executeTransaction],
   );
@@ -152,7 +150,8 @@ async function pollTransactionStatus(
 
     if (wallet.transactionStatus) {
       try {
-        const status = await wallet.transactionStatus(txId);
+        const response = await wallet.transactionStatus(txId);
+        const status = response.status;
         if (status === 'Finalized' || status === 'Accepted' || status === 'confirmed') {
           return true;
         }

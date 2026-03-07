@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useWallet } from '@provablehq/aleo-wallet-adaptor-react';
 import { useWalletModal } from '@provablehq/aleo-wallet-adaptor-react-ui';
+import { Network } from '@provablehq/aleo-types';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Dashboard } from '@/components/app/Dashboard';
 import { SupplyForm } from '@/components/app/SupplyForm';
@@ -12,20 +13,21 @@ import { ProtocolStats } from '@/components/app/ProtocolStats';
 
 export default function AppDashboard() {
   const {
-    publicKey,
+    address,
     connected,
     connecting,
     wallet,
     connect,
     disconnect,
     requestRecords,
-    requestTransaction,
+    executeTransaction,
+    transactionStatus,
   } = useWallet();
   const { setVisible } = useWalletModal();
 
   const handleConnect = useCallback(() => {
     if (wallet) {
-      connect();
+      connect(Network.TESTNET);
     } else {
       setVisible(true);
     }
@@ -33,14 +35,15 @@ export default function AppDashboard() {
 
   const walletProps = {
     requestRecords,
-    requestTransaction,
+    requestTransaction: executeTransaction,
+    transactionStatus,
     connected,
-    address: publicKey,
+    address,
   };
 
   return (
     <AppLayout
-      address={publicKey}
+      address={address}
       connected={connected}
       connecting={connecting}
       onConnect={handleConnect}

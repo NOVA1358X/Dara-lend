@@ -15,8 +15,8 @@ import toast from 'react-hot-toast';
 interface RepayFormProps {
   wallet: {
     requestRecords?: (program: string) => Promise<unknown[]>;
-    requestTransaction?: (transaction: unknown) => Promise<string>;
-    transactionStatus?: (txId: string) => Promise<string>;
+    requestTransaction?: (transaction: any) => Promise<{ transactionId: string } | undefined>;
+    transactionStatus?: (txId: string) => Promise<{ status: string }>;
     connected: boolean;
   };
 }
@@ -26,7 +26,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
   const [selectedLoanIdx, setSelectedLoanIdx] = useState<number | null>(null);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { repay, resetTransaction } = useTransaction(wallet);
-  const { debtPositions, creditsRecords, isLoading } = useWalletRecords(wallet);
+  const { debtPositions, isLoading } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
     return (
@@ -52,34 +52,11 @@ export function RepayForm({ wallet }: RepayFormProps) {
     const debt = debtPositions[idx];
     if (!debt) return;
 
-    let paymentRecord: string | null = null;
-
-    for (const r of creditsRecords as Array<{
-      data?: { microcredits?: string };
-      spent?: boolean;
-      plaintext?: string;
-    }>) {
-      if (r.spent) continue;
-      const mc = r.data?.microcredits;
-      if (mc) {
-        const val = parseInt(mc.replace('u64.private', '').replace('u64', ''), 10);
-        if (val >= debt.debtAmount) {
-          paymentRecord = r.plaintext || JSON.stringify(r);
-          break;
-        }
-      }
-    }
-
-    if (!paymentRecord) {
-      toast.error('Insufficient credits balance to repay this loan');
-      return;
-    }
-
     setSelectedLoanIdx(idx);
     const debtRecord = JSON.stringify(debt.raw);
 
     try {
-      await repay(debtRecord, paymentRecord);
+      await repay(debtRecord);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Repay failed';
       toast.error(message);
@@ -97,7 +74,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
             Repay Loans
           </h2>
           <p className="text-xs text-text-secondary">
-            Repay your debt and reclaim encrypted collateral
+            Repay USDCx debt and reclaim encrypted ALEO collateral
           </p>
         </div>
       </div>
@@ -135,7 +112,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
                   Debt
                 </p>
                 <p className="font-mono text-lg font-semibold text-text-primary tabular-nums">
-                  {formatCredits(debt.debtAmount)} ALEO
+                  {formatCredits(debt.debtAmount)} USDCx
                 </p>
               </div>
               <div>

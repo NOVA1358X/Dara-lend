@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTransaction } from '@/hooks/useTransaction';
 import { useAppStore } from '@/stores/appStore';
@@ -11,8 +11,8 @@ import toast from 'react-hot-toast';
 interface SupplyFormProps {
   wallet: {
     requestRecords?: (program: string) => Promise<unknown[]>;
-    requestTransaction?: (transaction: unknown) => Promise<string>;
-    transactionStatus?: (txId: string) => Promise<string>;
+    requestTransaction?: (transaction: any) => Promise<{ transactionId: string } | undefined>;
+    transactionStatus?: (txId: string) => Promise<{ status: string }>;
     connected: boolean;
     address?: string | null;
   };
@@ -44,9 +44,9 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
     }
   }, [wallet]);
 
-  useState(() => {
+  useEffect(() => {
     fetchBalance();
-  });
+  }, [fetchBalance]);
 
   const amountInMicrocredits = Math.floor(parseFloat(amount || '0') * 1_000_000);
   const isValidAmount = amountInMicrocredits >= 100_000;
@@ -64,33 +64,8 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
     }
     const nonce = Date.now();
 
-    if (!wallet.requestRecords) return;
     try {
-      const records = await wallet.requestRecords('credits.aleo');
-      let selectedRecord: string | null = null;
-
-      for (const r of records as Array<{
-        data?: { microcredits?: string };
-        spent?: boolean;
-        plaintext?: string;
-      }>) {
-        if (r.spent) continue;
-        const mc = r.data?.microcredits;
-        if (mc) {
-          const val = parseInt(mc.replace('u64.private', '').replace('u64', ''), 10);
-          if (val >= amountInMicrocredits) {
-            selectedRecord = r.plaintext || JSON.stringify(r);
-            break;
-          }
-        }
-      }
-
-      if (!selectedRecord) {
-        toast.error('No credits record with sufficient balance found');
-        return;
-      }
-
-      await supplyCollateral(selectedRecord, amountInMicrocredits, nonce);
+      await supplyCollateral(amountInMicrocredits, nonce);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to supply collateral';
       toast.error(message);
