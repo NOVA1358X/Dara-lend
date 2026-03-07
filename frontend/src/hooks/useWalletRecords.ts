@@ -14,9 +14,11 @@ export function useWalletRecords(wallet: WalletHook) {
       if (!wallet.connected || !wallet.requestRecords) return [];
       try {
         const rawRecords = await wallet.requestRecords(PROGRAM_ID);
+        console.log('[DARA] Raw records from wallet:', JSON.stringify(rawRecords, null, 2));
         const parsed = rawRecords
           .map((r) => parseRecord(r as Record<string, unknown>))
           .filter((r): r is DaraRecord => r !== null);
+        console.log('[DARA] Parsed records:', parsed);
         return parsed;
       } catch {
         return [];

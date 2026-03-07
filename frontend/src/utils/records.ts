@@ -7,7 +7,7 @@ export interface CollateralReceiptRecord {
   collateralAmount: number;
   depositBlock: number;
   nonceHash: string;
-  raw: Record<string, string>;
+  raw: Record<string, unknown>;
   spent: boolean;
 }
 
@@ -18,7 +18,7 @@ export interface DebtPositionRecord {
   debtAmount: number;
   liquidationPrice: number;
   loanId: string;
-  raw: Record<string, string>;
+  raw: Record<string, unknown>;
   spent: boolean;
 }
 
@@ -30,7 +30,7 @@ export interface LiquidationAuthRecord {
   debtAmount: number;
   liquidationPrice: number;
   borrower: string;
-  raw: Record<string, string>;
+  raw: Record<string, unknown>;
   spent: boolean;
 }
 
@@ -40,7 +40,7 @@ export interface RepaymentReceiptRecord {
   amountRepaid: number;
   collateralReturned: number;
   loanId: string;
-  raw: Record<string, string>;
+  raw: Record<string, unknown>;
   spent: boolean;
 }
 
@@ -50,7 +50,7 @@ export interface LiquidationReceiptRecord {
   loanId: string;
   collateralSeized: number;
   debtCovered: number;
-  raw: Record<string, string>;
+  raw: Record<string, unknown>;
   spent: boolean;
 }
 
@@ -66,28 +66,55 @@ interface RawAleoRecord {
   spent?: boolean;
   plaintext?: string;
   programId?: string;
+  program_id?: string;
   functionName?: string;
   recordName?: string;
+  // Shield may return fields at top level
+  [key: string]: unknown;
 }
 
 function extractFields(record: RawAleoRecord): Record<string, string> {
-  if (record.data) return record.data;
-  if (record.plaintext) {
+  // 1. Try record.data first (standard format)
+  if (record.data && typeof record.data === 'object') {
+    return record.data;
+  }
+
+  // 2. Try plaintext parsing (Shield format)
+  if (record.plaintext && typeof record.plaintext === 'string') {
     const fields: Record<string, string> = {};
-    const lines = record.plaintext.split('\n');
+    const text = record.plaintext;
+    // Handle both multi-line and single-line plaintext
+    const lines = text.includes('\n') ? text.split('\n') : text.replace(/[{}]/g, '').split(',');
     for (const line of lines) {
       const match = line.trim().match(/^(\w+)\s*:\s*(.+?)[\s,]*$/);
       if (match) {
         fields[match[1]] = match[2];
       }
     }
-    return fields;
+    if (Object.keys(fields).length > 0) return fields;
   }
+
+  // 3. Try top-level fields (some adapters put fields directly on the record object)
+  const knownFields = [
+    'owner', 'collateral_amount', 'deposit_block', 'nonce_hash',
+    'debt_amount', 'liquidation_price', 'loan_id', 'borrower',
+    'amount_repaid', 'collateral_returned', 'collateral_seized', 'debt_covered',
+  ];
+  const fields: Record<string, string> = {};
+  for (const key of knownFields) {
+    if (key in record && record[key] !== undefined) {
+      fields[key] = String(record[key]);
+    }
+  }
+  if (Object.keys(fields).length > 0) return fields;
+
   return {};
 }
 
 function detectRecordType(fields: Record<string, string>, record: RawAleoRecord): string | null {
+  // Shield may use recordName or record_name
   if (record.recordName) return record.recordName;
+  if (typeof record['record_name'] === 'string') return record['record_name'] as string;
 
   const keys = Object.keys(fields).filter(k => k !== 'owner' && k !== '_nonce');
 
@@ -109,7 +136,8 @@ function detectRecordType(fields: Record<string, string>, record: RawAleoRecord)
   return null;
 }
 
-export function parseRecord(record: RawAleoRecord): DaraRecord | null {
+export function parseRecord(rawRecord: Record<string, unknown>): DaraRecord | null {
+  const record = rawRecord as unknown as RawAleoRecord;
   const fields = extractFields(record);
   const recordType = detectRecordType(fields, record);
   const spent = record.spent ?? false;
@@ -126,7 +154,7 @@ export function parseRecord(record: RawAleoRecord): DaraRecord | null {
         collateralAmount: parseAleoU64(fields['collateral_amount']),
         depositBlock: parseAleoU64(fields['deposit_block']),
         nonceHash: parseAleoField(fields['nonce_hash']),
-        raw: fields,
+        raw: rawRecord,
         spent,
       };
 
@@ -138,7 +166,7 @@ export function parseRecord(record: RawAleoRecord): DaraRecord | null {
         debtAmount: parseAleoU64(fields['debt_amount']),
         liquidationPrice: parseAleoU64(fields['liquidation_price']),
         loanId: parseAleoField(fields['loan_id']),
-        raw: fields,
+        raw: rawRecord,
         spent,
       };
 
@@ -151,7 +179,7 @@ export function parseRecord(record: RawAleoRecord): DaraRecord | null {
         debtAmount: parseAleoU64(fields['debt_amount']),
         liquidationPrice: parseAleoU64(fields['liquidation_price']),
         borrower: parseAleoAddress(fields['borrower']),
-        raw: fields,
+        raw: rawRecord,
         spent,
       };
 
@@ -162,7 +190,7 @@ export function parseRecord(record: RawAleoRecord): DaraRecord | null {
         amountRepaid: parseAleoU64(fields['amount_repaid']),
         collateralReturned: parseAleoU64(fields['collateral_returned']),
         loanId: parseAleoField(fields['loan_id']),
-        raw: fields,
+        raw: rawRecord,
         spent,
       };
 
@@ -173,7 +201,7 @@ export function parseRecord(record: RawAleoRecord): DaraRecord | null {
         loanId: parseAleoField(fields['loan_id']),
         collateralSeized: parseAleoU64(fields['collateral_seized']),
         debtCovered: parseAleoU64(fields['debt_covered']),
-        raw: fields,
+        raw: rawRecord,
         spent,
       };
 

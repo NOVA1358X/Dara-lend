@@ -66,9 +66,11 @@ export function useTransaction(wallet: WalletExecute) {
           toast.error('Transaction may still be processing. Check your wallet.');
         }
 
+        setTransactionPending(false);
         return txId;
       } catch (error) {
         setTransactionStep('failed');
+        setTransactionPending(false);
         const message = error instanceof Error ? error.message : 'Transaction failed';
         toast.error(message);
         return null;
@@ -151,11 +153,11 @@ async function pollTransactionStatus(
     if (wallet.transactionStatus) {
       try {
         const response = await wallet.transactionStatus(txId);
-        const status = response.status;
-        if (status === 'Finalized' || status === 'Accepted' || status === 'confirmed') {
+        const status = (response.status || '').toLowerCase();
+        if (status === 'finalized' || status === 'accepted' || status === 'confirmed' || status === 'completed') {
           return true;
         }
-        if (status === 'Failed' || status === 'Rejected') {
+        if (status === 'failed' || status === 'rejected') {
           return false;
         }
       } catch {

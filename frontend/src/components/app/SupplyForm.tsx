@@ -6,6 +6,7 @@ import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { LockIcon } from '@/components/icons/LockIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { formatCredits } from '@/utils/formatting';
+import { ALEO_TESTNET_API } from '@/utils/constants';
 import toast from 'react-hot-toast';
 
 interface SupplyFormProps {
@@ -26,23 +27,27 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
   const { supplyCollateral, resetTransaction } = useTransaction(wallet);
 
   const fetchBalance = useCallback(async () => {
-    if (!wallet.connected || !wallet.requestRecords) return;
+    if (!wallet.connected || !wallet.address) return;
     try {
-      const records = await wallet.requestRecords('credits.aleo');
-      let total = 0;
-      for (const r of records as Array<{ data?: { microcredits?: string }; spent?: boolean }>) {
-        if (r.spent) continue;
-        const mc = r.data?.microcredits;
-        if (mc) {
-          const val = parseInt(mc.replace('u64.private', '').replace('u64', ''), 10);
-          if (!isNaN(val)) total += val;
-        }
+      // Query public credits balance from on-chain mapping
+      const url = `${ALEO_TESTNET_API}/program/credits.aleo/mapping/account/${wallet.address}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        setWalletBalance(0);
+        return;
       }
-      setWalletBalance(total);
+      const text = await response.text();
+      if (!text || text === 'null' || text === '') {
+        setWalletBalance(0);
+        return;
+      }
+      const cleaned = text.replace(/"/g, '').replace('u64', '').trim();
+      const val = parseInt(cleaned, 10);
+      setWalletBalance(isNaN(val) ? 0 : val);
     } catch {
       setWalletBalance(null);
     }
-  }, [wallet]);
+  }, [wallet.connected, wallet.address]);
 
   useEffect(() => {
     fetchBalance();

@@ -124,6 +124,19 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
           </div>
         </div>
 
+        {/* Asset */}
+        <div className="mb-4">
+          <label className="text-label uppercase text-text-muted tracking-widest block mb-2">
+            Borrow Asset
+          </label>
+          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-bg-secondary border border-border-default">
+            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <span className="text-[10px] font-bold text-blue-400">U</span>
+            </div>
+            <span className="text-sm font-medium text-text-primary">USDCx Stablecoin</span>
+          </div>
+        </div>
+
         {/* Collateral Selector */}
         {collateralReceipts.length > 1 && (
           <div className="mb-4">
@@ -178,7 +191,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
             min="0"
             step="0.01"
             className="w-full px-4 py-4 rounded-lg bg-bg-secondary border border-border-default text-text-primary font-mono text-xl tabular-nums placeholder:text-text-muted focus:outline-none focus:border-accent/30 transition-colors"
-            aria-label="Borrow amount in ALEO"
+            aria-label="Borrow amount in USDCx"
           />
 
           {/* Slider */}

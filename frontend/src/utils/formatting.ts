@@ -47,6 +47,7 @@ export function parseAleoU64(value: string): number {
   const cleaned = value
     .replace('u64', '')
     .replace('u128', '')
+    .replace('u32', '')
     .replace('.public', '')
     .replace('.private', '')
     .replace(/"/g, '')
