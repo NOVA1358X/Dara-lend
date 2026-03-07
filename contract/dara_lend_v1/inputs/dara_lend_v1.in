@@ -1,0 +1,22 @@
+[initialize]
+admin_address: address = aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3ljyzc;
+initial_price: u64 = 1500000u64;
+
+[update_oracle_price]
+new_price: u64 = 1550000u64;
+
+[supply_collateral]
+amount: u64 = 10000000u64;
+nonce: field = 12345field;
+
+[borrow]
+borrow_amount: u64 = 5000000u64;
+current_price: u64 = 1500000u64;
+orchestrator: address = aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq3ljyzc;
+
+[repay]
+
+[liquidate]
+current_oracle_price: u64 = 1000000u64;
+
+[withdraw_collateral]

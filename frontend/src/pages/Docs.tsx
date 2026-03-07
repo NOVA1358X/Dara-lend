@@ -1,0 +1,10 @@
+import { LandingLayout } from '@/components/layout/LandingLayout';
+import { DocsLayout } from '@/components/docs/DocsLayout';
+
+export default function Docs() {
+  return (
+    <LandingLayout>
+      <DocsLayout />
+    </LandingLayout>
+  );
+}

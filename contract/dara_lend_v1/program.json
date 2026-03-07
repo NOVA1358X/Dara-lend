@@ -1,0 +1,21 @@
+{
+  "program": "dara_lend_v1.aleo",
+  "version": "0.1.0",
+  "description": "Privacy-first decentralized lending protocol on Aleo",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    }
+  ],
+  "dev_dependencies": []
+}
