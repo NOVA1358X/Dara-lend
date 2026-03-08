@@ -141,6 +141,47 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           eliminates sandwich attacks, front-running, and targeted liquidation sniping that plague
           transparent DeFi protocols like Aave and Compound.
         </p>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          Dual-Record Architecture
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          When a user borrows, two private records are created: a <strong className="text-text-primary">DebtPosition</strong> owned
+          by the borrower (for repayment) and a <strong className="text-text-primary">LiquidationAuth</strong> owned by the
+          orchestrator (for liquidation). This separation ensures borrowers control their funds
+          while the protocol has a mechanism to enforce solvency — without exposing either
+          party&apos;s position data publicly.
+        </p>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          Known Limitations &amp; Roadmap
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-3">
+          Like all Aleo DeFi projects in the current ecosystem, DARA Lend uses public token
+          transfers via <code className="text-accent text-xs">credits.aleo/transfer_public_as_signer</code> and{' '}
+          <code className="text-accent text-xs">test_usdcx_stablecoin.aleo/transfer_public</code>. These public transfer
+          methods expose participant addresses and amounts on-chain during supply, borrow, and repay
+          operations.
+        </p>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          This is a known ecosystem-wide limitation — the Aleo SDK does not yet provide
+          documentation for private stablecoin transfers. When private USDCx transfer support
+          becomes available, DARA Lend will migrate to fully private token flows to eliminate
+          this remaining information leakage.
+        </p>
+        <ul className="space-y-2 mb-6">
+          {[
+            'Individual position data (collateral, debt, liquidation price) — ENCRYPTED in records',
+            'Protocol aggregates (TVL, total borrowed) — PUBLIC for solvency verification',
+            'Token transfers (supply, borrow, repay) — PUBLIC addresses visible (ecosystem limitation)',
+            'No user addresses stored in any public mapping — only aggregate values',
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2 text-text-secondary text-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-warning mt-1.5 flex-shrink-0" />
+              {item}
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Getting Started */}
@@ -183,6 +224,34 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
         <p className="text-text-secondary leading-relaxed mb-4">
           Once you have collateral supplied, navigate to Borrow. You can borrow up to 70% of
           your collateral value. Your liquidation price will be encrypted — invisible to MEV bots.
+        </p>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          5. Repay Debt
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          Navigate to the Repay page to view your active loans. Repaying a loan returns your
+          encrypted collateral as a <code className="text-accent text-xs">RepaymentReceipt</code> record.
+          Full debt amount is repaid in a single transaction.
+        </p>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          6. Withdraw Collateral
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          If you have collateral that is not used as backing for any loan, navigate to the
+          Withdraw page to reclaim your ALEO credits. Only the record owner can initiate
+          a withdrawal — the encrypted receipt proves ownership.
+        </p>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          7. Liquidation
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          The Liquidate page shows any <code className="text-accent text-xs">LiquidationAuth</code> records
+          in your wallet. If the oracle price drops below a position&apos;s liquidation price,
+          the position becomes &quot;underwater&quot; and can be liquidated — seizing collateral and
+          clearing the debt from the protocol.
         </p>
       </section>
 

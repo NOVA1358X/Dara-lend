@@ -10,6 +10,8 @@ import { BorrowForm } from '@/components/app/BorrowForm';
 import { RepayForm } from '@/components/app/RepayForm';
 import { PositionsList } from '@/components/app/PositionsList';
 import { ProtocolStats } from '@/components/app/ProtocolStats';
+import { WithdrawForm } from '@/components/app/WithdrawForm';
+import { LiquidateForm } from '@/components/app/LiquidateForm';
 
 export default function AppDashboard() {
   const {
@@ -22,6 +24,7 @@ export default function AppDashboard() {
     requestRecords,
     executeTransaction,
     transactionStatus,
+    decrypt,
   } = useWallet();
   const { setVisible } = useWalletModal();
 
@@ -37,6 +40,7 @@ export default function AppDashboard() {
     requestRecords,
     requestTransaction: executeTransaction,
     transactionStatus,
+    decrypt,
     connected,
     address,
   };
@@ -55,7 +59,9 @@ export default function AppDashboard() {
         <Route path="borrow" element={<BorrowForm wallet={walletProps} />} />
         <Route path="repay" element={<RepayForm wallet={walletProps} />} />
         <Route path="positions" element={<PositionsList wallet={walletProps} />} />
-        <Route path="stats" element={<ProtocolStats />} />
+        <Route path="withdraw" element={<WithdrawForm wallet={walletProps} />} />
+        <Route path="liquidate" element={<LiquidateForm wallet={walletProps} />} />
+        <Route path="stats" element={<ProtocolStats wallet={walletProps} />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </AppLayout>

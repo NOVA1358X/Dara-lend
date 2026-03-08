@@ -14,6 +14,7 @@ interface SupplyFormProps {
     requestRecords?: (program: string) => Promise<unknown[]>;
     requestTransaction?: (transaction: any) => Promise<{ transactionId: string } | undefined>;
     transactionStatus?: (txId: string) => Promise<{ status: string }>;
+    decrypt?: (cipherText: string) => Promise<string>;
     connected: boolean;
     address?: string | null;
   };

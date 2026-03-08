@@ -29,11 +29,15 @@ export function CrossChainSection() {
           className="mb-16"
         >
           <p className="text-label uppercase text-accent tracking-widest mb-4">
-            Cross-Chain
+            Roadmap — Cross-Chain
           </p>
           <h2 className="font-heading text-section-mobile md:text-section text-text-primary max-w-xl">
             Supply from anywhere. Borrow privately.
           </h2>
+          <p className="text-sm text-text-muted mt-3 max-w-lg">
+            Coming soon — Shield Wallet&apos;s native NEAR Intents will enable collateral supply
+            from any chain, directly into your private DARA Lend position.
+          </p>
         </motion.div>
 
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">

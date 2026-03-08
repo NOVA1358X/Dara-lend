@@ -10,6 +10,7 @@ import { LockIcon } from '@/components/icons/LockIcon';
 interface PositionsListProps {
   wallet: {
     requestRecords?: (program: string) => Promise<unknown[]>;
+    decrypt?: (cipherText: string) => Promise<string>;
     connected: boolean;
   };
 }

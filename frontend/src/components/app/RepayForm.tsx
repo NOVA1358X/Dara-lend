@@ -17,6 +17,7 @@ interface RepayFormProps {
     requestRecords?: (program: string) => Promise<unknown[]>;
     requestTransaction?: (transaction: any) => Promise<{ transactionId: string } | undefined>;
     transactionStatus?: (txId: string) => Promise<{ status: string }>;
+    decrypt?: (cipherText: string) => Promise<string>;
     connected: boolean;
   };
 }
@@ -53,7 +54,8 @@ export function RepayForm({ wallet }: RepayFormProps) {
     if (!debt) return;
 
     setSelectedLoanIdx(idx);
-    const debtRecord = JSON.stringify(debt.raw);
+    // Pass the record plaintext string — Shield expects string inputs
+    const debtRecord = debt.plaintext || '';
 
     try {
       await repay(debtRecord);

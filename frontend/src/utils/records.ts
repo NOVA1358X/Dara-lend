@@ -7,6 +7,7 @@ export interface CollateralReceiptRecord {
   collateralAmount: number;
   depositBlock: number;
   nonceHash: string;
+  plaintext: string;
   raw: Record<string, unknown>;
   spent: boolean;
 }
@@ -18,6 +19,7 @@ export interface DebtPositionRecord {
   debtAmount: number;
   liquidationPrice: number;
   loanId: string;
+  plaintext: string;
   raw: Record<string, unknown>;
   spent: boolean;
 }
@@ -30,6 +32,7 @@ export interface LiquidationAuthRecord {
   debtAmount: number;
   liquidationPrice: number;
   borrower: string;
+  plaintext: string;
   raw: Record<string, unknown>;
   spent: boolean;
 }
@@ -40,6 +43,7 @@ export interface RepaymentReceiptRecord {
   amountRepaid: number;
   collateralReturned: number;
   loanId: string;
+  plaintext: string;
   raw: Record<string, unknown>;
   spent: boolean;
 }
@@ -50,6 +54,7 @@ export interface LiquidationReceiptRecord {
   loanId: string;
   collateralSeized: number;
   debtCovered: number;
+  plaintext: string;
   raw: Record<string, unknown>;
   spent: boolean;
 }
@@ -62,39 +67,82 @@ export type DaraRecord =
   | LiquidationReceiptRecord;
 
 interface RawAleoRecord {
-  data?: Record<string, string>;
+  data?: Record<string, unknown>;
   spent?: boolean;
   plaintext?: string;
+  recordPlaintext?: string;
   programId?: string;
   program_id?: string;
   functionName?: string;
   recordName?: string;
+  recordCiphertext?: string;
+  owner?: string;
+  nonce?: string;
   // Shield may return fields at top level
   [key: string]: unknown;
 }
 
-function extractFields(record: RawAleoRecord): Record<string, string> {
-  // 1. Try record.data first (standard format)
-  if (record.data && typeof record.data === 'object') {
-    return record.data;
-  }
-
-  // 2. Try plaintext parsing (Shield format)
-  if (record.plaintext && typeof record.plaintext === 'string') {
-    const fields: Record<string, string> = {};
-    const text = record.plaintext;
-    // Handle both multi-line and single-line plaintext
-    const lines = text.includes('\n') ? text.split('\n') : text.replace(/[{}]/g, '').split(',');
-    for (const line of lines) {
-      const match = line.trim().match(/^(\w+)\s*:\s*(.+?)[\s,]*$/);
-      if (match) {
-        fields[match[1]] = match[2];
-      }
+/**
+ * Parse an Aleo plaintext record string into key-value fields.
+ * Handles formats like:
+ *   { owner: aleo1...private, collateral_amount: 1000000u64.private, ... }
+ */
+export function parsePlaintextFields(text: string): Record<string, string> {
+  const fields: Record<string, string> = {};
+  const inner = text.replace(/^\s*\{/, '').replace(/\}\s*$/, '');
+  const parts = inner.includes('\n') ? inner.split('\n') : inner.split(',');
+  for (const part of parts) {
+    const trimmed = part.trim().replace(/,\s*$/, '');
+    if (!trimmed) continue;
+    const match = trimmed.match(/^(\w+)\s*:\s*(.+)$/);
+    if (match) {
+      fields[match[1]] = match[2].trim();
     }
-    if (Object.keys(fields).length > 0) return fields;
+  }
+  return fields;
+}
+
+/**
+ * Coerce a Shield data value to a string.
+ * Handles: string values, objects with .value property, numbers, booleans.
+ */
+function coerceDataValue(val: unknown): string {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'bigint') return String(val);
+  if (typeof val === 'boolean') return String(val);
+  if (val && typeof val === 'object') {
+    // Shield may wrap values as { value: "1000000u64" } or similar
+    const obj = val as Record<string, unknown>;
+    if ('value' in obj && obj.value != null) return String(obj.value);
+    // Try toString
+    const str = String(val);
+    if (str !== '[object Object]') return str;
+  }
+  return '';
+}
+
+function extractFields(record: RawAleoRecord): Record<string, string> {
+  // 1. Try recordPlaintext (Shield format) or plaintext (from decrypt)
+  const pt = record.recordPlaintext || record.plaintext;
+  if (pt && typeof pt === 'string') {
+    const fields = parsePlaintextFields(pt);
+    if (Object.keys(fields).length > 1) return fields;
   }
 
-  // 3. Try top-level fields (some adapters put fields directly on the record object)
+  // 2. Try record.data with robust value coercion
+  if (record.data && typeof record.data === 'object') {
+    const fields: Record<string, string> = {};
+    for (const [key, val] of Object.entries(record.data)) {
+      if (val === undefined || val === null) continue;
+      const str = coerceDataValue(val);
+      if (str) fields[key] = str;
+    }
+    // Need at least one non-owner, non-nonce field
+    const meaningful = Object.keys(fields).filter(k => k !== 'owner' && k !== '_nonce');
+    if (meaningful.length > 0) return fields;
+  }
+
+  // 3. Try top-level fields (some adapters put fields directly on the record)
   const knownFields = [
     'owner', 'collateral_amount', 'deposit_block', 'nonce_hash',
     'debt_amount', 'liquidation_price', 'loan_id', 'borrower',
@@ -136,11 +184,19 @@ function detectRecordType(fields: Record<string, string>, record: RawAleoRecord)
   return null;
 }
 
-export function parseRecord(rawRecord: Record<string, unknown>): DaraRecord | null {
+export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlaintext?: string): DaraRecord | null {
   const record = rawRecord as unknown as RawAleoRecord;
+  
+  // If we have decrypted plaintext, inject it into the record for extraction
+  if (decryptedPlaintext && !record.plaintext) {
+    record.plaintext = decryptedPlaintext;
+  }
+  
   const fields = extractFields(record);
   const recordType = detectRecordType(fields, record);
   const spent = record.spent ?? false;
+  // Prefer recordPlaintext (Shield native) over plaintext (from decrypt)
+  const plaintext = record.recordPlaintext || record.plaintext || '';
 
   if (!recordType) return null;
 
@@ -154,6 +210,7 @@ export function parseRecord(rawRecord: Record<string, unknown>): DaraRecord | nu
         collateralAmount: parseAleoU64(fields['collateral_amount']),
         depositBlock: parseAleoU64(fields['deposit_block']),
         nonceHash: parseAleoField(fields['nonce_hash']),
+        plaintext,
         raw: rawRecord,
         spent,
       };
@@ -166,6 +223,7 @@ export function parseRecord(rawRecord: Record<string, unknown>): DaraRecord | nu
         debtAmount: parseAleoU64(fields['debt_amount']),
         liquidationPrice: parseAleoU64(fields['liquidation_price']),
         loanId: parseAleoField(fields['loan_id']),
+        plaintext,
         raw: rawRecord,
         spent,
       };
@@ -179,6 +237,7 @@ export function parseRecord(rawRecord: Record<string, unknown>): DaraRecord | nu
         debtAmount: parseAleoU64(fields['debt_amount']),
         liquidationPrice: parseAleoU64(fields['liquidation_price']),
         borrower: parseAleoAddress(fields['borrower']),
+        plaintext,
         raw: rawRecord,
         spent,
       };
@@ -190,6 +249,7 @@ export function parseRecord(rawRecord: Record<string, unknown>): DaraRecord | nu
         amountRepaid: parseAleoU64(fields['amount_repaid']),
         collateralReturned: parseAleoU64(fields['collateral_returned']),
         loanId: parseAleoField(fields['loan_id']),
+        plaintext,
         raw: rawRecord,
         spent,
       };
@@ -201,6 +261,7 @@ export function parseRecord(rawRecord: Record<string, unknown>): DaraRecord | nu
         loanId: parseAleoField(fields['loan_id']),
         collateralSeized: parseAleoU64(fields['collateral_seized']),
         debtCovered: parseAleoU64(fields['debt_covered']),
+        plaintext,
         raw: rawRecord,
         spent,
       };

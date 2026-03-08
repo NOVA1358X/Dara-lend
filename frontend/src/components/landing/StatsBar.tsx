@@ -24,7 +24,7 @@ export function StatsBar() {
       decimals: 0,
     },
     {
-      label: 'Positions Hidden',
+      label: 'Privacy Level',
       value: '100',
       suffix: '%',
       numericValue: 100,
@@ -32,12 +32,10 @@ export function StatsBar() {
       tooltip: 'All positions encrypted by default',
     },
     {
-      label: 'Chains Connected',
-      value: '35',
-      suffix: '+',
-      numericValue: 35,
-      decimals: 0,
-      subtext: 'via NEAR Intents',
+      label: 'Oracle Price',
+      value: stats?.oraclePrice ? (stats.oraclePrice / 1_000_000).toFixed(2) : null,
+      suffix: ' USD',
+      numericValue: stats?.oraclePrice ? stats.oraclePrice / 1_000_000 : 0,
     },
   ];
 
@@ -85,9 +83,6 @@ export function StatsBar() {
               <p className="text-label uppercase text-text-muted tracking-widest">
                 {stat.label}
               </p>
-              {stat.subtext && (
-                <p className="text-[11px] text-text-muted mt-0.5">{stat.subtext}</p>
-              )}
             </motion.div>
           ))}
         </div>

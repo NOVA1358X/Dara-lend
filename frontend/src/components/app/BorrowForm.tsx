@@ -20,6 +20,7 @@ interface BorrowFormProps {
     requestRecords?: (program: string) => Promise<unknown[]>;
     requestTransaction?: (transaction: any) => Promise<{ transactionId: string } | undefined>;
     transactionStatus?: (txId: string) => Promise<{ status: string }>;
+    decrypt?: (cipherText: string) => Promise<string>;
     connected: boolean;
     address?: string | null;
   };
@@ -90,9 +91,8 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
     }
 
     const orchestratorAddress = wallet.address || '';
-    const collateralRecord = selectedCollateral?.raw
-      ? JSON.stringify(selectedCollateral.raw)
-      : '';
+    // Pass the record plaintext string — Shield expects string inputs
+    const collateralRecord = selectedCollateral?.plaintext || '';
 
     try {
       await borrow(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);

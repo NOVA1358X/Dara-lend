@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PROGRAM_ID, TX_FEE, TRANSITIONS } from '@/utils/constants';
+import { PROGRAM_ID, TX_FEE, TRANSITIONS, USDCX_PROGRAM, PROTOCOL_ADDRESS } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import toast from 'react-hot-toast';
@@ -58,12 +58,16 @@ export function useTransaction(wallet: WalletExecute) {
         toast.success('Transaction submitted');
 
         const confirmed = await pollTransactionStatus(txId, wallet);
-        if (confirmed) {
+        if (confirmed === true) {
           setTransactionStep('confirmed');
-          toast.success('Transaction confirmed');
-        } else {
+          toast.success('Transaction confirmed on-chain!');
+        } else if (confirmed === false) {
           setTransactionStep('failed');
-          toast.error('Transaction may still be processing. Check your wallet.');
+          toast.error('Transaction rejected on-chain. Check if the protocol has sufficient USDCx liquidity.');
+        } else {
+          // null = polling timed out, transaction may still be processing
+          setTransactionStep('confirmed');
+          toast.success(`Transaction broadcast. Check explorer: ${txId}`);
         }
 
         setTransactionPending(false);
@@ -130,6 +134,58 @@ export function useTransaction(wallet: WalletExecute) {
     [executeTransaction],
   );
 
+  /** Transfer USDCx from user to the lending protocol address */
+  const fundProtocol = useCallback(
+    async (amountMicro: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+
+        const tx = createAleoTransaction(
+          USDCX_PROGRAM,
+          'transfer_public',
+          [PROTOCOL_ADDRESS, `${amountMicro}u128`],
+          TX_FEE,
+        );
+
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Fund protocol transaction submitted');
+
+        const confirmed = await pollTransactionStatus(txId, wallet);
+        if (confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Protocol funded with USDCx!');
+        } else if (confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Fund transaction rejected. Check your USDCx balance.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Fund transaction broadcast. Check explorer: ${txId}`);
+        }
+
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        const message = error instanceof Error ? error.message : 'Fund transaction failed';
+        toast.error(message);
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
   return {
     executeTransaction,
     supplyCollateral,
@@ -137,6 +193,7 @@ export function useTransaction(wallet: WalletExecute) {
     repay,
     liquidate,
     withdrawCollateral,
+    fundProtocol,
     resetTransaction,
   };
 }
@@ -144,16 +201,21 @@ export function useTransaction(wallet: WalletExecute) {
 async function pollTransactionStatus(
   txId: string,
   wallet: WalletExecute,
-  maxAttempts = 20,
-  interval = 3000,
-): Promise<boolean> {
+  maxAttempts = 60,
+  interval = 5000,
+): Promise<boolean | null> {
+  // Also try the public API as a fallback
+  const apiBase = 'https://api.explorer.provable.com/v1/testnet';
+
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((resolve) => setTimeout(resolve, interval));
 
+    // Try wallet adapter status first
     if (wallet.transactionStatus) {
       try {
         const response = await wallet.transactionStatus(txId);
         const status = (response.status || '').toLowerCase();
+        console.log(`[DARA] Poll ${i + 1}/${maxAttempts} wallet status: ${status}`);
         if (status === 'finalized' || status === 'accepted' || status === 'confirmed' || status === 'completed') {
           return true;
         }
@@ -161,9 +223,25 @@ async function pollTransactionStatus(
           return false;
         }
       } catch {
-        continue;
+        // Wallet status check failed, try API
       }
     }
+
+    // Fallback: check the explorer API
+    try {
+      const cleanId = txId.trim();
+      const res = await fetch(`${apiBase}/transaction/${cleanId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const txType = data?.type;
+        console.log(`[DARA] Poll ${i + 1}/${maxAttempts} API type: ${txType}`);
+        if (txType === 'execute' || txType === 'accepted') return true;
+        if (txType === 'rejected') return false;
+      }
+    } catch {
+      // API check failed, continue polling
+    }
   }
-  return false;
+  // Timed out — transaction status unknown
+  return null;
 }

@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 interface DashboardProps {
   wallet: {
     requestRecords?: (program: string) => Promise<unknown[]>;
+    decrypt?: (cipherText: string) => Promise<string>;
     connected: boolean;
   };
 }
