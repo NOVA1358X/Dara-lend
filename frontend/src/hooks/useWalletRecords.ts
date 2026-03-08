@@ -72,6 +72,8 @@ export function useWalletRecords(wallet: WalletHook) {
     enabled: wallet.connected,
     refetchInterval: 15_000,
     staleTime: 5_000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const creditsQuery = useQuery<unknown[]>({
@@ -87,6 +89,8 @@ export function useWalletRecords(wallet: WalletHook) {
     enabled: wallet.connected,
     refetchInterval: 15_000,
     staleTime: 5_000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const allRecords = daraRecordsQuery.data || [];

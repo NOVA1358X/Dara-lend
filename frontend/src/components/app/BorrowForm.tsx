@@ -10,6 +10,7 @@ import { PRECISION } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { HealthFactorGauge } from '@/components/shared/HealthFactorGauge';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { ArrowDownIcon } from '@/components/icons/ArrowDownIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { LockIcon } from '@/components/icons/LockIcon';
@@ -33,7 +34,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { borrow, resetTransaction } = useTransaction(wallet);
-  const { collateralReceipts, isLoading } = useWalletRecords(wallet);
+  const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
   const { data: oraclePrice } = useOraclePrice();
 
   const selectedCollateral = collateralReceipts[selectedCollateralIdx];
@@ -65,7 +66,15 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
     );
   }
 
-  if (!isLoading && collateralReceipts.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="max-w-[480px] mx-auto">
+        <LoadingSkeleton height={400} rounded="rounded-xl" />
+      </div>
+    );
+  }
+
+  if (collateralReceipts.length === 0) {
     return (
       <EmptyState
         title="No Collateral Found"
@@ -97,7 +106,10 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
     const collateralRecord = selectedCollateral?.plaintext || '';
 
     try {
-      await borrow(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
+      const txId = await borrow(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
+      if (txId) {
+        setTimeout(() => refetch(), 3000);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Borrow failed';
       toast.error(message);

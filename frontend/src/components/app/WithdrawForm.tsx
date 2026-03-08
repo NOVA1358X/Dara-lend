@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/appStore';
 import { formatCredits, truncateAddress } from '@/utils/formatting';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
 import { UnlockIcon } from '@/components/icons/UnlockIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
@@ -28,7 +29,7 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { withdrawCollateral, resetTransaction } = useTransaction(wallet);
-  const { collateralReceipts, isLoading } = useWalletRecords(wallet);
+  const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
     return (
@@ -40,7 +41,17 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
     );
   }
 
-  if (!isLoading && collateralReceipts.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="max-w-[560px] mx-auto space-y-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <LoadingSkeleton key={i} height={180} rounded="rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (collateralReceipts.length === 0) {
     return (
       <EmptyState
         title="No Collateral to Withdraw"
@@ -58,7 +69,11 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
     const recordPlaintext = receipt.plaintext || '';
 
     try {
-      await withdrawCollateral(recordPlaintext);
+      const txId = await withdrawCollateral(recordPlaintext);
+      if (txId) {
+        // Refetch records so the spent record disappears from the UI
+        setTimeout(() => refetch(), 3000);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Withdraw failed';
       toast.error(message);

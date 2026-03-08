@@ -9,6 +9,7 @@ import { formatCredits, truncateAddress } from '@/utils/formatting';
 import { PRECISION, ALEO_TESTNET_API, PROGRAM_ID, MAPPINGS, MAPPING_KEYS } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
 import { ZapIcon } from '@/components/icons/ZapIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
@@ -31,7 +32,7 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
   const [currentOraclePrice, setCurrentOraclePrice] = useState<number | null>(null);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { liquidate, resetTransaction } = useTransaction(wallet);
-  const { liquidationAuths, isLoading } = useWalletRecords(wallet);
+  const { liquidationAuths, isLoading, refetch } = useWalletRecords(wallet);
   const { data: oraclePrice } = useOraclePrice();
 
   // Fetch latest oracle price from on-chain mapping
@@ -69,7 +70,17 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
     );
   }
 
-  if (!isLoading && liquidationAuths.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="max-w-[560px] mx-auto space-y-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <LoadingSkeleton key={i} height={200} rounded="rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (liquidationAuths.length === 0) {
     return (
       <EmptyState
         title="No Liquidation Authorizations"
@@ -100,7 +111,10 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
     const recordPlaintext = auth.plaintext || '';
 
     try {
-      await liquidate(recordPlaintext, currentOraclePrice);
+      const txId = await liquidate(recordPlaintext, currentOraclePrice);
+      if (txId) {
+        setTimeout(() => refetch(), 3000);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Liquidation failed';
       toast.error(message);

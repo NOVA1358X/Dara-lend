@@ -8,6 +8,7 @@ import { formatCredits, truncateAddress, calculateHealthFactor } from '@/utils/f
 import { PRECISION } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
 import { UnlockIcon } from '@/components/icons/UnlockIcon';
 import toast from 'react-hot-toast';
@@ -28,7 +29,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
   const [repayStep, setRepayStep] = useState<'idle' | 'approving' | 'repaying'>('idle');
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { repay, approveUSDCx, resetTransaction } = useTransaction(wallet);
-  const { debtPositions, isLoading } = useWalletRecords(wallet);
+  const { debtPositions, isLoading, refetch } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
     return (
@@ -40,7 +41,17 @@ export function RepayForm({ wallet }: RepayFormProps) {
     );
   }
 
-  if (!isLoading && debtPositions.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="max-w-[560px] mx-auto space-y-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <LoadingSkeleton key={i} height={200} rounded="rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (debtPositions.length === 0) {
     return (
       <EmptyState
         title="No Active Loans"
@@ -68,8 +79,11 @@ export function RepayForm({ wallet }: RepayFormProps) {
 
       // Step 2: Execute repay
       setRepayStep('repaying');
-      await repay(debtRecord);
+      const repayTxId = await repay(debtRecord);
       setRepayStep('idle');
+      if (repayTxId) {
+        setTimeout(() => refetch(), 3000);
+      }
     } catch (err) {
       setRepayStep('idle');
       const message = err instanceof Error ? err.message : 'Repay failed';
