@@ -103,8 +103,10 @@ export function calculateHealthFactor(
   return maxDebt / debtAmount;
 }
 
-export function calculateMaxBorrow(collateralAmount: number): number {
-  return Math.floor((collateralAmount * 700_000) / PRECISION);
+export function calculateMaxBorrow(collateralAmount: number, oraclePrice: number): number {
+  // Must match contract: col_value = col * price / SCALE; max = col_value * LTV_BPS / BPS
+  // = collateral * oraclePrice * 7000 / (1_000_000 * 10_000)
+  return Math.floor((collateralAmount * oraclePrice * 7_000) / (PRECISION * 10_000));
 }
 
 export function calculateLiquidationPrice(

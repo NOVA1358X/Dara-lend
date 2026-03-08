@@ -38,9 +38,11 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
   const selectedCollateral = collateralReceipts[selectedCollateralIdx];
   const collateralAmount = selectedCollateral?.collateralAmount || 0;
-  const maxBorrowAmount = calculateMaxBorrow(collateralAmount);
+  const currentOraclePrice = oraclePrice || PRECISION;
+  const maxBorrowAmount = calculateMaxBorrow(collateralAmount, currentOraclePrice);
   const borrowAmount = Math.floor(parseFloat(amount || '0') * 1_000_000);
-  const ltvRatio = collateralAmount > 0 ? (borrowAmount / collateralAmount) * 100 : 0;
+  const colValue = (collateralAmount * currentOraclePrice) / PRECISION;
+  const ltvRatio = colValue > 0 ? (borrowAmount / colValue) * 100 : 0;
   const projectedHealth = borrowAmount > 0
     ? calculateHealthFactor(collateralAmount, borrowAmount, oraclePrice || PRECISION)
     : Infinity;

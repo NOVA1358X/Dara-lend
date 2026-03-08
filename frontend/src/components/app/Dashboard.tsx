@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useProtocolStats } from '@/hooks/useProtocolStats';
 import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
-import { formatCredits, calculateHealthFactor } from '@/utils/formatting';
+import { formatCredits, calculateHealthFactor, calculateMaxBorrow } from '@/utils/formatting';
 import { PRECISION } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { HealthFactorGauge } from '@/components/shared/HealthFactorGauge';
@@ -58,7 +58,7 @@ export function Dashboard({ wallet }: DashboardProps) {
   const healthFactor = totalDebt > 0
     ? calculateHealthFactor(totalCollateral, totalDebt, oraclePrice || PRECISION)
     : Infinity;
-  const maxBorrow = Math.floor((totalCollateral * 700_000) / PRECISION) - totalDebt;
+  const maxBorrow = calculateMaxBorrow(totalCollateral, oraclePrice || PRECISION) - totalDebt;
 
   const isLoading = recordsLoading && wallet.connected;
 
