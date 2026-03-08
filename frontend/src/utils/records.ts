@@ -31,7 +31,7 @@ export interface LiquidationAuthRecord {
   collateralAmount: number;
   debtAmount: number;
   liquidationPrice: number;
-  borrower: string;
+  borrowerHash: string;
   plaintext: string;
   raw: Record<string, unknown>;
   spent: boolean;
@@ -145,7 +145,7 @@ function extractFields(record: RawAleoRecord): Record<string, string> {
   // 3. Try top-level fields (some adapters put fields directly on the record)
   const knownFields = [
     'owner', 'collateral_amount', 'deposit_block', 'nonce_hash',
-    'debt_amount', 'liquidation_price', 'loan_id', 'borrower',
+    'debt_amount', 'liquidation_price', 'loan_id', 'borrower_hash',
     'amount_repaid', 'collateral_returned', 'collateral_seized', 'debt_covered',
   ];
   const fields: Record<string, string> = {};
@@ -172,7 +172,7 @@ function detectRecordType(fields: Record<string, string>, record: RawAleoRecord)
   if (keys.includes('debt_amount') && keys.includes('liquidation_price') && keys.includes('loan_id') && !keys.includes('borrower')) {
     return RECORD_TYPES.DEBT_POSITION;
   }
-  if (keys.includes('borrower') && keys.includes('loan_id') && keys.includes('liquidation_price')) {
+  if ((keys.includes('borrower_hash') || keys.includes('borrower')) && keys.includes('loan_id') && keys.includes('liquidation_price')) {
     return RECORD_TYPES.LIQUIDATION_AUTH;
   }
   if (keys.includes('amount_repaid') && keys.includes('collateral_returned')) {
@@ -236,7 +236,7 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
         collateralAmount: parseAleoU64(fields['collateral_amount']),
         debtAmount: parseAleoU64(fields['debt_amount']),
         liquidationPrice: parseAleoU64(fields['liquidation_price']),
-        borrower: parseAleoAddress(fields['borrower']),
+        borrowerHash: parseAleoField(fields['borrower_hash'] || fields['borrower'] || ''),
         plaintext,
         raw: rawRecord,
         spent,

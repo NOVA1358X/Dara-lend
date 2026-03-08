@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { PROGRAM_ID, TX_FEE, TRANSITIONS, USDCX_PROGRAM, PROTOCOL_ADDRESS } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
+import { saveTxToHistory } from '@/components/app/TransactionHistory';
 import toast from 'react-hot-toast';
 
 interface WalletExecute {
@@ -61,13 +62,16 @@ export function useTransaction(wallet: WalletExecute) {
         if (confirmed === true) {
           setTransactionStep('confirmed');
           toast.success('Transaction confirmed on-chain!');
+          saveTxToHistory({ type: functionName, txId, timestamp: Date.now(), status: 'confirmed' });
         } else if (confirmed === false) {
           setTransactionStep('failed');
           toast.error('Transaction rejected on-chain. Check if the protocol has sufficient USDCx liquidity.');
+          saveTxToHistory({ type: functionName, txId, timestamp: Date.now(), status: 'failed' });
         } else {
           // null = polling timed out, transaction may still be processing
           setTransactionStep('confirmed');
           toast.success(`Transaction broadcast. Check explorer: ${txId}`);
+          saveTxToHistory({ type: functionName, txId, timestamp: Date.now(), status: 'pending' });
         }
 
         setTransactionPending(false);

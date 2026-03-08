@@ -8,6 +8,7 @@ const sections: DocSection[] = [
   { id: 'getting-started', label: 'Getting Started' },
   { id: 'smart-contract', label: 'Smart Contract' },
   { id: 'architecture', label: 'Architecture' },
+  { id: 'roadmap', label: 'Roadmap' },
   { id: 'faq', label: 'FAQ' },
 ];
 

@@ -1,5 +1,6 @@
 import { createServer } from './api/server.js';
 import { startPriceUpdater } from './oracle/priceUpdater.js';
+import { startLiquidationMonitor } from './liquidation/monitor.js';
 import { config } from './utils/config.js';
 
 const app = createServer();
@@ -11,3 +12,4 @@ app.listen(config.port, () => {
 });
 
 startPriceUpdater();
+startLiquidationMonitor();

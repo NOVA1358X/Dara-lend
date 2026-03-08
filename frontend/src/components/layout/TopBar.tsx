@@ -14,7 +14,10 @@ const pageTitles: Record<string, string> = {
   '/app/supply': 'Supply Collateral',
   '/app/borrow': 'Borrow',
   '/app/repay': 'Repay',
+  '/app/withdraw': 'Withdraw',
+  '/app/liquidate': 'Liquidate',
   '/app/positions': 'Positions',
+  '/app/history': 'Transaction History',
   '/app/stats': 'Protocol Stats',
 };
 

@@ -68,10 +68,14 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
       toast.error('Minimum supply is 0.1 ALEO');
       return;
     }
-    const nonce = Date.now();
+    // Generate cryptographically secure nonce
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
 
     try {
-      await supplyCollateral(amountInMicrocredits, nonce);
+      const txId = await supplyCollateral(amountInMicrocredits, nonce);
+      if (txId) fetchBalance(); // Refresh balance after successful supply
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to supply collateral';
       toast.error(message);

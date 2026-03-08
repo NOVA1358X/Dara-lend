@@ -11,7 +11,7 @@ Built for the **Aleo Privacy Buildathon Wave 3**.
 ## Live Demo
 
 - **Frontend:** *[Deploy URL — will be added after deployment]*
-- **Contract:** [`dara_lend_v1.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v1.aleo)
+- **Contract:** [`dara_lend_v2.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v2.aleo)
 - **Deployment TX:** [`at1chdltvfp6xrfh5x5ypn3ahw898knvhp9wclqrwmtv2556zwzsggq227v8m`](https://testnet.explorer.provable.com/transaction/at1chdltvfp6xrfh5x5ypn3ahw898knvhp9wclqrwmtv2556zwzsggq227v8m)
 
 ---
@@ -56,30 +56,31 @@ This ensures borrowers control their funds while the protocol can enforce solven
 | Feature | Status | Description |
 |---------|--------|-------------|
 | Supply Collateral | ✅ Working | Lock ALEO credits as encrypted collateral via `credits.aleo/transfer_public_as_signer` |
-| Borrow USDCx | ✅ Working | Borrow USDCx stablecoin against collateral, encrypted position records |
+| Borrow USDCx | ✅ Working | Borrow USDCx against collateral with 0.5% origination fee, oracle freshness check, circuit breaker |
 | Repay Debt | ✅ Working | Repay full debt amount, reclaim collateral |
 | Withdraw Collateral | ✅ Working | Withdraw unused collateral deposits |
-| Liquidation | ✅ Working | Liquidate underwater positions via LiquidationAuth records |
-| Dashboard | ✅ Working | Real-time protocol stats from on-chain mappings |
-| Position Viewer | ✅ Working | Decrypt and display all private records from Shield Wallet |
+| Liquidation | ✅ Working | Liquidate underwater positions with 5% liquidator incentive bonus |
+| Dashboard | ✅ Working | Real-time protocol stats + health factor color alerts + liquidation risk banner |
+| Position Viewer | ✅ Working | Decrypt and display all private records from Shield Wallet, click-to-copy fields |
 | Protocol Stats | ✅ Working | TVL, total borrowed, loan count, oracle price — all from on-chain |
-| Oracle Price Feed | ✅ Working | CoinGecko-sourced ALEO/USD price, auto-updated on-chain |
-| Documentation | ✅ Working | In-app docs with privacy model, getting started guide, smart contract reference |
+| Oracle Price Feed | ✅ Working | CoinGecko-sourced ALEO/USD price, 2-min updates with retry logic + freshness validation |
+| Transaction History | ✅ Working | Persistent transaction log with status tracking and explorer links |
+| Documentation | ✅ Working | In-app docs with privacy model, smart contract reference, and roadmap |
 
 ## Smart Contract
 
-**Program ID:** `dara_lend_v1.aleo`  
+**Program ID:** `dara_lend_v2.aleo`  
 **Network:** Aleo Testnet
 
 ### Transitions
 
 | Transition | Description |
 |---|---|
-| `update_oracle_price` | Admin-only oracle price update from CoinGecko feed |
-| `supply_collateral` | Lock ALEO credits as encrypted collateral (CollateralReceipt record) |
-| `borrow` | Borrow USDCx against collateral (creates DebtPosition + LiquidationAuth) |
+| `update_oracle_price` | Admin-only oracle price update from CoinGecko feed, records block height for freshness |
+| `supply_collateral` | Lock ALEO credits as encrypted collateral (CollateralReceipt record), nonce bound to caller |
+| `borrow` | Borrow USDCx against collateral with 0.5% fee, oracle freshness check, circuit breaker (creates DebtPosition + LiquidationAuth) |
 | `repay` | Repay USDCx debt and reclaim ALEO collateral (RepaymentReceipt record) |
-| `liquidate` | Liquidate underwater positions (consumes LiquidationAuth, seizes collateral) |
+| `liquidate` | Liquidate underwater positions with 5% bonus (consumes LiquidationAuth, seizes collateral + bonus) |
 | `withdraw_collateral` | Withdraw unused collateral (consumes CollateralReceipt) |
 
 ### External Program Integration
@@ -92,6 +93,10 @@ This ensures borrowers control their funds while the protocol can enforce solven
 - **LTV Ratio:** 70% (700,000 / 1,000,000)
 - **Liquidation Threshold:** 80% (800,000 / 1,000,000)
 - **Min Collateral:** 0.1 ALEO (100,000 microcredits)
+- **Origination Fee:** 0.5% (50 BPS)
+- **Liquidation Bonus:** 5% (500 BPS)
+- **Max Total Borrowed:** 100,000 USDCx (circuit breaker)
+- **Max Oracle Age:** 100 blocks (~5 min freshness window)
 - **Precision:** 6 decimals (1,000,000)
 
 ### Record Types
@@ -101,10 +106,12 @@ All position data is stored in **private encrypted records**:
 ```
 CollateralReceipt { owner, collateral_amount, deposit_block, nonce_hash }
 DebtPosition      { owner, collateral_amount, debt_amount, liquidation_price, loan_id }
-LiquidationAuth   { owner, loan_id, collateral_amount, debt_amount, liquidation_price, borrower }
+LiquidationAuth   { owner, loan_id, collateral_amount, debt_amount, liquidation_price, borrower_hash }
 RepaymentReceipt  { owner, amount_repaid, collateral_returned, loan_id }
 LiquidationReceipt{ owner, loan_id, collateral_seized, debt_covered }
 ```
+
+> **Privacy improvement (v2):** `LiquidationAuth` now stores `borrower_hash` (a field hash of the borrower address) instead of the raw `borrower` address, preventing the orchestrator/liquidator from identifying borrowers.
 
 ### Public Mappings (Aggregates Only)
 
@@ -116,6 +123,8 @@ oracle_price:           u8 => u64    — Current ALEO/USD price
 used_nonces:            field => bool — Replay protection
 active_loans:           field => bool — Loan state tracking
 protocol_admin:         u8 => address — Admin address
+price_update_block:     u8 => u32    — Block height of last oracle update
+total_fees_collected:   u8 => u128   — Total origination fees collected
 ```
 
 **No individual user addresses appear in any public mapping.**
@@ -142,16 +151,17 @@ Like all Aleo DeFi projects currently, DARA Lend uses public token transfers (`c
 
 ```
 dara-lend/
-├── contract/          Leo smart contract (dara_lend_v1.aleo)
+├── contract/          Leo smart contract (dara_lend_v2.aleo)
 │   └── src/main.leo   Full contract source
 ├── frontend/          React + TypeScript + Tailwind frontend
 │   └── src/
-│       ├── components/app/   Supply, Borrow, Repay, Withdraw, Liquidate, Dashboard, Stats
+│       ├── components/app/   Supply, Borrow, Repay, Withdraw, Liquidate, Dashboard, Stats, History
 │       ├── hooks/            useTransaction, useWalletRecords, useProtocolStats
 │       └── utils/            Record parsing, formatting, constants
-└── backend/           Express API server + Oracle price updater
+└── backend/           Express API server + Oracle price updater + Liquidation monitor
     └── src/
-        ├── oracle/    CoinGecko price feed → on-chain update_oracle_price
+        ├── oracle/    CoinGecko price feed → on-chain update_oracle_price (2-min, retry logic)
+        ├── liquidation/ Protocol health monitor (LTV tracking, alerts)
         └── api/       Stats, solvency, health, transaction endpoints
 ```
 
@@ -183,7 +193,32 @@ npm install
 npm run dev
 ```
 
-The backend runs the oracle price updater (CoinGecko → on-chain) every 5 minutes and exposes API endpoints for protocol stats.
+The backend runs the oracle price updater (CoinGecko → on-chain) every 2 minutes with retry logic, a liquidation monitor for protocol health tracking, and exposes API endpoints for protocol stats.
+
+## Wave 3 Changelog
+
+### Contract Upgrade (v1 → v2)
+- **Privacy fix:** LiquidationAuth stores `borrower_hash` (field hash) instead of raw `borrower` address
+- **Oracle freshness:** `update_oracle_price` records `block.height`; `borrow` and `liquidate` assert price is within 100 blocks
+- **Origination fee:** 0.5% fee deducted from borrow amount, tracked in `total_fees_collected` mapping
+- **Liquidation incentive:** 5% bonus collateral awarded to liquidators
+- **Circuit breaker:** `borrow` enforces `MAX_TOTAL_BORROWED` cap of 100K USDCx
+- **Nonce binding:** `supply_collateral` uses `BHP256::commit_to_field(nonce, self.signer)` to prevent grief attacks
+
+### Backend Improvements
+- Oracle update interval reduced from 5 min to 2 min
+- Added retry logic with exponential backoff (3 attempts)
+- Liquidation monitor with global LTV tracking and health alerts
+- Enhanced `/health` endpoint with oracle status, protocol snapshot, and LTV data
+
+### Frontend Improvements
+- Transaction history page with localStorage persistence and explorer links
+- Health factor color alerts (green/yellow/orange/red) with liquidation risk banner
+- Click-to-copy on position card fields (loan_id, nonce_hash, borrower_hash)
+- Cryptographically secure nonce generation (`crypto.getRandomValues`)
+- Balance auto-refresh after supply
+- In-app roadmap section in documentation
+- TopBar route labels for all pages
 
 ## Tech Stack
 

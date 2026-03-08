@@ -24,6 +24,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
       'getting-started',
       'smart-contract',
       'architecture',
+      'roadmap',
       'faq',
     ];
 
@@ -262,7 +263,12 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
           The DARA Lend protocol is powered by a single Leo program deployed at{' '}
-          <span className="font-mono text-accent">dara_lend_v1.aleo</span>. The contract
+          <a
+            href="https://testnet.explorer.provable.com/program/dara_lend_v2.aleo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-accent hover:underline"
+          >dara_lend_v2.aleo</a>. The contract
           manages all lending operations using Aleo&apos;s native encryption.
         </p>
 
@@ -276,13 +282,13 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
     owner: address,
     collateral_amount: u64,
     deposit_block: u32,
-    nonce_hash: field,
+    nonce_hash: field,  // bound to caller via BHP256::commit
 }
 
 record DebtPosition {
     owner: address,
     collateral_amount: u64,
-    debt_amount: u64,
+    debt_amount: u128,
     liquidation_price: u64,
     loan_id: field,
 }
@@ -291,9 +297,9 @@ record LiquidationAuth {
     owner: address,
     loan_id: field,
     collateral_amount: u64,
-    debt_amount: u64,
+    debt_amount: u128,
     liquidation_price: u64,
-    borrower: address,
+    borrower_hash: field,  // hashed address — no raw address leak
 }`}</CodeBlock>
 
         <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
@@ -307,7 +313,7 @@ record LiquidationAuth {
             },
             {
               name: 'borrow',
-              desc: 'Takes a CollateralReceipt, validates LTV ratio, creates DebtPosition and LiquidationAuth records. Transfers borrowed amount to caller via credits.aleo.',
+              desc: 'Takes a CollateralReceipt, validates LTV ratio, creates DebtPosition and LiquidationAuth records. Applies 0.5% origination fee. Enforces oracle freshness and max debt circuit breaker. Transfers net amount via test_usdcx_stablecoin.aleo.',
             },
             {
               name: 'repay',
@@ -315,7 +321,7 @@ record LiquidationAuth {
             },
             {
               name: 'liquidate',
-              desc: 'Consumes a LiquidationAuth, verifies oracle price against liquidation threshold. Seizes collateral and generates LiquidationReceipt.',
+              desc: 'Consumes a LiquidationAuth, verifies oracle price against liquidation threshold. Seizes collateral + 5% bonus incentive and generates LiquidationReceipt. Oracle freshness validated.',
             },
             {
               name: 'withdraw_collateral',
@@ -406,6 +412,67 @@ Mapping::set(solvency_commitment, 1field, solvency);`}</CodeBlock>
         </ol>
       </section>
 
+      {/* Roadmap */}
+      <section id="roadmap">
+        <h2 className="font-heading text-2xl font-bold text-text-primary mb-4">
+          Roadmap
+        </h2>
+        <p className="text-text-secondary leading-relaxed mb-6">
+          DARA Lend is actively evolving. Here is our planned roadmap for upcoming features and
+          privacy improvements.
+        </p>
+
+        <div className="space-y-4">
+          {[
+            {
+              phase: 'Wave 3 (Current)',
+              items: [
+                'Privacy leak fix — borrower address hashed in LiquidationAuth',
+                'Oracle price freshness validation (100 block staleness window)',
+                '0.5% origination fee on borrow',
+                '5% liquidation incentive for liquidators',
+                'Max debt circuit breaker (100K USDCx cap)',
+                'Nonce bound to caller address (grief attack prevention)',
+                'Transaction history with explorer links',
+                'Health factor color alerts (client-side, privacy-preserving)',
+              ],
+            },
+            {
+              phase: 'Wave 4 (Planned)',
+              items: [
+                'Private USDCx transfers when SDK supports it (eliminate address exposure)',
+                'Record join/split for partial withdrawals and flexible positions',
+                'Block-based interest rate accrual',
+                'Multi-collateral support',
+                'Automated backend liquidation monitor',
+              ],
+            },
+            {
+              phase: 'Future',
+              items: [
+                'Cross-chain collateral bridges',
+                'Governance token and decentralized admin',
+                'Variable interest rate models',
+                'Flash loan protection',
+                'Mainnet deployment after security audit',
+              ],
+            },
+          ].map((section) => (
+            <div key={section.phase} className="p-4 rounded-lg bg-bg-tertiary border border-border-default">
+              <p className="font-heading font-semibold text-accent mb-3">{section.phase}</p>
+              <ul className="space-y-1.5">
+                {section.items.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-text-secondary text-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq">
         <h2 className="font-heading text-2xl font-bold text-text-primary mb-4">
@@ -435,7 +502,7 @@ Mapping::set(solvency_commitment, 1field, solvency);`}</CodeBlock>
             },
             {
               q: 'Are there any fees?',
-              a: 'Transaction fees are paid to the Aleo network for proof verification. DARA Lend does not currently charge protocol fees. All fee payments use standard (non-private) fee mode.',
+              a: 'DARA Lend charges a 0.5% origination fee on borrowed amounts. Liquidators receive a 5% bonus on seized collateral as incentive. Transaction fees are paid to the Aleo network for proof verification.',
             },
           ].map((item, idx) => (
             <div key={idx}>

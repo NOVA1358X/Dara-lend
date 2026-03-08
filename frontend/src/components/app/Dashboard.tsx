@@ -62,8 +62,44 @@ export function Dashboard({ wallet }: DashboardProps) {
 
   const isLoading = recordsLoading && wallet.connected;
 
+  const healthColor = healthFactor === Infinity ? 'text-accent-success' :
+    healthFactor >= 2.0 ? 'text-accent-success' :
+    healthFactor >= 1.5 ? 'text-yellow-400' :
+    healthFactor >= 1.0 ? 'text-orange-400' : 'text-red-500';
+
+  const healthLabel = healthFactor === Infinity ? 'Safe — No Debt' :
+    healthFactor >= 2.0 ? 'Healthy' :
+    healthFactor >= 1.5 ? 'Caution' :
+    healthFactor >= 1.0 ? 'At Risk' : 'Liquidation Danger';
+
   return (
     <div className="space-y-8">
+      {/* Health Alert Banner */}
+      {wallet.connected && !isLoading && totalDebt > 0 && healthFactor < 1.5 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 rounded-xl border ${
+            healthFactor < 1.0
+              ? 'bg-red-500/10 border-red-500/30'
+              : 'bg-orange-400/10 border-orange-400/30'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${healthFactor < 1.0 ? 'bg-red-500 animate-pulse' : 'bg-orange-400'}`} />
+            <div>
+              <p className={`text-sm font-semibold ${healthFactor < 1.0 ? 'text-red-400' : 'text-orange-300'}`}>
+                {healthFactor < 1.0 ? 'Liquidation Risk — Health Factor Below 1.0' : 'Low Health Factor — Consider Repaying'}
+              </p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Health: {healthFactor.toFixed(2)} | {healthFactor < 1.0
+                  ? 'Your position may be liquidated. Repay debt immediately.'
+                  : 'Your position is approaching the liquidation threshold.'}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
       {/* User Position Stats */}
       <div>
         <h2 className="text-label uppercase text-text-muted tracking-widest mb-4">
@@ -93,7 +129,10 @@ export function Dashboard({ wallet }: DashboardProps) {
             ) : isLoading ? (
               <LoadingSkeleton width="80%" height={32} />
             ) : (
-              <HealthFactorGauge value={healthFactor} size={100} />
+              <div>
+                <HealthFactorGauge value={healthFactor} size={100} />
+                <p className={`text-xs font-medium mt-1 ${healthColor}`}>{healthLabel}</p>
+              </div>
             )}
           </div>
           <StatCard

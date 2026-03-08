@@ -1,7 +1,7 @@
 import credits.aleo;
 import test_usdcx_stablecoin.aleo;
 
-program dara_lend_v1.aleo {
+program dara_lend_v2.aleo {
 
     // ═══════════════════════════════════════════════════
     // CONSTANTS
@@ -12,6 +12,10 @@ program dara_lend_v1.aleo {
     const LIQ_BPS: u128 = 8_000u128;
     const BPS: u128 = 10_000u128;
     const MIN_COLLATERAL: u64 = 100_000u64;
+    const FEE_BPS: u128 = 50u128;                         // 0.5% origination fee
+    const LIQUIDATION_BONUS_BPS: u128 = 500u128;          // 5% liquidation incentive
+    const MAX_TOTAL_BORROWED: u128 = 100_000_000_000u128; // 100 000 USDCx cap
+    const MAX_PRICE_AGE: u32 = 100u32;                    // ~5 min staleness window
 
     // ═══════════════════════════════════════════════════
     // RECORDS
@@ -38,7 +42,7 @@ program dara_lend_v1.aleo {
         collateral_amount: u64,
         debt_amount: u128,
         liquidation_price: u64,
-        borrower: address,
+        borrower_hash: field,
     }
 
     record RepaymentReceipt {
@@ -63,9 +67,11 @@ program dara_lend_v1.aleo {
     mapping total_borrowed: u8 => u128;
     mapping loan_count: u8 => u64;
     mapping oracle_price: u8 => u64;
+    mapping price_update_block: u8 => u32;
     mapping used_nonces: field => bool;
     mapping protocol_admin: u8 => address;
     mapping active_loans: field => bool;
+    mapping total_fees_collected: u8 => u128;
 
     // ═══════════════════════════════════════════════════
     // CONSTRUCTOR (runs at deployment)
@@ -75,9 +81,11 @@ program dara_lend_v1.aleo {
     async constructor() {
         Mapping::set(protocol_admin, 0u8, aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8);
         Mapping::set(oracle_price, 0u8, 1_000_000u64);
+        Mapping::set(price_update_block, 0u8, 0u32);
         Mapping::set(vault_total_collateral, 0u8, 0u64);
         Mapping::set(total_borrowed, 0u8, 0u128);
         Mapping::set(loan_count, 0u8, 0u64);
+        Mapping::set(total_fees_collected, 0u8, 0u128);
     }
 
     // ═══════════════════════════════════════════════════
@@ -98,10 +106,11 @@ program dara_lend_v1.aleo {
         let admin: address = Mapping::get(protocol_admin, 0u8);
         assert_eq(caller, admin);
         Mapping::set(oracle_price, 0u8, new_price);
+        Mapping::set(price_update_block, 0u8, block.height);
     }
 
     // ═══════════════════════════════════════════════════
-    // 3. SUPPLY COLLATERAL (credits.aleo)
+    // 2. SUPPLY COLLATERAL (credits.aleo)
     // ═══════════════════════════════════════════════════
 
     async transition supply_collateral(
@@ -110,7 +119,8 @@ program dara_lend_v1.aleo {
     ) -> (CollateralReceipt, Future) {
         assert(amount >= MIN_COLLATERAL);
 
-        let nonce_hash: field = BHP256::hash_to_field(nonce);
+        // Bind nonce to caller address to prevent grief attacks
+        let nonce_hash: field = BHP256::commit_to_field(nonce, self.signer);
 
         let receipt: CollateralReceipt = CollateralReceipt {
             owner: self.signer,
@@ -141,7 +151,7 @@ program dara_lend_v1.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 4. BORROW (receive USDCx against credit collateral)
+    // 3. BORROW (receive USDCx against credit collateral)
     // ═══════════════════════════════════════════════════
 
     async transition borrow(
@@ -158,10 +168,17 @@ program dara_lend_v1.aleo {
         let max_borrow: u128 = col_value * LTV_BPS / BPS;
         assert(borrow_amount <= max_borrow);
 
+        // Apply 0.5% origination fee — user receives less, owes full amount
+        let fee: u128 = borrow_amount * FEE_BPS / BPS;
+        let net_borrow: u128 = borrow_amount - fee;
+
         let liq_price_u128: u128 = borrow_amount * SCALE * BPS / (col_u128 * LIQ_BPS);
         let liquidation_price: u64 = liq_price_u128 as u64;
 
         let loan_id: field = BHP256::hash_to_field(collateral_record.nonce_hash);
+
+        // Hash borrower address to protect privacy in LiquidationAuth
+        let borrower_hash: field = BHP256::hash_to_field(self.signer);
 
         let debt: DebtPosition = DebtPosition {
             owner: self.signer,
@@ -177,16 +194,18 @@ program dara_lend_v1.aleo {
             collateral_amount: collateral_record.collateral_amount,
             debt_amount: borrow_amount,
             liquidation_price: liquidation_price,
-            borrower: self.signer,
+            borrower_hash: borrower_hash,
         };
 
+        // Transfer net amount (after fee) to borrower
         let borrow_future: Future =
-            test_usdcx_stablecoin.aleo/transfer_public(self.caller, borrow_amount);
+            test_usdcx_stablecoin.aleo/transfer_public(self.caller, net_borrow);
 
         return (debt, liq_auth, finalize_borrow(
             borrow_future,
             current_price,
             borrow_amount,
+            fee,
             loan_id,
         ));
     }
@@ -195,15 +214,27 @@ program dara_lend_v1.aleo {
         borrow_future: Future,
         current_price: u64,
         borrow_amount: u128,
+        fee: u128,
         loan_id: field,
     ) {
         borrow_future.await();
 
+        // Validate oracle price matches and is fresh
         let stored_price: u64 = Mapping::get(oracle_price, 0u8);
         assert_eq(current_price, stored_price);
 
+        let last_update: u32 = Mapping::get_or_use(price_update_block, 0u8, 0u32);
+        let price_age: u32 = block.height - last_update;
+        assert(price_age <= MAX_PRICE_AGE);
+
+        // Enforce max debt circuit breaker
         let current_borrowed: u128 = Mapping::get_or_use(total_borrowed, 0u8, 0u128);
+        assert(current_borrowed + borrow_amount <= MAX_TOTAL_BORROWED);
         Mapping::set(total_borrowed, 0u8, current_borrowed + borrow_amount);
+
+        // Track origination fees
+        let current_fees: u128 = Mapping::get_or_use(total_fees_collected, 0u8, 0u128);
+        Mapping::set(total_fees_collected, 0u8, current_fees + fee);
 
         let current_loans: u64 = Mapping::get_or_use(loan_count, 0u8, 0u64);
         Mapping::set(loan_count, 0u8, current_loans + 1u64);
@@ -213,7 +244,7 @@ program dara_lend_v1.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 5. REPAY (send USDCx back, receive credits collateral)
+    // 4. REPAY (send USDCx back, receive credits collateral)
     // ═══════════════════════════════════════════════════
 
     async transition repay(
@@ -268,7 +299,7 @@ program dara_lend_v1.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 6. LIQUIDATE
+    // 5. LIQUIDATE (with 5% bonus incentive)
     // ═══════════════════════════════════════════════════
 
     async transition liquidate(
@@ -277,21 +308,27 @@ program dara_lend_v1.aleo {
     ) -> (LiquidationReceipt, Future) {
         assert(current_oracle_price <= auth.liquidation_price);
 
+        // Calculate 5% liquidation bonus for the liquidator
+        let col_u128: u128 = auth.collateral_amount as u128;
+        let bonus_amount_u128: u128 = col_u128 * LIQUIDATION_BONUS_BPS / BPS;
+        let total_seize_u128: u128 = col_u128 + bonus_amount_u128;
+        let total_seize: u64 = total_seize_u128 as u64;
+
         let receipt: LiquidationReceipt = LiquidationReceipt {
             owner: self.signer,
             loan_id: auth.loan_id,
-            collateral_seized: auth.collateral_amount,
+            collateral_seized: total_seize,
             debt_covered: auth.debt_amount,
         };
 
         let seize_future: Future =
             credits.aleo/transfer_public(
-                self.caller, auth.collateral_amount);
+                self.caller, total_seize);
 
         return (receipt, finalize_liquidate(
             seize_future,
             current_oracle_price,
-            auth.collateral_amount,
+            total_seize,
             auth.debt_amount,
             auth.loan_id,
         ));
@@ -300,17 +337,22 @@ program dara_lend_v1.aleo {
     async function finalize_liquidate(
         seize_future: Future,
         current_oracle_price: u64,
-        collateral_amount: u64,
+        total_seize: u64,
         debt_amount: u128,
         loan_id: field,
     ) {
         seize_future.await();
 
+        // Validate oracle price matches and is fresh
         let stored_price: u64 = Mapping::get(oracle_price, 0u8);
         assert_eq(current_oracle_price, stored_price);
 
+        let last_update: u32 = Mapping::get_or_use(price_update_block, 0u8, 0u32);
+        let price_age: u32 = block.height - last_update;
+        assert(price_age <= MAX_PRICE_AGE);
+
         let current_collateral: u64 = Mapping::get(vault_total_collateral, 0u8);
-        Mapping::set(vault_total_collateral, 0u8, current_collateral - collateral_amount);
+        Mapping::set(vault_total_collateral, 0u8, current_collateral - total_seize);
 
         let current_borrowed: u128 = Mapping::get(total_borrowed, 0u8);
         Mapping::set(total_borrowed, 0u8, current_borrowed - debt_amount);
@@ -323,7 +365,7 @@ program dara_lend_v1.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 7. WITHDRAW COLLATERAL
+    // 6. WITHDRAW COLLATERAL
     // ═══════════════════════════════════════════════════
 
     async transition withdraw_collateral(

@@ -231,10 +231,10 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
               </div>
               <div>
                 <p className="text-[11px] text-text-muted uppercase tracking-wider mb-1">
-                  Borrower
+                  Borrower (hash)
                 </p>
                 <p className="font-mono text-[11px] text-text-secondary">
-                  {truncateAddress(auth.borrower, 8, 4)}
+                  {truncateAddress(auth.borrowerHash, 8, 4)}
                 </p>
               </div>
             </div>

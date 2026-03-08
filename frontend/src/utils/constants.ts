@@ -1,4 +1,4 @@
-export const PROGRAM_ID = 'dara_lend_v1.aleo';
+export const PROGRAM_ID = 'dara_lend_v2.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 
 export const ALEO_TESTNET_API = 'https://api.explorer.provable.com/v1/testnet';
@@ -27,9 +27,11 @@ export const MAPPINGS = {
   TOTAL_BORROWED: 'total_borrowed',
   LOAN_COUNT: 'loan_count',
   ORACLE_PRICE: 'oracle_price',
+  PRICE_UPDATE_BLOCK: 'price_update_block',
   USED_NONCES: 'used_nonces',
   PROTOCOL_ADMIN: 'protocol_admin',
   ACTIVE_LOANS: 'active_loans',
+  TOTAL_FEES_COLLECTED: 'total_fees_collected',
 } as const;
 
 export const TRANSITIONS = {

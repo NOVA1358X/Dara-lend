@@ -1,14 +1,27 @@
-import { getMappingValue, parseAleoU64 } from '../utils/aleoClient.js';
+import cron from 'node-cron';
+import { getMappingValue, parseAleoU64, getLatestBlockHeight } from '../utils/aleoClient.js';
 import { config } from '../utils/config.js';
 
-async function printProtocolStatus(): Promise<void> {
-  console.log('\n=== DARA Lend Protocol Status ===\n');
+const LTV_THRESHOLD = 75; // 75% — positions above this are eligible
+const PRECISION = config.precision;
 
-  const [collateralRaw, borrowedRaw, loansRaw, priceRaw] = await Promise.all([
+interface ProtocolSnapshot {
+  totalCollateral: number;
+  totalBorrowed: number;
+  loanCount: number;
+  oraclePrice: number;
+  blockHeight: number | null;
+  globalLtv: number;
+  isHealthy: boolean;
+}
+
+async function getProtocolSnapshot(): Promise<ProtocolSnapshot> {
+  const [collateralRaw, borrowedRaw, loansRaw, priceRaw, blockHeight] = await Promise.all([
     getMappingValue('vault_total_collateral'),
     getMappingValue('total_borrowed'),
     getMappingValue('loan_count'),
     getMappingValue('oracle_price'),
+    getLatestBlockHeight(),
   ]);
 
   const totalCollateral = parseAleoU64(collateralRaw);
@@ -16,33 +29,55 @@ async function printProtocolStatus(): Promise<void> {
   const loanCount = parseAleoU64(loansRaw);
   const oraclePrice = parseAleoU64(priceRaw);
 
-  console.log(`  Total Collateral: ${(totalCollateral / config.precision).toFixed(6)} ALEO`);
-  console.log(`  Total Borrowed:   ${(totalBorrowed / config.precision).toFixed(6)} ALEO`);
-  console.log(`  Active Loans:     ${loanCount}`);
-  console.log(`  Oracle Price:     $${(oraclePrice / config.precision).toFixed(4)}`);
+  const collateralValueUsd = oraclePrice > 0 ? (totalCollateral * oraclePrice) / PRECISION : 0;
+  const globalLtv = collateralValueUsd > 0 ? (totalBorrowed / collateralValueUsd) * 100 : 0;
 
-  const utilizationRate =
-    totalCollateral > 0
-      ? ((totalBorrowed / totalCollateral) * 100).toFixed(2)
-      : '0.00';
-  console.log(`  Utilization:      ${utilizationRate}%`);
-
-  const collRatio =
-    totalBorrowed > 0
-      ? ((totalCollateral / totalBorrowed) * 100).toFixed(2)
-      : 'N/A';
-  console.log(`  Collateral Ratio: ${collRatio}%`);
-
-  console.log('\n================================\n');
+  return {
+    totalCollateral,
+    totalBorrowed,
+    loanCount,
+    oraclePrice,
+    blockHeight,
+    globalLtv,
+    isHealthy: globalLtv < LTV_THRESHOLD,
+  };
 }
 
-async function main() {
+let lastSnapshot: ProtocolSnapshot | null = null;
+
+async function runMonitorCycle(): Promise<void> {
   try {
-    await printProtocolStatus();
+    const snapshot = await getProtocolSnapshot();
+    lastSnapshot = snapshot;
+
+    const collAleo = (snapshot.totalCollateral / PRECISION).toFixed(4);
+    const borrowUsd = (snapshot.totalBorrowed / PRECISION).toFixed(4);
+    const price = (snapshot.oraclePrice / PRECISION).toFixed(4);
+
+    console.log(
+      `[monitor] Block ${snapshot.blockHeight} | Collateral: ${collAleo} ALEO | Borrowed: ${borrowUsd} USDCx | Price: $${price} | LTV: ${snapshot.globalLtv.toFixed(2)}% | ${snapshot.isHealthy ? 'HEALTHY' : 'WARNING'}`,
+    );
+
+    if (!snapshot.isHealthy) {
+      console.warn(
+        `[monitor] ⚠ Global LTV ${snapshot.globalLtv.toFixed(2)}% exceeds ${LTV_THRESHOLD}% threshold — liquidation opportunities likely exist`,
+      );
+    }
   } catch (err) {
-    console.error('Error:', err);
-    process.exit(1);
+    console.error('[monitor] Monitoring cycle failed:', err);
   }
 }
 
-main();
+export function getMonitorStatus() {
+  return lastSnapshot;
+}
+
+export function startLiquidationMonitor(): void {
+  console.log('[monitor] Starting liquidation monitor (every 2 minutes)');
+
+  runMonitorCycle();
+
+  cron.schedule('*/2 * * * *', () => {
+    runMonitorCycle();
+  });
+}
