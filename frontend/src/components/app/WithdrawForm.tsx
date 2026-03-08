@@ -32,6 +32,16 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
   const { withdrawCollateral, resetTransaction } = useTransaction(wallet);
   const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
 
+  const handleDismiss = (idx: number) => {
+    const receipt = collateralReceipts[idx];
+    if (!receipt) return;
+    const commitment = (receipt.raw.commitment as string) || '';
+    if (commitment) {
+      markRecordConsumed(commitment);
+      refetch();
+    }
+  };
+
   if (!wallet.connected) {
     return (
       <EmptyState
@@ -161,6 +171,12 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
             className="w-full py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
           >
             {transactionPending && selectedIdx === idx ? 'Processing...' : 'Withdraw Collateral'}
+          </button>
+          <button
+            onClick={() => handleDismiss(idx)}
+            className="w-full mt-2 py-2 text-xs text-text-muted hover:text-accent-danger transition-colors text-center"
+          >
+            Already withdrawn? Hide this record
           </button>
         </motion.div>
       ))}

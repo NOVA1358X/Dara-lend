@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { PROGRAM_ID, CREDITS_PROGRAM, ALEO_TESTNET_API } from '@/utils/constants';
-import { parseRecord, DaraRecord, filterRecordsByType, CollateralReceiptRecord, DebtPositionRecord, RepaymentReceiptRecord, LiquidationAuthRecord, LiquidationReceiptRecord } from '@/utils/records';
+import { PROGRAM_ID, CREDITS_PROGRAM } from '@/utils/constants';
+import { parseRecord, DaraRecord, filterRecordsByType, getConsumedSet, CollateralReceiptRecord, DebtPositionRecord, RepaymentReceiptRecord, LiquidationAuthRecord, LiquidationReceiptRecord } from '@/utils/records';
 
 interface WalletHook {
   requestRecords?: (program: string, includePlaintext?: boolean) => Promise<unknown[]>;
@@ -22,21 +22,6 @@ async function tryDecryptRecord(
     return await decrypt(ciphertext);
   } catch {
     return null;
-  }
-}
-
-/**
- * Check if a record is actually spent on-chain by verifying its serial number (tag).
- * The Aleo API returns a transition ID if the serial number has been consumed.
- */
-async function isRecordSpentOnChain(tag: string): Promise<boolean> {
-  if (!tag) return false;
-  try {
-    const res = await fetch(`${ALEO_TESTNET_API}/find/transitionID/${tag.trim()}`);
-    // If the API returns 200, the serial number was consumed → record is spent
-    return res.ok;
-  } catch {
-    return false;
   }
 }
 
@@ -77,13 +62,14 @@ export function useWalletRecords(wallet: WalletHook) {
           if (record) parsed.push(record);
         }
 
-        // Verify spent status on-chain for records the wallet says are unspent.
-        // Some wallets don't update the spent flag promptly after transactions.
+        // Mark records as spent if they're in our consumed set (localStorage)
+        const consumed = getConsumedSet();
         for (const record of parsed) {
           if (!record.spent) {
-            const tag = record.raw.tag as string | undefined;
-            if (tag && await isRecordSpentOnChain(tag)) {
+            const commitment = (record.raw.commitment as string) || '';
+            if (commitment && consumed.has(commitment)) {
               record.spent = true;
+              console.log('[DARA] Marking record as consumed (localStorage):', commitment.slice(0, 20) + '...');
             }
           }
         }

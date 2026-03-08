@@ -273,9 +273,9 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
 
 const CONSUMED_KEY = 'dara_consumed_records';
 
-function getConsumedSet(): Set<string> {
+export function getConsumedSet(): Set<string> {
   try {
-    const raw = sessionStorage.getItem(CONSUMED_KEY);
+    const raw = localStorage.getItem(CONSUMED_KEY);
     return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
   } catch {
     return new Set();
@@ -285,7 +285,8 @@ function getConsumedSet(): Set<string> {
 export function markRecordConsumed(commitment: string): void {
   const set = getConsumedSet();
   set.add(commitment);
-  sessionStorage.setItem(CONSUMED_KEY, JSON.stringify([...set]));
+  localStorage.setItem(CONSUMED_KEY, JSON.stringify([...set]));
+  console.log('[DARA] Marked record consumed:', commitment.slice(0, 20) + '...');
 }
 
 function getRecordCommitment(record: DaraRecord): string {
