@@ -27,9 +27,13 @@ export function RepayForm({ wallet }: RepayFormProps) {
   const navigate = useNavigate();
   const [selectedLoanIdx, setSelectedLoanIdx] = useState<number | null>(null);
   const [repayStep, setRepayStep] = useState<'idle' | 'approving' | 'repaying'>('idle');
+  const [repaidLoanIds, setRepaidLoanIds] = useState<Set<string>>(new Set());
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { repay, approveUSDCx, resetTransaction } = useTransaction(wallet);
-  const { debtPositions, isLoading, refetch } = useWalletRecords(wallet);
+  const { debtPositions: allDebts, isLoading, refetch } = useWalletRecords(wallet);
+
+  // Filter out records that were just repaid (wallet may not mark spent immediately)
+  const debtPositions = allDebts.filter(d => !repaidLoanIds.has(d.loanId));
 
   if (!wallet.connected) {
     return (
@@ -82,7 +86,9 @@ export function RepayForm({ wallet }: RepayFormProps) {
       const repayTxId = await repay(debtRecord);
       setRepayStep('idle');
       if (repayTxId) {
-        setTimeout(() => refetch(), 3000);
+        // Immediately hide the repaid debt from UI
+        setRepaidLoanIds(prev => new Set(prev).add(debt.loanId));
+        setTimeout(() => refetch(), 5000);
       }
     } catch (err) {
       setRepayStep('idle');

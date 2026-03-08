@@ -27,9 +27,13 @@ interface WithdrawFormProps {
 export function WithdrawForm({ wallet }: WithdrawFormProps) {
   const navigate = useNavigate();
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [withdrawnHashes, setWithdrawnHashes] = useState<Set<string>>(new Set());
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { withdrawCollateral, resetTransaction } = useTransaction(wallet);
-  const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
+  const { collateralReceipts: allReceipts, isLoading, refetch } = useWalletRecords(wallet);
+
+  // Filter out records that were just withdrawn (wallet may not mark spent immediately)
+  const collateralReceipts = allReceipts.filter(r => !withdrawnHashes.has(r.nonceHash));
 
   if (!wallet.connected) {
     return (
@@ -71,8 +75,9 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
     try {
       const txId = await withdrawCollateral(recordPlaintext);
       if (txId) {
-        // Refetch records so the spent record disappears from the UI
-        setTimeout(() => refetch(), 3000);
+        // Immediately hide the withdrawn record from UI
+        setWithdrawnHashes(prev => new Set(prev).add(receipt.nonceHash));
+        setTimeout(() => refetch(), 5000);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Withdraw failed';
