@@ -5,6 +5,7 @@ import { useTransaction } from '@/hooks/useTransaction';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, truncateAddress } from '@/utils/formatting';
+import { markRecordConsumed } from '@/utils/records';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -27,13 +28,9 @@ interface WithdrawFormProps {
 export function WithdrawForm({ wallet }: WithdrawFormProps) {
   const navigate = useNavigate();
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [withdrawnHashes, setWithdrawnHashes] = useState<Set<string>>(new Set());
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { withdrawCollateral, resetTransaction } = useTransaction(wallet);
-  const { collateralReceipts: allReceipts, isLoading, refetch } = useWalletRecords(wallet);
-
-  // Filter out records that were just withdrawn (wallet may not mark spent immediately)
-  const collateralReceipts = allReceipts.filter(r => !withdrawnHashes.has(r.nonceHash));
+  const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
     return (
@@ -75,9 +72,10 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
     try {
       const txId = await withdrawCollateral(recordPlaintext);
       if (txId) {
-        // Immediately hide the withdrawn record from UI
-        setWithdrawnHashes(prev => new Set(prev).add(receipt.nonceHash));
-        setTimeout(() => refetch(), 5000);
+        // Mark record as consumed so it stays hidden even across navigation
+        const commitment = (receipt.raw.commitment as string) || (receipt.raw.tag as string) || '';
+        if (commitment) markRecordConsumed(commitment);
+        refetch();
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Withdraw failed';

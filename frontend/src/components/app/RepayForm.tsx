@@ -5,6 +5,7 @@ import { useTransaction } from '@/hooks/useTransaction';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, truncateAddress, calculateHealthFactor } from '@/utils/formatting';
+import { markRecordConsumed } from '@/utils/records';
 import { PRECISION } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -27,13 +28,9 @@ export function RepayForm({ wallet }: RepayFormProps) {
   const navigate = useNavigate();
   const [selectedLoanIdx, setSelectedLoanIdx] = useState<number | null>(null);
   const [repayStep, setRepayStep] = useState<'idle' | 'approving' | 'repaying'>('idle');
-  const [repaidLoanIds, setRepaidLoanIds] = useState<Set<string>>(new Set());
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { repay, approveUSDCx, resetTransaction } = useTransaction(wallet);
-  const { debtPositions: allDebts, isLoading, refetch } = useWalletRecords(wallet);
-
-  // Filter out records that were just repaid (wallet may not mark spent immediately)
-  const debtPositions = allDebts.filter(d => !repaidLoanIds.has(d.loanId));
+  const { debtPositions, isLoading, refetch } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
     return (
@@ -86,9 +83,10 @@ export function RepayForm({ wallet }: RepayFormProps) {
       const repayTxId = await repay(debtRecord);
       setRepayStep('idle');
       if (repayTxId) {
-        // Immediately hide the repaid debt from UI
-        setRepaidLoanIds(prev => new Set(prev).add(debt.loanId));
-        setTimeout(() => refetch(), 5000);
+        // Mark record as consumed so it stays hidden even across navigation
+        const commitment = (debt.raw.commitment as string) || (debt.raw.tag as string) || '';
+        if (commitment) markRecordConsumed(commitment);
+        refetch();
       }
     } catch (err) {
       setRepayStep('idle');

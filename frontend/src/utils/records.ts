@@ -271,9 +271,36 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
   }
 }
 
+const CONSUMED_KEY = 'dara_consumed_records';
+
+function getConsumedSet(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(CONSUMED_KEY);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function markRecordConsumed(commitment: string): void {
+  const set = getConsumedSet();
+  set.add(commitment);
+  sessionStorage.setItem(CONSUMED_KEY, JSON.stringify([...set]));
+}
+
+function getRecordCommitment(record: DaraRecord): string {
+  const raw = record.raw;
+  return (raw.commitment as string) || (raw.tag as string) || '';
+}
+
 export function filterRecordsByType<T extends DaraRecord>(
   records: DaraRecord[],
   type: string,
 ): T[] {
-  return records.filter((r) => r.type === type && !r.spent) as T[];
+  const consumed = getConsumedSet();
+  return records.filter((r) => {
+    if (r.type !== type || r.spent) return false;
+    const id = getRecordCommitment(r);
+    return !id || !consumed.has(id);
+  }) as T[];
 }
