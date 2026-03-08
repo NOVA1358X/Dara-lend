@@ -117,6 +117,58 @@ export function useTransaction(wallet: WalletExecute) {
     [executeTransaction],
   );
 
+  /** Approve the lending protocol to spend USDCx (required before repay) */
+  const approveUSDCx = useCallback(
+    async (amount: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+
+        const tx = createAleoTransaction(
+          USDCX_PROGRAM,
+          'approve_public',
+          [PROTOCOL_ADDRESS, `${amount}u128`],
+          TX_FEE,
+        );
+
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Approval transaction submitted');
+
+        const confirmed = await pollTransactionStatus(txId, wallet);
+        if (confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('USDCx spending approved!');
+        } else if (confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Approval rejected on-chain.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Approval broadcast. Check explorer: ${txId}`);
+        }
+
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        const message = error instanceof Error ? error.message : 'Approval failed';
+        toast.error(message);
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
   const liquidate = useCallback(
     async (authRecord: string, oraclePrice: number) => {
       return executeTransaction(TRANSITIONS.LIQUIDATE, [
@@ -200,6 +252,7 @@ export function useTransaction(wallet: WalletExecute) {
     supplyCollateral,
     borrow,
     repay,
+    approveUSDCx,
     liquidate,
     withdrawCollateral,
     updateOraclePrice,

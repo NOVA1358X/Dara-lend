@@ -25,8 +25,9 @@ interface RepayFormProps {
 export function RepayForm({ wallet }: RepayFormProps) {
   const navigate = useNavigate();
   const [selectedLoanIdx, setSelectedLoanIdx] = useState<number | null>(null);
+  const [repayStep, setRepayStep] = useState<'idle' | 'approving' | 'repaying'>('idle');
   const { transactionStep, transactionId, transactionPending } = useAppStore();
-  const { repay, resetTransaction } = useTransaction(wallet);
+  const { repay, approveUSDCx, resetTransaction } = useTransaction(wallet);
   const { debtPositions, isLoading } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
@@ -54,12 +55,23 @@ export function RepayForm({ wallet }: RepayFormProps) {
     if (!debt) return;
 
     setSelectedLoanIdx(idx);
-    // Pass the record plaintext string — Shield expects string inputs
     const debtRecord = debt.plaintext || '';
 
     try {
+      // Step 1: Approve USDCx spending
+      setRepayStep('approving');
+      const approveTxId = await approveUSDCx(debt.debtAmount);
+      if (!approveTxId) {
+        setRepayStep('idle');
+        return;
+      }
+
+      // Step 2: Execute repay
+      setRepayStep('repaying');
       await repay(debtRecord);
+      setRepayStep('idle');
     } catch (err) {
+      setRepayStep('idle');
       const message = err instanceof Error ? err.message : 'Repay failed';
       toast.error(message);
     }
@@ -156,7 +168,11 @@ export function RepayForm({ wallet }: RepayFormProps) {
               disabled={transactionPending}
               className="w-full py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
             >
-              {transactionPending && selectedLoanIdx === idx ? 'Processing...' : 'Repay Full Amount'}
+              {transactionPending && selectedLoanIdx === idx
+                ? repayStep === 'approving'
+                  ? 'Step 1/2: Approving USDCx...'
+                  : 'Step 2/2: Repaying...'
+                : 'Repay Full Amount'}
             </button>
           </motion.div>
         );
