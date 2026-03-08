@@ -134,6 +134,15 @@ export function useTransaction(wallet: WalletExecute) {
     [executeTransaction],
   );
 
+  const updateOraclePrice = useCallback(
+    async (priceMicro: number) => {
+      return executeTransaction(TRANSITIONS.UPDATE_ORACLE_PRICE, [
+        microCreditsToInput(priceMicro),
+      ]);
+    },
+    [executeTransaction],
+  );
+
   /** Transfer USDCx from user to the lending protocol address */
   const fundProtocol = useCallback(
     async (amountMicro: number) => {
@@ -193,6 +202,7 @@ export function useTransaction(wallet: WalletExecute) {
     repay,
     liquidate,
     withdrawCollateral,
+    updateOraclePrice,
     fundProtocol,
     resetTransaction,
   };

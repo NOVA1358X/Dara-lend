@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useProtocolStats } from '@/hooks/useProtocolStats';
+import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { formatCredits, calculateHealthFactor } from '@/utils/formatting';
 import { PRECISION } from '@/utils/constants';
@@ -43,6 +44,7 @@ const quickActions = [
 
 export function Dashboard({ wallet }: DashboardProps) {
   const { data: stats, isLoading: statsLoading } = useProtocolStats();
+  const { price: marketPrice } = useMarketPrice();
   const { collateralReceipts, debtPositions, isLoading: recordsLoading } =
     useWalletRecords(wallet);
 
@@ -130,13 +132,11 @@ export function Dashboard({ wallet }: DashboardProps) {
             loading={statsLoading}
           />
           <StatCard
-            label="Utilization Rate"
+            label="ALEO Price"
             value={
-              stats
-                ? `${(stats.utilizationRate * 100).toFixed(1)}%`
-                : '—'
+              marketPrice ? `$${marketPrice.toFixed(4)}` : '—'
             }
-            loading={statsLoading}
+            loading={false}
           />
         </div>
       </div>

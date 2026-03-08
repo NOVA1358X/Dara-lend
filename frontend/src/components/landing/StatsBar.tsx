@@ -1,4 +1,5 @@
 import { useProtocolStats } from '@/hooks/useProtocolStats';
+import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { formatCredits } from '@/utils/formatting';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion';
 
 export function StatsBar() {
   const { data: stats, isLoading } = useProtocolStats();
+  const { price: marketPrice } = useMarketPrice();
   const { ref, inView } = useScrollReveal({ threshold: 0.3 });
 
   const statItems = [
@@ -32,10 +34,11 @@ export function StatsBar() {
       tooltip: 'All positions encrypted by default',
     },
     {
-      label: 'Oracle Price',
-      value: stats?.oraclePrice ? (stats.oraclePrice / 1_000_000).toFixed(2) : null,
+      label: 'ALEO Price',
+      value: marketPrice ? marketPrice.toFixed(4) : null,
       suffix: ' USD',
-      numericValue: stats?.oraclePrice ? stats.oraclePrice / 1_000_000 : 0,
+      numericValue: marketPrice ?? 0,
+      decimals: 4,
     },
   ];
 
