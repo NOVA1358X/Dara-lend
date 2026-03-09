@@ -59,20 +59,21 @@ export function useTransaction(wallet: WalletExecute) {
 
         toast.success('Transaction submitted');
 
-        const confirmed = await pollTransactionStatus(txId, wallet);
-        if (confirmed === true) {
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        const historyTxId = pollResult.realTxId || txId;
+        if (pollResult.confirmed === true) {
           setTransactionStep('confirmed');
           toast.success('Transaction confirmed on-chain!');
-          saveTxToHistory({ type: functionName, txId, timestamp: Date.now(), status: 'confirmed' });
-        } else if (confirmed === false) {
+          saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'confirmed' });
+        } else if (pollResult.confirmed === false) {
           setTransactionStep('failed');
           toast.error('Transaction rejected on-chain. Check if the protocol has sufficient USDCx liquidity.');
-          saveTxToHistory({ type: functionName, txId, timestamp: Date.now(), status: 'failed' });
+          saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'failed' });
         } else {
           // null = polling timed out, transaction may still be processing
           setTransactionStep('confirmed');
-          toast.success(`Transaction broadcast. Check explorer: ${txId}`);
-          saveTxToHistory({ type: functionName, txId, timestamp: Date.now(), status: 'pending' });
+          toast.success(`Transaction broadcast. Check explorer: ${historyTxId}`);
+          saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'pending' });
         }
 
         setTransactionPending(false);
@@ -150,11 +151,11 @@ export function useTransaction(wallet: WalletExecute) {
         setTransactionStep('broadcasting');
         toast.success('Approval transaction submitted');
 
-        const confirmed = await pollTransactionStatus(txId, wallet);
-        if (confirmed === true) {
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
           setTransactionStep('confirmed');
           toast.success('USDCx spending approved!');
-        } else if (confirmed === false) {
+        } else if (pollResult.confirmed === false) {
           setTransactionStep('failed');
           toast.error('Approval rejected on-chain.');
         } else {
@@ -229,11 +230,11 @@ export function useTransaction(wallet: WalletExecute) {
         setTransactionStep('broadcasting');
         toast.success('Converting credits to private record...');
 
-        const confirmed = await pollTransactionStatus(txId, wallet);
-        if (confirmed === true) {
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
           setTransactionStep('confirmed');
           toast.success('Credits converted to private record!');
-        } else if (confirmed === false) {
+        } else if (pollResult.confirmed === false) {
           setTransactionStep('failed');
           toast.error('Conversion failed on-chain.');
         } else {
@@ -281,11 +282,11 @@ export function useTransaction(wallet: WalletExecute) {
         setTransactionStep('broadcasting');
         toast.success('Fund protocol transaction submitted');
 
-        const confirmed = await pollTransactionStatus(txId, wallet);
-        if (confirmed === true) {
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
           setTransactionStep('confirmed');
           toast.success('Protocol funded with USDCx!');
-        } else if (confirmed === false) {
+        } else if (pollResult.confirmed === false) {
           setTransactionStep('failed');
           toast.error('Fund transaction rejected. Check your USDCx balance.');
         } else {
@@ -321,12 +322,17 @@ export function useTransaction(wallet: WalletExecute) {
   };
 }
 
+interface PollResult {
+  confirmed: boolean | null;
+  realTxId?: string;
+}
+
 async function pollTransactionStatus(
   txId: string,
   wallet: WalletExecute,
   maxAttempts = 60,
   interval = 5000,
-): Promise<boolean | null> {
+): Promise<PollResult> {
   // Also try the public API as a fallback
   const apiBase = 'https://api.explorer.provable.com/v1/testnet';
 
@@ -338,12 +344,16 @@ async function pollTransactionStatus(
       try {
         const response = await wallet.transactionStatus(txId);
         const status = (response.status || '').toLowerCase();
-        console.log(`[DARA] Poll ${i + 1}/${maxAttempts} wallet status: ${status}`);
+        // Extract real Aleo transaction ID from wallet response
+        const resp = response as Record<string, unknown>;
+        const realId = (resp.transactionId ?? resp.transaction_id ?? resp.id ?? '') as string;
+        const realTxId = (typeof realId === 'string' && realId.startsWith('at1')) ? realId : undefined;
+        console.log(`[DARA] Poll ${i + 1}/${maxAttempts} wallet status: ${status}${realTxId ? ` realTxId: ${realTxId}` : ''}`);
         if (status === 'finalized' || status === 'accepted' || status === 'confirmed' || status === 'completed') {
-          return true;
+          return { confirmed: true, realTxId };
         }
         if (status === 'failed' || status === 'rejected') {
-          return false;
+          return { confirmed: false, realTxId };
         }
       } catch {
         // Wallet status check failed, try API
@@ -357,14 +367,15 @@ async function pollTransactionStatus(
       if (res.ok) {
         const data = await res.json();
         const txType = data?.type;
+        const realTxId = (typeof data?.id === 'string' && data.id.startsWith('at1')) ? data.id : undefined;
         console.log(`[DARA] Poll ${i + 1}/${maxAttempts} API type: ${txType}`);
-        if (txType === 'execute' || txType === 'accepted') return true;
-        if (txType === 'rejected') return false;
+        if (txType === 'execute' || txType === 'accepted') return { confirmed: true, realTxId };
+        if (txType === 'rejected') return { confirmed: false, realTxId };
       }
     } catch {
       // API check failed, continue polling
     }
   }
   // Timed out — transaction status unknown
-  return null;
+  return { confirmed: null };
 }
