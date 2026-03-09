@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
-const COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=aleo&vs_currencies=usd';
+// Proxied through backend to avoid CORS issues
+const PRICE_API_URL = '/api/price';
 const REFRESH_INTERVAL = 30_000; // 30 seconds
 
 interface MarketPriceResult {
@@ -21,10 +22,10 @@ function notifyListeners() {
 
 async function fetchPrice() {
   try {
-    const res = await fetch(COINGECKO_URL);
+    const res = await fetch(PRICE_API_URL);
     if (res.ok) {
       const data = await res.json();
-      const p = data?.aleo?.usd;
+      const p = data?.price;
       if (typeof p === 'number' && p > 0) {
         cachedPrice = p;
         cachedAt = new Date();

@@ -117,6 +117,15 @@ export function startPriceUpdater(): void {
     return;
   }
 
+  if (!config.provableApiKey) {
+    console.warn(
+      '[oracle] PROVABLE_API_KEY not set — oracle updater disabled. ' +
+      'Local WASM proving hangs for programs with 4+ imports. ' +
+      'Set PROVABLE_API_KEY and PROVABLE_CONSUMER_ID in .env to enable automatic oracle updates.',
+    );
+    return;
+  }
+
   console.log(
     `[oracle] Starting price updater (cron: ${config.oracleUpdateCron})`,
   );

@@ -55,15 +55,11 @@ export async function executeTransition(
     return txId;
   }
 
-  // Local proving path — first run synthesizes keys (slow), subsequent runs use cache
-  console.log(`[tx] Using local proving for ${transition} (keys will be cached after first run)`);
-  const txId = await pm.execute({
-    programName: config.programId,
-    functionName: transition,
-    inputs,
-    priorityFee: 0.5,
-    privateFee: false,
-  });
-  if (!txId) throw new Error('Transaction returned no ID');
-  return txId;
+  // Local WASM proving is not viable for dara_lend_v3.aleo — it has 5 imported
+  // programs which causes WASM key synthesis to hang indefinitely.
+  // Require PROVABLE_API_KEY and PROVABLE_CONSUMER_ID in .env for delegated proving.
+  throw new Error(
+    'Local proving is not supported for programs with 4+ imports (WASM hang). ' +
+    'Set PROVABLE_API_KEY and PROVABLE_CONSUMER_ID in .env to use delegated proving.',
+  );
 }

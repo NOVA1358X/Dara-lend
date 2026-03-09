@@ -77,12 +77,18 @@ export function useWalletRecords(wallet: WalletHook) {
         console.log('[DARA] Parsed records:', parsed);
         return parsed;
       } catch (e) {
-        console.error('[DARA] Error fetching records:', e);
+        const msg = (e as Error)?.message || String(e);
+        if (msg.includes('not allowed') || msg.includes('not authorized')) {
+          // Wallet hasn't synced the program yet — this is expected right after deploy
+          console.warn('[DARA] Wallet has not synced program records yet. This is normal for newly deployed programs — try disconnecting and reconnecting your wallet.');
+        } else {
+          console.error('[DARA] Error fetching records:', e);
+        }
         return [];
       }
     },
     enabled: wallet.connected,
-    refetchInterval: 15_000,
+    refetchInterval: 30_000, // slower poll to reduce noise when program isn't synced
     staleTime: 5_000,
     retry: false,
     refetchOnWindowFocus: false,

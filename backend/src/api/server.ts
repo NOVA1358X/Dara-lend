@@ -4,6 +4,7 @@ import statsRouter from './routes/stats.js';
 import solvencyRouter from './routes/solvency.js';
 import healthRouter from './routes/health.js';
 import transactionRouter from './routes/transaction.js';
+import priceRouter from './routes/price.js';
 
 export function createServer() {
   const app = express();
@@ -15,6 +16,7 @@ export function createServer() {
   app.use('/api/solvency', solvencyRouter);
   app.use('/api/health', healthRouter);
   app.use('/api/transaction', transactionRouter);
+  app.use('/api/price', priceRouter);
 
   app.get('/', (_req, res) => {
     res.json({
