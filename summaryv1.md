@@ -4,9 +4,9 @@
 
 **DARA Lend** is a privacy-preserving decentralized lending protocol on Aleo. Users supply ALEO credits as collateral and borrow USDCx stablecoin — all positions are encrypted as private records on-chain. Public mappings track only aggregate totals (TVL, total borrowed, loan count) so anyone can verify protocol solvency without seeing individual positions.
 
-- **Contract**: `dara_lend_v3.aleo` — deployed on Aleo Testnet (v3: end-to-end private token transfers)
-- **TX ID**: `at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl`
-- **Explorer**: https://testnet.explorer.provable.com/program/dara_lend_v3.aleo
+- **Contract**: `dara_lend_v4.aleo` — deployed on Aleo Testnet (v4: hardened oracle with multi-source aggregation)
+- **TX ID**: `at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc`
+- **Explorer**: https://testnet.explorer.provable.com/program/dara_lend_v4.aleo
 - **GitHub**: https://github.com/NOVA1358X/Dara-lend
 - **Total Files**: 103 source files (contract + frontend + backend) — 8 new files added in Phases 4+6+7+8
 - **Total Lines Changed**: ~3,200 insertions, ~600 deletions across ~50 files (post-initial commit)
@@ -40,7 +40,7 @@
 
 ---
 
-## Smart Contract — `dara_lend_v3.aleo`
+## Smart Contract — `dara_lend_v4.aleo`
 
 ### External Dependencies
 - `credits.aleo` — native ALEO credits (collateral)
@@ -591,8 +591,8 @@ DARA Lend v3 uses private token transfer functions throughout the protocol:
 
 | Constant | Value |
 |----------|-------|
-| PROGRAM_ID | `dara_lend_v3.aleo` |
-| PROTOCOL_ADDRESS | `aleo1qg44nuy7y9pshqcapw67w8mcye23s3mh7dl2ze8lw9m9yg0fqvzs2f94nn` |
+| PROGRAM_ID | `dara_lend_v4.aleo` |
+| PROTOCOL_ADDRESS | `aleo10x8masftnd0l62h96crjrvv68h5qslkzer4ud3nnv9c9ksn3g5qqucf8d0` |
 | ADMIN_ADDRESS | `aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8` |
 | USDCX_PROGRAM | `test_usdcx_stablecoin.aleo` |
 | CREDITS_PROGRAM | `credits.aleo` |
@@ -613,8 +613,9 @@ DARA Lend v3 uses private token transfer functions throughout the protocol:
 
 | Item | Value |
 |------|-------|
-| Program | dara_lend_v3.aleo |
+| Program | dara_lend_v4.aleo |
 | Network | Aleo Testnet |
+| Deploy TX (v4) | at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc |
 | Deploy TX (v3) | at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl |
 | Deploy TX (v2) | at10vx3736ggtx9v2g436pxeyvgpg3knfg38lfd96jc022eju6ktyxsd6jzzs |
 | Deploy TX (v1) | at1chdltvfp6xrfh5x5ypn3ahw898knvhp9wclqrwmtv2556zwzsggq227v8m |

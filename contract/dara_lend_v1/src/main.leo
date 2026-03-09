@@ -1,7 +1,7 @@
 import credits.aleo;
 import test_usdcx_stablecoin.aleo;
 
-program dara_lend_v3.aleo {
+program dara_lend_v4.aleo {
 
     // ═══════════════════════════════════════════════════
     // CONSTANTS
@@ -16,6 +16,8 @@ program dara_lend_v3.aleo {
     const LIQUIDATION_BONUS_BPS: u128 = 500u128;          // 5% liquidation incentive
     const MAX_TOTAL_BORROWED: u128 = 100_000_000_000u128; // 100 000 USDCx cap
     const MAX_PRICE_AGE: u32 = 100u32;                    // ~5 min staleness window
+    const MAX_PRICE_DEVIATION_BPS: u64 = 1_500u64;        // reject >15% change per update
+    const MIN_UPDATE_INTERVAL: u32 = 5u32;                // min blocks between updates
 
     // ═══════════════════════════════════════════════════
     // RECORDS
@@ -72,6 +74,8 @@ program dara_lend_v3.aleo {
     mapping protocol_admin: u8 => address;
     mapping active_loans: field => bool;
     mapping total_fees_collected: u8 => u128;
+    mapping price_round: u8 => u64;
+    mapping price_history: u8 => u64;
 
     // ═══════════════════════════════════════════════════
     // CONSTRUCTOR (runs at deployment)
@@ -86,27 +90,63 @@ program dara_lend_v3.aleo {
         Mapping::set(total_borrowed, 0u8, 0u128);
         Mapping::set(loan_count, 0u8, 0u64);
         Mapping::set(total_fees_collected, 0u8, 0u128);
+        Mapping::set(price_round, 0u8, 0u64);
+        Mapping::set(price_history, 0u8, 1_000_000u64);
     }
 
     // ═══════════════════════════════════════════════════
     // 1. UPDATE ORACLE PRICE
+    //    Round-based replay protection, deviation cap,
+    //    and minimum interval between updates
     // ═══════════════════════════════════════════════════
 
     async transition update_oracle_price(
         new_price: u64,
+        round: u64,
     ) -> Future {
         assert(new_price > 0u64);
-        return finalize_update_oracle_price(self.caller, new_price);
+        assert(round > 0u64);
+        return finalize_update_oracle_price(self.caller, new_price, round);
     }
 
     async function finalize_update_oracle_price(
         caller: address,
         new_price: u64,
+        round: u64,
     ) {
+        // 1. Admin check
         let admin: address = Mapping::get(protocol_admin, 0u8);
         assert_eq(caller, admin);
+
+        // 2. Round must be strictly increasing (replay protection)
+        let current_round: u64 = Mapping::get_or_use(price_round, 0u8, 0u64);
+        assert(round > current_round);
+
+        // 3. Minimum interval between updates
+        let last_update: u32 = Mapping::get_or_use(price_update_block, 0u8, 0u32);
+        let elapsed: u32 = block.height - last_update;
+        // Skip interval check on first update (last_update == 0)
+        let interval_ok: bool = last_update == 0u32 || elapsed >= MIN_UPDATE_INTERVAL;
+        assert(interval_ok);
+
+        // 4. Deviation cap — reject if price changed >15% from previous
+        let old_price: u64 = Mapping::get_or_use(price_history, 0u8, new_price);
+        // Safe subtraction: cap values to avoid underflow
+        let higher: u64 = new_price >= old_price ? new_price : old_price;
+        let lower: u64 = new_price < old_price ? new_price : old_price;
+        let diff: u64 = higher - lower;
+        // diff * 10000 / old_price <= MAX_PRICE_DEVIATION_BPS
+        // Skip deviation check on first real update (old_price == initial default)
+        let deviation_bps: u64 = old_price > 0u64 ? diff * 10_000u64 / old_price : 0u64;
+        // Allow first update (current_round == 0) to skip deviation check
+        let deviation_ok: bool = current_round == 0u64 || deviation_bps <= MAX_PRICE_DEVIATION_BPS;
+        assert(deviation_ok);
+
+        // 5. Update all mappings
         Mapping::set(oracle_price, 0u8, new_price);
         Mapping::set(price_update_block, 0u8, block.height);
+        Mapping::set(price_round, 0u8, round);
+        Mapping::set(price_history, 0u8, new_price);
     }
 
     // ═══════════════════════════════════════════════════

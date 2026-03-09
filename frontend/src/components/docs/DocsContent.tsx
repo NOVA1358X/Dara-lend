@@ -273,11 +273,11 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
         <p className="text-text-secondary leading-relaxed mb-4">
           The DARA Lend protocol is powered by a single Leo program deployed at{' '}
           <a
-            href="https://testnet.explorer.provable.com/program/dara_lend_v3.aleo"
+            href="https://testnet.explorer.provable.com/program/dara_lend_v4.aleo"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-accent hover:underline"
-          >dara_lend_v3.aleo</a>. The contract
+          >dara_lend_v4.aleo</a>. The contract
           manages all lending operations using Aleo&apos;s native encryption.
         </p>
 

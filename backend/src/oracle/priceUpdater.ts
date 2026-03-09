@@ -2,49 +2,11 @@ import cron from 'node-cron';
 import { config } from '../utils/config.js';
 import { getMappingValue, parseAleoU64 } from '../utils/aleoClient.js';
 import { executeTransition } from '../utils/transactionBuilder.js';
+import { aggregatePrices, type AggregatedPrice, type Confidence } from './aggregator.js';
+import { validatePrice } from './validator.js';
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 2000;
-
-async function fetchFromCoinGecko(): Promise<number> {
-  const url = `${config.coingeckoApiUrl}/simple/price?ids=aleo&vs_currencies=usd`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`CoinGecko API error: ${res.status}`);
-  const data = (await res.json()) as { aleo?: { usd?: number } };
-  const price = data?.aleo?.usd;
-  if (!price) throw new Error('ALEO price not available from CoinGecko');
-  return price;
-}
-
-async function fetchFromCryptoCompare(): Promise<number> {
-  const res = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ALEO&tsyms=USD');
-  if (!res.ok) throw new Error(`CryptoCompare API error: ${res.status}`);
-  const data = (await res.json()) as { USD?: number };
-  const price = data?.USD;
-  if (!price) throw new Error('ALEO price not available from CryptoCompare');
-  return price;
-}
-
-let lastFetchedPrice = 0;
-
-async function fetchAleoPrice(): Promise<number> {
-  // Try CoinGecko first, fall back to CryptoCompare
-  for (const fetcher of [fetchFromCoinGecko, fetchFromCryptoCompare]) {
-    try {
-      const price = await fetcher();
-      lastFetchedPrice = price;
-      return price;
-    } catch (err) {
-      console.warn(`[oracle] ${fetcher.name} failed: ${(err as Error).message}`);
-    }
-  }
-  // If all APIs fail but we have a cached price, use it
-  if (lastFetchedPrice > 0) {
-    console.warn(`[oracle] All price APIs failed, using cached price: $${lastFetchedPrice.toFixed(4)}`);
-    return lastFetchedPrice;
-  }
-  throw new Error('All price sources failed and no cached price available');
-}
 
 function priceToMicrocredits(usdPrice: number): number {
   return Math.round(usdPrice * config.precision);
@@ -52,6 +14,11 @@ function priceToMicrocredits(usdPrice: number): number {
 
 async function getCurrentOnChainPrice(): Promise<number> {
   const raw = await getMappingValue('oracle_price');
+  return parseAleoU64(raw);
+}
+
+async function getCurrentRound(): Promise<number> {
+  const raw = await getMappingValue('price_round');
   return parseAleoU64(raw);
 }
 
@@ -69,16 +36,37 @@ async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
   throw new Error('unreachable');
 }
 
+// Oracle state tracking
 let lastUpdateTimestamp = 0;
 let lastUpdatePrice = 0;
+let currentRoundCounter = 0;
+let lastAggregation: AggregatedPrice | null = null;
 
 async function updatePrice(): Promise<void> {
   try {
-    const usdPrice = await withRetry(fetchAleoPrice, 'fetchPrice');
-    const newPriceMicro = priceToMicrocredits(usdPrice);
+    // 1. Aggregate prices from all sources
+    const aggregated = await aggregatePrices();
+    lastAggregation = aggregated;
 
+    console.log(
+      `[oracle] Aggregated: $${aggregated.medianPrice.toFixed(4)} ` +
+      `(${aggregated.sources.length} sources, confidence: ${aggregated.confidence}, ` +
+      `failed: [${aggregated.failedSources.join(', ')}])`,
+    );
+
+    // 2. Get current on-chain price
     const currentPrice = await getCurrentOnChainPrice();
 
+    // 3. Validate aggregated price
+    const validation = validatePrice(aggregated, currentPrice, config.precision);
+    if (!validation.valid) {
+      console.warn(`[oracle] Price rejected: ${validation.reason}`);
+      return;
+    }
+
+    const newPriceMicro = priceToMicrocredits(aggregated.medianPrice);
+
+    // 4. Check if price changed enough to warrant an update
     if (currentPrice > 0) {
       const change = Math.abs(newPriceMicro - currentPrice) / currentPrice;
       if (change < config.priceChangeThreshold) {
@@ -89,12 +77,23 @@ async function updatePrice(): Promise<void> {
       }
     }
 
+    // 5. Get current on-chain round and increment
+    const onChainRound = await getCurrentRound();
+    if (onChainRound >= currentRoundCounter) {
+      currentRoundCounter = onChainRound;
+    }
+    currentRoundCounter += 1;
+
     console.log(
-      `[oracle] Updating oracle price: $${usdPrice.toFixed(4)} → ${newPriceMicro}u64`,
+      `[oracle] Updating oracle: $${aggregated.medianPrice.toFixed(4)} → ${newPriceMicro}u64, round ${currentRoundCounter}`,
     );
 
+    // 6. Submit transaction with round
     const txId = await withRetry(
-      () => executeTransition('update_oracle_price', [`${newPriceMicro}u64`]),
+      () => executeTransition('update_oracle_price', [
+        `${newPriceMicro}u64`,
+        `${currentRoundCounter}u64`,
+      ]),
       'executeTransition',
     );
     console.log(`[oracle] Price update transaction: ${txId}`);
@@ -105,8 +104,26 @@ async function updatePrice(): Promise<void> {
   }
 }
 
-export function getOracleStatus() {
-  return { lastUpdateTimestamp, lastUpdatePrice };
+export interface OracleStatus {
+  lastUpdateTimestamp: number;
+  lastUpdatePrice: number;
+  currentRound: number;
+  confidence: Confidence | null;
+  sourceCount: number;
+  failedSources: string[];
+  sources: Array<{ source: string; price: number }>;
+}
+
+export function getOracleStatus(): OracleStatus {
+  return {
+    lastUpdateTimestamp,
+    lastUpdatePrice,
+    currentRound: currentRoundCounter,
+    confidence: lastAggregation?.confidence ?? null,
+    sourceCount: lastAggregation?.sources.length ?? 0,
+    failedSources: lastAggregation?.failedSources ?? [],
+    sources: lastAggregation?.sources.map((s) => ({ source: s.source, price: s.price })) ?? [],
+  };
 }
 
 export function startPriceUpdater(): void {
@@ -129,6 +146,14 @@ export function startPriceUpdater(): void {
   console.log(
     `[oracle] Starting price updater (cron: ${config.oracleUpdateCron})`,
   );
+
+  // Initialize round from on-chain state
+  getCurrentRound().then((r) => {
+    currentRoundCounter = r;
+    console.log(`[oracle] Initialized round counter from on-chain: ${r}`);
+  }).catch(() => {
+    console.warn('[oracle] Could not read on-chain round, starting from 0');
+  });
 
   updatePrice();
 

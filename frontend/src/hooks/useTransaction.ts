@@ -193,9 +193,10 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const updateOraclePrice = useCallback(
-    async (priceMicro: number) => {
+    async (priceMicro: number, round: number) => {
       return executeTransaction(TRANSITIONS.UPDATE_ORACLE_PRICE, [
         microCreditsToInput(priceMicro),
+        `${round}u64`,
       ]);
     },
     [executeTransaction],

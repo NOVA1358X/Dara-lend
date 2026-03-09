@@ -11,8 +11,8 @@ Built for the **Aleo Privacy Buildathon Wave 3**.
 ## Live Demo
 
 - **Frontend:** *[Deploy URL — will be added after deployment]*
-- **Contract:** [`dara_lend_v3.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v3.aleo)
-- **Deployment TX:** [`at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl`](https://testnet.explorer.provable.com/transaction/at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl)
+- **Contract:** [`dara_lend_v4.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v4.aleo)
+- **Deployment TX:** [`at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc`](https://testnet.explorer.provable.com/transaction/at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc)
 
 ---
 
@@ -69,14 +69,14 @@ This ensures borrowers control their funds while the protocol can enforce solven
 
 ## Smart Contract
 
-**Program ID:** `dara_lend_v3.aleo`  
+**Program ID:** `dara_lend_v4.aleo`  
 **Network:** Aleo Testnet
 
 ### Transitions
 
 | Transition | Description |
 |---|---|
-| `update_oracle_price` | Admin-only oracle price update from CoinGecko feed, records block height for freshness |
+| `update_oracle_price` | Admin-only oracle price update with round-based replay protection, deviation cap (15%), and minimum update interval |
 | `supply_collateral` | Accept private credits record, lock as encrypted collateral (CollateralReceipt record), supplier identity hidden via `transfer_private_to_public` |
 | `borrow` | Borrow USDCx against collateral with 0.5% fee, oracle freshness check, circuit breaker — USDCx sent as private Token via `transfer_public_to_private` (creates DebtPosition + LiquidationAuth) |
 | `repay` | Repay USDCx debt and reclaim ALEO collateral as private credits record via `transfer_public_to_private` (RepaymentReceipt record) |
@@ -167,7 +167,7 @@ Observers can see aggregate fund movements (credits entering/leaving the protoco
 
 ```
 dara-lend/
-├── contract/          Leo smart contract (dara_lend_v3.aleo)
+├── contract/          Leo smart contract (dara_lend_v4.aleo)
 │   └── src/main.leo   Full contract source
 ├── frontend/          React + TypeScript + Tailwind frontend
 │   └── src/
@@ -245,12 +245,12 @@ The backend runs the oracle price updater (CoinGecko → on-chain) every 2 minut
 
 ## Tech Stack
 
-- **Smart Contract:** Leo (Aleo) — deployed on Aleo Testnet as `dara_lend_v3.aleo`
+- **Smart Contract:** Leo (Aleo) — deployed on Aleo Testnet as `dara_lend_v4.aleo`
 - **Frontend:** React 18, TypeScript, Vite 5, Tailwind CSS, Framer Motion
 - **Backend:** Node.js, Express, TypeScript, `@provablehq/sdk`
 - **Wallet:** Shield Wallet via `@provablehq/aleo-wallet-adaptor-react`
 - **Token Integration:** `credits.aleo` (collateral) + `test_usdcx_stablecoin.aleo` (USDCx debt)
-- **Oracle:** Multi-source (CoinGecko + CryptoCompare + cached fallback), 2-min automated updates, on-chain freshness validation
+- **Oracle:** Multi-source aggregated (CoinGecko + CryptoCompare + Coinbase + Binance), median pricing, outlier rejection, round-based replay protection, 2-min automated updates, on-chain deviation cap + freshness validation
 - **Data:** On-chain mappings via Aleo Explorer API, real-time polling
 
 ## What Sets DARA Lend Apart

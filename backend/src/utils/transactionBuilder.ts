@@ -23,7 +23,7 @@ function getProgramManager(): InstanceType<typeof ProgramManager> {
 }
 
 /**
- * Execute a transition on the dara_lend_v3 program.
+ * Execute a transition on the dara_lend_v4 program.
  *
  * Uses delegated proving via the Provable API when an API key is configured,
  * falling back to local WASM proving (slower first run, cached after).
@@ -55,7 +55,7 @@ export async function executeTransition(
     return txId;
   }
 
-  // Local WASM proving is not viable for dara_lend_v3.aleo — it has 5 imported
+  // Local WASM proving is not viable for dara_lend_v4.aleo — it has 5 imported
   // programs which causes WASM key synthesis to hang indefinitely.
   // Require PROVABLE_API_KEY and PROVABLE_CONSUMER_ID in .env for delegated proving.
   throw new Error(

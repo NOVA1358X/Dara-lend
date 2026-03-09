@@ -9,7 +9,7 @@ export const config = {
   coingeckoApiUrl: process.env.COINGECKO_API_URL || 'https://api.coingecko.com/api/v3',
   provableApiKey: process.env.PROVABLE_API_KEY || '',
   provableConsumerId: process.env.PROVABLE_CONSUMER_ID || '',
-  programId: 'dara_lend_v3.aleo',
+  programId: 'dara_lend_v4.aleo',
   precision: 1_000_000,
   oracleUpdateCron: '*/2 * * * *',
   priceChangeThreshold: 0.001,

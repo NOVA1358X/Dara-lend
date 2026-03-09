@@ -5,7 +5,7 @@ import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useTransaction } from '@/hooks/useTransaction';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits } from '@/utils/formatting';
-import { PRECISION, USDCX_PROGRAM, ALEO_TESTNET_API, PROTOCOL_ADDRESS, ADMIN_ADDRESS } from '@/utils/constants';
+import { PRECISION, USDCX_PROGRAM, ALEO_TESTNET_API, PROTOCOL_ADDRESS, ADMIN_ADDRESS, BACKEND_API } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
@@ -33,6 +33,28 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
   const walletForTx = wallet || { connected: false };
   const { fundProtocol, updateOraclePrice, resetTransaction } = useTransaction(walletForTx);
 
+  // Oracle health state
+  const [oracleHealth, setOracleHealth] = useState<{
+    confidence: string | null;
+    sourceCount: number;
+    failedSources: string[];
+    sources: Array<{ source: string; price: number }>;
+    currentRound: number;
+    onChainRound: number;
+  } | null>(null);
+
+  const fetchOracleHealth = async () => {
+    try {
+      const res = await fetch(`${BACKEND_API}/oracle/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setOracleHealth(data);
+      }
+    } catch {
+      // Backend may not be running
+    }
+  };
+
   // Fetch USDCx liquidity of the protocol
   const fetchLiquidity = async () => {
     try {
@@ -54,6 +76,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
   // Auto-fetch on mount
   useEffect(() => {
     fetchLiquidity();
+    fetchOracleHealth();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isSolvent = stats
@@ -201,7 +224,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
           </div>
 
           <p className="text-sm text-text-secondary leading-relaxed mb-4">
-            Fetch real ALEO/USD price from CoinGecko and update the on-chain oracle.
+            Fetch real ALEO/USD price from multiple sources and update the on-chain oracle.
             This calls <code className="text-accent text-xs">update_oracle_price</code> on the contract.
           </p>
 
@@ -216,13 +239,44 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
             </div>
             <div className="p-4 rounded-lg bg-bg-secondary">
               <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
-                Live CoinGecko Price
+                Live Market Price
               </p>
               <p className="font-mono text-sm text-text-primary tabular-nums">
                 {priceLoading ? 'Fetching...' : livePrice ? `$${livePrice.toFixed(6)}` : '—'}
               </p>
             </div>
           </div>
+
+          {/* Oracle Health Info */}
+          {oracleHealth && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="p-3 rounded-lg bg-bg-secondary">
+                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Confidence</p>
+                <p className={`font-mono text-xs font-medium ${
+                  oracleHealth.confidence === 'high' ? 'text-accent-success' :
+                  oracleHealth.confidence === 'medium' ? 'text-accent-warning' :
+                  'text-accent-danger'
+                }`}>
+                  {oracleHealth.confidence ?? 'N/A'}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-bg-secondary">
+                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Sources</p>
+                <p className="font-mono text-xs text-text-primary">
+                  {oracleHealth.sourceCount} active
+                  {oracleHealth.failedSources.length > 0 && (
+                    <span className="text-accent-danger"> / {oracleHealth.failedSources.length} failed</span>
+                  )}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-bg-secondary">
+                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Round</p>
+                <p className="font-mono text-xs text-text-primary">
+                  #{oracleHealth.onChainRound || oracleHealth.currentRound || 0}
+                </p>
+              </div>
+            </div>
+          )}
 
           {transactionPending && (
             <div className="mb-4">
@@ -244,8 +298,12 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                   toast.error('Fetch live price first');
                   return;
                 }
+                // Fetch latest oracle health to get the current round
+                await fetchOracleHealth();
+                const currentRound = oracleHealth?.onChainRound || oracleHealth?.currentRound || 0;
+                const nextRound = currentRound + 1;
                 const priceMicro = Math.round(livePrice * PRECISION);
-                await updateOraclePrice(priceMicro);
+                await updateOraclePrice(priceMicro, nextRound);
               }}
               disabled={transactionPending || !livePrice}
               className="flex-1 py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
