@@ -8,7 +8,7 @@
 - **TX ID**: `at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl`
 - **Explorer**: https://testnet.explorer.provable.com/program/dara_lend_v3.aleo
 - **GitHub**: https://github.com/NOVA1358X/Dara-lend
-- **Total Files**: 102 source files (contract + frontend + backend) — 7 new files added in Phases 4+6+7
+- **Total Files**: 103 source files (contract + frontend + backend) — 8 new files added in Phases 4+6+7+8
 - **Total Lines Changed**: ~3,200 insertions, ~600 deletions across ~50 files (post-initial commit)
 
 ---
@@ -366,6 +366,44 @@ Migrated all token transfers from public to private functions. Removed the false
 | Deploy Cost | 11.802281 credits |
 | Build | `leo build` ✅, `npx tsc --noEmit` (frontend) ✅, `npx tsc --noEmit` (backend) ✅ |
 
+### Phase 8: Runtime Bug Fixes — CORS, Wallet Noise, Oracle Hang (commit `47cd35b`)
+
+Fixed 3 runtime issues discovered during live testing of v3.
+
+#### Issue 1: CoinGecko CORS (Frontend price fetch blocked)
+
+The `useMarketPrice.ts` hook was calling `https://api.coingecko.com/api/v3/simple/price?ids=aleo&vs_currencies=usd` directly from the browser. CoinGecko's API blocks browser CORS requests and rate-limits aggressively (429).
+
+**Fix**: Created `/api/price` backend endpoint ([backend/src/api/routes/price.ts](backend/src/api/routes/price.ts)) that fetches price server-side from CoinGecko with CryptoCompare fallback. Updated `useMarketPrice.ts` to call `/api/price` instead. Vite already proxies `/api` → `localhost:3001`.
+
+| File | Change |
+|------|--------|
+| backend/src/api/routes/price.ts | **NEW** — Server-side price endpoint with 15s cache, CoinGecko + CryptoCompare fallback |
+| backend/src/api/server.ts | Registered `/api/price` route |
+| frontend/src/hooks/useMarketPrice.ts | Changed fetch URL from CoinGecko direct → `/api/price` proxy |
+
+#### Issue 2: "WalletError: Program not allowed" (Console noise)
+
+Wallet `requestRecords(PROGRAM_ID)` throws "Program not allowed" when the wallet hasn't synced the newly deployed program. This is expected behavior after a fresh deploy — the wallet needs to index the new program. The error was caught but logged as `console.error` every 15 seconds.
+
+**Fix**: Detect "not allowed" / "not authorized" errors specifically and log a helpful `console.warn` instead. Increased poll interval from 15s to 30s to reduce noise.
+
+| File | Change |
+|------|--------|
+| frontend/src/hooks/useWalletRecords.ts | Specific catch for "Program not allowed" with actionable message, poll 15s→30s |
+
+#### Issue 3: Backend Oracle WASM Hang (Key synthesis freeze)
+
+The oracle `priceUpdater.ts` calls `transactionBuilder.ts → executeTransition('update_oracle_price', ...)`. Without a Provable API key, this falls back to local WASM proving which attempts to synthesize keys for all 5 imported programs (credits, merkle_tree, multisig_core, freezelist, stablecoin). WASM crashes/hangs indefinitely for programs with 4+ imports — this is a known Aleo SDK limitation.
+
+**Fix**: Removed the local WASM proving fallback entirely (it can never succeed for this contract). Added early check in `startPriceUpdater()` — if `PROVABLE_API_KEY` is not set, the oracle updater is disabled with a clear warning. Updated `.env.example` with the required variables.
+
+| File | Change |
+|------|--------|
+| backend/src/utils/transactionBuilder.ts | Replaced local proving fallback with error explaining the 4+ imports WASM limitation |
+| backend/src/oracle/priceUpdater.ts | Added `PROVABLE_API_KEY` check — oracle disabled with warning if not set |
+| backend/.env.example | Added `PROVABLE_API_KEY` and `PROVABLE_CONSUMER_ID` variables |
+
 ---
 
 ## Live Testing Results
@@ -449,7 +487,7 @@ DARA-Lend/
 │       │   ├── useTransaction.ts            ← TX execution: supply, borrow, repay, approveUSDCx, liquidate, withdraw, updateOracle, fundProtocol + auto-save to history
 │       │   ├── useWalletRecords.ts          ← Record fetching: 5 record types exported
 │       │   ├── useProtocolStats.ts          ← On-chain mapping queries
-│       │   ├── useMarketPrice.ts            ← NEW: CoinGecko live price (30s poll, shared cache)
+│       │   ├── useMarketPrice.ts            ← NEW: ALEO price via backend proxy (30s poll, shared cache)
 │       │   └── useAleoClient.ts             ← Aleo REST API client
 │       └── utils/
 │           ├── constants.ts                 ← Program ID, mappings, transitions, ADMIN_ADDRESS, PROTOCOL_ADDRESS
@@ -458,7 +496,7 @@ DARA-Lend/
 └── backend/
     ├── package.json
     ├── tsconfig.json
-    ├── .env.example                         ← PORT, PRIVATE_KEY, ADMIN_ADDRESS, ALEO_RPC_URL, COINGECKO_API_URL
+    ├── .env.example                         ← PORT, PRIVATE_KEY, ADMIN_ADDRESS, ALEO_RPC_URL, COINGECKO_API_URL, PROVABLE_API_KEY
     └── src/
         ├── index.ts                         ← Entry point
         ├── api/
@@ -467,7 +505,8 @@ DARA-Lend/
         │       ├── stats.ts                 ← Protocol stats endpoint
         │       ├── solvency.ts              ← Solvency check endpoint
         │       ├── health.ts                ← Server health endpoint
-        │       └── transaction.ts           ← TX status endpoint
+        │       ├── transaction.ts           ← TX status endpoint
+        │       └── price.ts                 ← NEW: Server-side ALEO price proxy (CoinGecko + CryptoCompare)
         ├── oracle/priceUpdater.ts           ← CoinGecko → on-chain price (2min cron, 3x retry)
         ├── liquidation/monitor.ts           ← Protocol health monitor (LTV tracking, 2min cron)
         └── utils/
@@ -491,6 +530,7 @@ DARA-Lend/
 | `b6d6e18` | feat: add USDCx approval step before repayment | 2 files | +58, -8 |
 | *(pending)* | feat: contract v2 upgrade + Wave 3 competition overhaul | ~20 files | ~+800, -200 |
 | `ad47bf7` | feat: v3 contract with end-to-end private token transfers | 21 files | +941, -118 |
+| `47cd35b` | fix: CoinGecko CORS, wallet records noise, oracle WASM hang | 7 files | +94, -16 |
 
 **Total across all commits**: ~50 files modified, ~3,200 insertions, ~600 deletions (post-initial commit).
 
