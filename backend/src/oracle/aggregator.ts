@@ -1,4 +1,5 @@
 import type { PriceResult, PriceFetcher } from './sources/types.js';
+import { fetchFromCoinMarketCap } from './sources/coinmarketcap.js';
 import { fetchFromCoinGecko } from './sources/coingecko.js';
 import { fetchFromCryptoCompare } from './sources/cryptocompare.js';
 import { fetchFromCoinbase } from './sources/coinbase.js';
@@ -14,6 +15,7 @@ export interface AggregatedPrice {
 }
 
 const FETCHERS: PriceFetcher[] = [
+  fetchFromCoinMarketCap,
   fetchFromCoinGecko,
   fetchFromCryptoCompare,
   fetchFromCoinbase,
@@ -51,7 +53,7 @@ export async function aggregatePrices(): Promise<AggregatedPrice> {
 
   const successful: PriceResult[] = [];
   const failedSources: string[] = [];
-  const sourceNames = ['coingecko', 'cryptocompare', 'coinbase', 'binance'];
+  const sourceNames = ['coinmarketcap', 'coingecko', 'cryptocompare', 'coinbase', 'binance'];
 
   results.forEach((result, i) => {
     if (result.status === 'fulfilled') {

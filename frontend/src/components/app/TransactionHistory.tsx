@@ -101,14 +101,29 @@ export function TransactionHistory() {
                   </p>
                 </div>
               </div>
-              <a
-                href={`${EXPLORER_BASE}/${tx.txId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-mono text-accent hover:underline"
-              >
-                {tx.txId.slice(0, 12)}...
-              </a>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                  tx.status === 'confirmed' ? 'bg-[rgba(52,211,153,0.1)] text-accent-success' :
+                  tx.status === 'failed' ? 'bg-[rgba(239,68,68,0.1)] text-red-400' :
+                  'bg-[rgba(250,204,21,0.1)] text-yellow-400'
+                }`}>
+                  {tx.status}
+                </span>
+                <a
+                  href={`${EXPLORER_BASE}/${tx.txId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono text-accent hover:underline flex items-center gap-1"
+                  title={tx.txId}
+                >
+                  {tx.txId.slice(0, 16)}...
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </a>
+              </div>
             </div>
           </motion.div>
         ))}

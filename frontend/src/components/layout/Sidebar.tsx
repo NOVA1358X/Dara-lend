@@ -36,7 +36,9 @@ export function Sidebar() {
         }`}
       >
         <div className={`h-16 flex items-center border-b border-[rgba(255,255,255,0.05)] ${sidebarCollapsed ? 'justify-center px-2' : 'px-5'}`}>
-          <Logo collapsed={sidebarCollapsed} />
+          <NavLink to="/app" aria-label="DARA Lend Dashboard">
+            <Logo collapsed={sidebarCollapsed} />
+          </NavLink>
         </div>
 
         <nav className="flex-1 py-4 px-2 space-y-0.5">
