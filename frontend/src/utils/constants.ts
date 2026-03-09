@@ -1,4 +1,4 @@
-export const PROGRAM_ID = 'dara_lend_v2.aleo';
+export const PROGRAM_ID = 'dara_lend_v3.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 
 export const ALEO_TESTNET_API = 'https://api.explorer.provable.com/v1/testnet';
@@ -12,8 +12,8 @@ export const MICROCREDITS_PER_CREDIT = 1_000_000;
 
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 
-// The on-chain address of dara_lend_v2.aleo (derived deterministically from program ID)
-export const PROTOCOL_ADDRESS = 'aleo1s5gs5qqs77hrv949sylvmfv0p78dy4fweyl9twfpstqtz75tmy8skxduqc';
+// The on-chain address of dara_lend_v3.aleo (derived deterministically from program ID)
+export const PROTOCOL_ADDRESS = 'aleo1qg44nuy7y9pshqcapw67w8mcye23s3mh7dl2ze8lw9m9yg0fqvzs2f94nn';
 
 // Protocol admin address (set during contract deployment)
 export const ADMIN_ADDRESS = 'aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8';
@@ -57,6 +57,7 @@ export const ROUTES = {
 } as const;
 
 export const TX_FEE = 500_000;
+export const TX_FEE_HIGH = 1_000_000; // Higher fee for complex private transfers
 
 export const RECORD_TYPES = {
   COLLATERAL_RECEIPT: 'CollateralReceipt',

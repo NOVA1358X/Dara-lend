@@ -6,7 +6,7 @@ export async function getMappingValue(
   mapping: string,
   key: string = GLOBAL_KEY,
 ): Promise<string | null> {
-  const url = `${config.aleoRpcUrl}/program/${config.programId}/mapping/${mapping}/${key}`;
+  const url = `${config.aleoApiUrl}/program/${config.programId}/mapping/${mapping}/${key}`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -18,7 +18,7 @@ export async function getMappingValue(
 }
 
 export async function getTransaction(txId: string): Promise<Record<string, unknown> | null> {
-  const url = `${config.aleoRpcUrl}/transaction/${encodeURIComponent(txId)}`;
+  const url = `${config.aleoApiUrl}/transaction/${encodeURIComponent(txId)}`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -29,7 +29,7 @@ export async function getTransaction(txId: string): Promise<Record<string, unkno
 }
 
 export async function getLatestBlockHeight(): Promise<number | null> {
-  const url = `${config.aleoRpcUrl}/latest/height`;
+  const url = `${config.aleoApiUrl}/latest/height`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;

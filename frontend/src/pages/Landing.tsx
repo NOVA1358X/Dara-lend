@@ -4,6 +4,7 @@ import { StatsBar } from '@/components/landing/StatsBar';
 import { ProblemSolution } from '@/components/landing/ProblemSolution';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { PrivacyArchitecture } from '@/components/landing/PrivacyArchitecture';
+import { TechnicalEdge } from '@/components/landing/TechnicalEdge';
 import { CrossChainSection } from '@/components/landing/CrossChainSection';
 import { SecuritySection } from '@/components/landing/SecuritySection';
 import { CTASection } from '@/components/landing/CTASection';
@@ -16,6 +17,7 @@ export default function Landing() {
       <ProblemSolution />
       <HowItWorks />
       <PrivacyArchitecture />
+      <TechnicalEdge />
       <CrossChainSection />
       <SecuritySection />
       <CTASection />

@@ -11,8 +11,8 @@ Built for the **Aleo Privacy Buildathon Wave 3**.
 ## Live Demo
 
 - **Frontend:** *[Deploy URL — will be added after deployment]*
-- **Contract:** [`dara_lend_v2.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v2.aleo)
-- **Deployment TX:** [`at10vx3736ggtx9v2g436pxeyvgpg3knfg38lfd96jc022eju6ktyxsd6jzzs`](https://testnet.explorer.provable.com/transaction/at10vx3736ggtx9v2g436pxeyvgpg3knfg38lfd96jc022eju6ktyxsd6jzzs)
+- **Contract:** [`dara_lend_v3.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v3.aleo)
+- **Deployment TX:** [`at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl`](https://testnet.explorer.provable.com/transaction/at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl)
 
 ---
 
@@ -55,11 +55,11 @@ This ensures borrowers control their funds while the protocol can enforce solven
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Supply Collateral | ✅ Working | Lock ALEO credits as encrypted collateral via `credits.aleo/transfer_public_as_signer` |
-| Borrow USDCx | ✅ Working | Borrow USDCx against collateral with 0.5% origination fee, oracle freshness check, circuit breaker |
-| Repay Debt | ✅ Working | Repay full debt amount, reclaim collateral |
-| Withdraw Collateral | ✅ Working | Withdraw unused collateral deposits |
-| Liquidation | ✅ Working | Liquidate underwater positions with 5% liquidator incentive bonus |
+| Supply Collateral | ✅ Working | Lock ALEO credits as encrypted collateral via private `credits.aleo/transfer_private_to_public` |
+| Borrow USDCx | ✅ Working | Borrow USDCx against collateral with 0.5% origination fee, oracle freshness check, circuit breaker — USDCx disbursed as private Token record |
+| Repay Debt | ✅ Working | Repay full debt amount, reclaim collateral as private credits record |
+| Withdraw Collateral | ✅ Working | Withdraw unused collateral deposits as private credits record |
+| Liquidation | ✅ Working | Liquidate underwater positions with 5% liquidator incentive bonus, seized collateral as private record |
 | Dashboard | ✅ Working | Real-time protocol stats + health factor color alerts + liquidation risk banner |
 | Position Viewer | ✅ Working | Decrypt and display all private records from Shield Wallet, click-to-copy fields |
 | Protocol Stats | ✅ Working | TVL, total borrowed, loan count, oracle price — all from on-chain |
@@ -69,7 +69,7 @@ This ensures borrowers control their funds while the protocol can enforce solven
 
 ## Smart Contract
 
-**Program ID:** `dara_lend_v2.aleo`  
+**Program ID:** `dara_lend_v3.aleo`  
 **Network:** Aleo Testnet
 
 ### Transitions
@@ -77,16 +77,16 @@ This ensures borrowers control their funds while the protocol can enforce solven
 | Transition | Description |
 |---|---|
 | `update_oracle_price` | Admin-only oracle price update from CoinGecko feed, records block height for freshness |
-| `supply_collateral` | Lock ALEO credits as encrypted collateral (CollateralReceipt record), nonce bound to caller |
-| `borrow` | Borrow USDCx against collateral with 0.5% fee, oracle freshness check, circuit breaker (creates DebtPosition + LiquidationAuth) |
-| `repay` | Repay USDCx debt and reclaim ALEO collateral (RepaymentReceipt record) |
-| `liquidate` | Liquidate underwater positions with 5% bonus (consumes LiquidationAuth, seizes collateral + bonus) |
-| `withdraw_collateral` | Withdraw unused collateral (consumes CollateralReceipt) |
+| `supply_collateral` | Accept private credits record, lock as encrypted collateral (CollateralReceipt record), supplier identity hidden via `transfer_private_to_public` |
+| `borrow` | Borrow USDCx against collateral with 0.5% fee, oracle freshness check, circuit breaker — USDCx sent as private Token via `transfer_public_to_private` (creates DebtPosition + LiquidationAuth) |
+| `repay` | Repay USDCx debt and reclaim ALEO collateral as private credits record via `transfer_public_to_private` (RepaymentReceipt record) |
+| `liquidate` | Liquidate underwater positions with 5% bonus, seized collateral sent as private credits via `transfer_public_to_private` (consumes LiquidationAuth) |
+| `withdraw_collateral` | Withdraw unused collateral as private credits record via `transfer_public_to_private` (consumes CollateralReceipt) |
 
 ### External Program Integration
 
-- **credits.aleo** — `transfer_public_as_signer` (supply), `transfer_public` (withdraw/liquidate/repay)
-- **test_usdcx_stablecoin.aleo** — `transfer_public` (borrow), `transfer_from_public` (repay)
+- **credits.aleo** — `transfer_private_to_public` (supply, private inflow), `transfer_public_to_private` (withdraw/liquidate/repay collateral return, private outflow)
+- **test_usdcx_stablecoin.aleo** — `transfer_public_to_private` (borrow, private USDCx to borrower), `transfer_from_public` (repay, approval-based)
 
 ### Parameters
 
@@ -137,6 +137,10 @@ total_fees_collected:   u8 => u128   — Total origination fees collected
 - Liquidation prices and thresholds
 - Position ownership (wallet addresses)
 - Health factors (computed client-side)
+- **Supplier identity** — private credits records consumed via `transfer_private_to_public`
+- **Borrower identity** — USDCx disbursed via `transfer_public_to_private` (private Token record)
+- **Withdrawer/Liquidator identity** — collateral returned via `transfer_public_to_private`
+- **Borrower hash** — `LiquidationAuth` stores `borrower_hash` (BHP256) instead of raw address
 
 ### What's Public
 - Aggregate TVL (total collateral)
@@ -144,14 +148,26 @@ total_fees_collected:   u8 => u128   — Total origination fees collected
 - Loan count
 - Oracle price
 
-### Known Limitations
-Like all Aleo DeFi projects currently, DARA Lend uses public token transfers (`credits.aleo/transfer_public_as_signer` and `test_usdcx_stablecoin.aleo/transfer_public`). These expose participant addresses and amounts on-chain during supply, borrow, and repay operations. This is a known ecosystem-wide limitation — the Aleo SDK does not yet provide documentation for private stablecoin transfers. DARA Lend will migrate to fully private token flows when this becomes available.
+### Private Transfer Architecture
+
+DARA Lend uses privacy-preserving token transfer functions throughout:
+
+| Operation | Function | Privacy |
+|---|---|---|
+| Supply Collateral | `credits.aleo/transfer_private_to_public` | Supplier identity hidden — private record consumed |
+| Borrow USDCx | `test_usdcx_stablecoin.aleo/transfer_public_to_private` | Borrower receives private Token record |
+| Repay USDCx | `test_usdcx_stablecoin.aleo/transfer_from_public` | Uses approval pattern |
+| Return Collateral | `credits.aleo/transfer_public_to_private` | Repayer receives private credits record |
+| Withdraw Collateral | `credits.aleo/transfer_public_to_private` | Withdrawer receives private credits record |
+| Liquidation Payout | `credits.aleo/transfer_public_to_private` | Liquidator receives private credits record |
+
+Observers can see aggregate fund movements (credits entering/leaving the protocol) but **cannot identify individual participants**.
 
 ## Project Structure
 
 ```
 dara-lend/
-├── contract/          Leo smart contract (dara_lend_v2.aleo)
+├── contract/          Leo smart contract (dara_lend_v3.aleo)
 │   └── src/main.leo   Full contract source
 ├── frontend/          React + TypeScript + Tailwind frontend
 │   └── src/
@@ -205,6 +221,12 @@ The backend runs the oracle price updater (CoinGecko → on-chain) every 2 minut
 - **Circuit breaker:** `borrow` enforces `MAX_TOTAL_BORROWED` cap of 100K USDCx
 - **Nonce binding:** `supply_collateral` uses `BHP256::commit_to_field(nonce, self.signer)` to prevent grief attacks
 
+### Contract Upgrade (v2 → v3) — Private Transfer Migration
+- **Private supply:** `supply_collateral` now accepts a private `credits.aleo/credits` record and uses `transfer_private_to_public` — supplier identity is hidden from chain observers
+- **Private borrow disbursement:** `borrow` now sends USDCx via `transfer_public_to_private` — borrower receives a private Token record, their identity is hidden
+- **Private collateral return:** `repay`, `withdraw_collateral`, and `liquidate` now return credits via `transfer_public_to_private` — recipient identity hidden
+- **Full privacy pipeline:** Only aggregate fund movements (TVL in/out) are visible; no individual participant addresses appear in any transaction
+
 ### Backend Improvements
 - Oracle update interval reduced from 5 min to 2 min
 - Added retry logic with exponential backoff (3 attempts)
@@ -216,19 +238,54 @@ The backend runs the oracle price updater (CoinGecko → on-chain) every 2 minut
 - Health factor color alerts (green/yellow/orange/red) with liquidation risk banner
 - Click-to-copy on position card fields (loan_id, nonce_hash, borrower_hash)
 - Cryptographically secure nonce generation (`crypto.getRandomValues`)
+- Private credits record selector for supply (with public-to-private conversion helper)
 - Balance auto-refresh after supply
 - In-app roadmap section in documentation
 - TopBar route labels for all pages
 
 ## Tech Stack
 
-- **Smart Contract:** Leo (Aleo) — deployed on Aleo Testnet
+- **Smart Contract:** Leo (Aleo) — deployed on Aleo Testnet as `dara_lend_v3.aleo`
 - **Frontend:** React 18, TypeScript, Vite 5, Tailwind CSS, Framer Motion
-- **Backend:** Node.js, Express, TypeScript
-- **Wallet:** Shield Wallet (primary) via `@provablehq/aleo-wallet-adaptor-react`
-- **Token Integration:** `credits.aleo` (collateral) + `test_usdcx_stablecoin.aleo` (debt)
-- **Data:** On-chain mappings via Aleo Explorer API
-- **Oracle:** CoinGecko ALEO/USD price feed
+- **Backend:** Node.js, Express, TypeScript, `@provablehq/sdk`
+- **Wallet:** Shield Wallet via `@provablehq/aleo-wallet-adaptor-react`
+- **Token Integration:** `credits.aleo` (collateral) + `test_usdcx_stablecoin.aleo` (USDCx debt)
+- **Oracle:** Multi-source (CoinGecko + CryptoCompare + cached fallback), 2-min automated updates, on-chain freshness validation
+- **Data:** On-chain mappings via Aleo Explorer API, real-time polling
+
+## What Sets DARA Lend Apart
+
+### 1. End-to-End Private Token Flows
+DARA Lend uses Aleo's private transfer functions throughout the entire lending lifecycle:
+- **Supply:** `credits.aleo/transfer_private_to_public` — observer sees credits arriving at the protocol but **cannot identify the depositor**
+- **Borrow:** `test_usdcx_stablecoin.aleo/transfer_public_to_private` — borrower receives USDCx as a **private Token record**, their identity is never exposed
+- **Withdraw/Repay/Liquidate:** `credits.aleo/transfer_public_to_private` — collateral returned as **private credits records**, recipient identity hidden
+- **Borrower hash:** `LiquidationAuth` stores `BHP256::hash_to_field(borrower)` instead of the raw address
+
+No individual participant addresses appear in any public mapping or finalize block.
+
+### 2. Automated Oracle (Not Manual Admin)
+Unlike protocols that rely on an admin clicking "Update Price" manually, DARA Lend runs an automated oracle backend that:
+- Fetches from **multiple independent sources** (CoinGecko → CryptoCompare → cached fallback)
+- Updates on-chain every **2 minutes** with retry logic and exponential backoff
+- Skips updates for price changes below 0.1% (saves gas)
+- Supports **delegated proving** via Provable API for cloud deployment
+- The admin panel serves as a **backup**, not the primary mechanism
+
+### 3. On-Chain Safety Mechanisms
+- **Oracle freshness**: Contract rejects stale prices (>100 blocks old)
+- **Circuit breaker**: Emergency pause and max debt cap (100K USDCx)
+- **Origination fee**: 0.5% on-chain fee with transparent tracking
+- **Liquidation bonus**: 5% incentive ensures liquidators act quickly
+
+### 4. Production-Grade Architecture
+Three-tier system (smart contract + React frontend + Express backend) with:
+- Real-time oracle status widget showing on-chain vs market price deviation
+- Health factor gauge with color-coded risk alerts
+- Private credits record selector with public-to-private conversion
+- Transaction history with explorer links
+- Liquidation monitoring bot with global LTV tracking
+- Comprehensive in-app documentation
 
 ## License
 

@@ -7,6 +7,7 @@ import { PRECISION } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { HealthFactorGauge } from '@/components/shared/HealthFactorGauge';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { OracleStatus } from '@/components/app/OracleStatus';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { WalletIcon } from '@/components/icons/WalletIcon';
 import { ArrowDownIcon } from '@/components/icons/ArrowDownIcon';
@@ -179,6 +180,9 @@ export function Dashboard({ wallet }: DashboardProps) {
           />
         </div>
       </div>
+
+      {/* Oracle Price Feed */}
+      <OracleStatus />
 
       {/* Quick Actions */}
       <div>

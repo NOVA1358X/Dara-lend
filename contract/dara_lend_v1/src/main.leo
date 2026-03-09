@@ -1,7 +1,7 @@
 import credits.aleo;
 import test_usdcx_stablecoin.aleo;
 
-program dara_lend_v2.aleo {
+program dara_lend_v3.aleo {
 
     // ═══════════════════════════════════════════════════
     // CONSTANTS
@@ -110,10 +110,13 @@ program dara_lend_v2.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 2. SUPPLY COLLATERAL (credits.aleo)
+    // 2. SUPPLY COLLATERAL — Private credits flow
+    // Observer sees credits arriving at protocol but
+    // CANNOT identify the depositor (private record consumed)
     // ═══════════════════════════════════════════════════
 
     async transition supply_collateral(
+        input_credits: credits.aleo/credits,
         amount: u64,
         nonce: field,
     ) -> (CollateralReceipt, Future) {
@@ -130,8 +133,10 @@ program dara_lend_v2.aleo {
             nonce_hash: nonce_hash,
         };
 
-        let credit_future: Future =
-            credits.aleo/transfer_public_as_signer(self.address, amount);
+        // Private: consumes user's private credits record, deposits to protocol's public balance
+        // Change record automatically returned to the user
+        let (change_credits, credit_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_private_to_public(input_credits, self.address, amount);
 
         return (receipt, finalize_supply_collateral(credit_future, nonce_hash, amount));
     }
@@ -152,7 +157,10 @@ program dara_lend_v2.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 3. BORROW (receive USDCx against credit collateral)
+    // 3. BORROW — Private USDCx disbursement
+    // Borrower receives USDCx as a private Token record
+    // Observer sees USDCx leaving protocol but CANNOT
+    // identify who received it
     // ═══════════════════════════════════════════════════
 
     async transition borrow(
@@ -198,9 +206,10 @@ program dara_lend_v2.aleo {
             borrower_hash: borrower_hash,
         };
 
-        // Transfer net amount (after fee) to borrower
-        let borrow_future: Future =
-            test_usdcx_stablecoin.aleo/transfer_public(self.caller, net_borrow);
+        // Private: sends USDCx as encrypted private Token record to borrower
+        // The recipient address is private — observers cannot identify the borrower
+        let (compliance_record, usdcx_token, borrow_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
+            test_usdcx_stablecoin.aleo/transfer_public_to_private(self.caller, net_borrow);
 
         return (debt, liq_auth, finalize_borrow(
             borrow_future,
@@ -245,7 +254,10 @@ program dara_lend_v2.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 4. REPAY (send USDCx back, receive credits collateral)
+    // 4. REPAY — Private credits return
+    // USDCx repayment uses approval pattern (transfer_from_public)
+    // Collateral returned as private credits record —
+    // observer CANNOT identify who received the collateral
     // ═══════════════════════════════════════════════════
 
     async transition repay(
@@ -259,12 +271,15 @@ program dara_lend_v2.aleo {
             loan_id: debt_record.loan_id,
         };
 
+        // USDCx repayment via approval pattern
         let repay_future: Future =
             test_usdcx_stablecoin.aleo/transfer_from_public(
                 self.caller, self.address, debt_record.debt_amount);
 
-        let return_future: Future =
-            credits.aleo/transfer_public(
+        // Private: return collateral as encrypted private credits record
+        // The recipient address is private — observers cannot identify the borrower
+        let (return_credits, return_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
                 self.caller, debt_record.collateral_amount);
 
         return (receipt, finalize_repay(
@@ -300,7 +315,9 @@ program dara_lend_v2.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 5. LIQUIDATE (with 5% bonus incentive)
+    // 5. LIQUIDATE — Private collateral seizure
+    // Liquidator receives seized collateral as private
+    // credits record — their identity stays hidden
     // ═══════════════════════════════════════════════════
 
     async transition liquidate(
@@ -322,8 +339,9 @@ program dara_lend_v2.aleo {
             debt_covered: auth.debt_amount,
         };
 
-        let seize_future: Future =
-            credits.aleo/transfer_public(
+        // Private: liquidator receives seized collateral as encrypted private record
+        let (seize_credits, seize_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
                 self.caller, total_seize);
 
         return (receipt, finalize_liquidate(
@@ -366,14 +384,16 @@ program dara_lend_v2.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 6. WITHDRAW COLLATERAL
+    // 6. WITHDRAW COLLATERAL — Private credits return
+    // Withdrawer receives collateral as private record
     // ═══════════════════════════════════════════════════
 
     async transition withdraw_collateral(
         receipt: CollateralReceipt,
     ) -> Future {
-        let return_future: Future =
-            credits.aleo/transfer_public(
+        // Private: return collateral as encrypted private credits record
+        let (return_credits, return_future): (credits.aleo/credits, Future) =
+            credits.aleo/transfer_public_to_private(
                 self.caller, receipt.collateral_amount);
 
         return finalize_withdraw_collateral(

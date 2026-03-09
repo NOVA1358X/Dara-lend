@@ -24,6 +24,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
       'getting-started',
       'smart-contract',
       'architecture',
+      'oracle',
       'roadmap',
       'faq',
     ];
@@ -155,30 +156,38 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
         </p>
 
         <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
-          Known Limitations &amp; Roadmap
+          Private Transfer Architecture
         </h3>
-        <p className="text-text-secondary leading-relaxed mb-3">
-          Like all Aleo DeFi projects in the current ecosystem, DARA Lend uses public token
-          transfers via <code className="text-accent text-xs">credits.aleo/transfer_public_as_signer</code> and{' '}
-          <code className="text-accent text-xs">test_usdcx_stablecoin.aleo/transfer_public</code>. These public transfer
-          methods expose participant addresses and amounts on-chain during supply, borrow, and repay
-          operations.
-        </p>
         <p className="text-text-secondary leading-relaxed mb-4">
-          This is a known ecosystem-wide limitation — the Aleo SDK does not yet provide
-          documentation for private stablecoin transfers. When private USDCx transfer support
-          becomes available, DARA Lend will migrate to fully private token flows to eliminate
-          this remaining information leakage.
+          DARA Lend v3 uses private token transfer functions throughout the protocol, hiding
+          participant identities at the transfer layer — not just in mappings and records.
         </p>
+        <div className="space-y-3 mb-6">
+          {[
+            { op: 'Supply Collateral', method: 'credits.aleo/transfer_private_to_public', privacy: 'Supplier identity hidden — uses private credits record as input' },
+            { op: 'Borrow', method: 'usdcx/transfer_public_to_private', privacy: 'Borrower receives private USDCx token — address not exposed' },
+            { op: 'Repay (USDCx)', method: 'usdcx/transfer_from_public', privacy: 'Uses approval pattern — repayer pre-approves amount' },
+            { op: 'Repay (Collateral Return)', method: 'credits.aleo/transfer_public_to_private', privacy: 'Collateral returned as private record' },
+            { op: 'Withdraw', method: 'credits.aleo/transfer_public_to_private', privacy: 'Withdrawer identity hidden' },
+            { op: 'Liquidate', method: 'credits.aleo/transfer_public_to_private', privacy: 'Liquidator identity hidden' },
+          ].map((item) => (
+            <div key={item.op} className="p-3 rounded-lg bg-bg-tertiary border border-border-default">
+              <p className="font-mono text-xs text-accent mb-1">{item.op}</p>
+              <p className="text-xs text-text-muted font-mono mb-1">{item.method}</p>
+              <p className="text-xs text-text-secondary">{item.privacy}</p>
+            </div>
+          ))}
+        </div>
         <ul className="space-y-2 mb-6">
           {[
             'Individual position data (collateral, debt, liquidation price) — ENCRYPTED in records',
             'Protocol aggregates (TVL, total borrowed) — PUBLIC for solvency verification',
-            'Token transfers (supply, borrow, repay) — PUBLIC addresses visible (ecosystem limitation)',
+            'Token transfers (supply, borrow, withdraw, liquidate) — PRIVATE identity hidden',
+            'Repay USDCx direction — uses approval pattern (Merkle proof complexity avoided)',
             'No user addresses stored in any public mapping — only aggregate values',
           ].map((item) => (
             <li key={item} className="flex items-start gap-2 text-text-secondary text-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-warning mt-1.5 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 flex-shrink-0" />
               {item}
             </li>
           ))}
@@ -264,11 +273,11 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
         <p className="text-text-secondary leading-relaxed mb-4">
           The DARA Lend protocol is powered by a single Leo program deployed at{' '}
           <a
-            href="https://testnet.explorer.provable.com/program/dara_lend_v2.aleo"
+            href="https://testnet.explorer.provable.com/program/dara_lend_v3.aleo"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-accent hover:underline"
-          >dara_lend_v2.aleo</a>. The contract
+          >dara_lend_v3.aleo</a>. The contract
           manages all lending operations using Aleo&apos;s native encryption.
         </p>
 
@@ -309,23 +318,23 @@ record LiquidationAuth {
           {[
             {
               name: 'supply_collateral',
-              desc: 'Deposits ALEO credits as encrypted collateral via credits.aleo cross-program call. Returns a CollateralReceipt record.',
+              desc: 'Accepts private ALEO credits record, deposits via credits.aleo/transfer_private_to_public. Supplier identity hidden. Returns a CollateralReceipt record.',
             },
             {
               name: 'borrow',
-              desc: 'Takes a CollateralReceipt, validates LTV ratio, creates DebtPosition and LiquidationAuth records. Applies 0.5% origination fee. Enforces oracle freshness and max debt circuit breaker. Transfers net amount via test_usdcx_stablecoin.aleo.',
+              desc: 'Takes a CollateralReceipt, validates LTV ratio, creates DebtPosition and LiquidationAuth records. Applies 0.5% origination fee. Enforces oracle freshness and max debt circuit breaker. Disburses USDCx via transfer_public_to_private — borrower receives private token.',
             },
             {
               name: 'repay',
-              desc: 'Consumes a DebtPosition, accepts credit payment, returns collateral. Generates a RepaymentReceipt record.',
+              desc: 'Consumes a DebtPosition, accepts USDCx via approval pattern, returns collateral as private record via transfer_public_to_private. Generates a RepaymentReceipt record.',
             },
             {
               name: 'liquidate',
-              desc: 'Consumes a LiquidationAuth, verifies oracle price against liquidation threshold. Seizes collateral + 5% bonus incentive and generates LiquidationReceipt. Oracle freshness validated.',
+              desc: 'Consumes a LiquidationAuth, verifies oracle price against liquidation threshold. Seizes collateral + 5% bonus via transfer_public_to_private — liquidator identity hidden. Generates LiquidationReceipt.',
             },
             {
               name: 'withdraw_collateral',
-              desc: 'Returns deposited collateral to the owner. Burns the CollateralReceipt record.',
+              desc: 'Returns collateral to owner via transfer_public_to_private — withdrawer identity hidden. Burns the CollateralReceipt record.',
             },
           ].map((t) => (
             <div key={t.name} className="p-4 rounded-lg bg-bg-tertiary border border-border-default">
@@ -412,6 +421,90 @@ Mapping::set(solvency_commitment, 1field, solvency);`}</CodeBlock>
         </ol>
       </section>
 
+      {/* Oracle System */}
+      <section id="oracle">
+        <h2 className="font-heading text-2xl font-bold text-text-primary mb-4">
+          Oracle System
+        </h2>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          DARA Lend implements a multi-layered oracle price feed that automatically keeps
+          on-chain pricing accurate without manual intervention — a critical advancement over
+          manual admin-panel approaches used by most Aleo DeFi protocols.
+        </p>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          Multi-Source Price Aggregation
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          The oracle uses a waterfall strategy with three price sources:
+        </p>
+        <ol className="space-y-3 mb-6">
+          {[
+            'CoinGecko API — Primary source with ALEO/USD pair (free tier, rate-limited)',
+            'CryptoCompare API — Fallback if CoinGecko is unavailable or rate-limited',
+            'Cached Price — Uses last known good price if all APIs fail temporarily',
+          ].map((step, idx) => (
+            <li key={idx} className="flex items-start gap-3 text-text-secondary text-sm">
+              <span className="w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center flex-shrink-0 font-mono text-xs font-bold">
+                {idx + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ol>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          On-Chain Freshness Enforcement
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-2">
+          Unlike protocols that accept any oracle price regardless of age, DARA Lend enforces
+          freshness at the smart contract level:
+        </p>
+        <CodeBlock>{`// Smart contract oracle freshness check
+const MAX_PRICE_AGE: u32 = 100u32; // ~5 minutes on Aleo
+
+async function finalize_borrow(...) {
+    let last_update: u32 = Mapping::get(price_update_block, 0u8);
+    assert(block.height - last_update <= MAX_PRICE_AGE);
+    // Rejects transactions using stale oracle data
+}`}</CodeBlock>
+        <p className="text-text-secondary leading-relaxed mt-2 mb-4">
+          This prevents attacks that exploit outdated prices. Every borrow and liquidation
+          validates that the oracle was updated within the last 100 blocks (~5 minutes).
+        </p>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          Automated Update Architecture
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-2">
+          The backend service runs a cron job every 2 minutes that:
+        </p>
+        <ul className="space-y-2 mb-6">
+          {[
+            'Fetches live ALEO/USD from multiple price APIs',
+            'Compares against current on-chain price',
+            'Skips update if change is below 0.1% threshold (saves gas)',
+            'Submits update_oracle_price transaction via @provablehq/sdk',
+            'Supports delegated proving via Provable API for cloud deployment',
+            'Retries up to 3 times with exponential backoff on failure',
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2 text-text-secondary text-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 flex-shrink-0" />
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
+          Admin Fallback
+        </h3>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          As a safety net, the protocol admin can also update the oracle price manually
+          through the Stats page. This provides a backup if the automated system encounters
+          issues, ensuring the protocol is never stuck with a stale price.
+        </p>
+      </section>
+
       {/* Roadmap */}
       <section id="roadmap">
         <h2 className="font-heading text-2xl font-bold text-text-primary mb-4">
@@ -427,7 +520,9 @@ Mapping::set(solvency_commitment, 1field, solvency);`}</CodeBlock>
             {
               phase: 'Wave 3 (Current)',
               items: [
+                'End-to-end private token flows — supply, borrow, withdraw, liquidate all use private transfers',
                 'Privacy leak fix — borrower address hashed in LiquidationAuth',
+                'Private credits record selector with public-to-private conversion',
                 'Oracle price freshness validation (100 block staleness window)',
                 '0.5% origination fee on borrow',
                 '5% liquidation incentive for liquidators',
@@ -440,7 +535,7 @@ Mapping::set(solvency_commitment, 1field, solvency);`}</CodeBlock>
             {
               phase: 'Wave 4 (Planned)',
               items: [
-                'Private USDCx transfers when SDK supports it (eliminate address exposure)',
+                'Private USDCx repay flow (requires Merkle proof integration for freeze-list compliance)',
                 'Record join/split for partial withdrawals and flexible positions',
                 'Block-based interest rate accrual',
                 'Multi-collateral support',

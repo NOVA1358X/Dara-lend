@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PROGRAM_ID, TX_FEE, TRANSITIONS, USDCX_PROGRAM, PROTOCOL_ADDRESS } from '@/utils/constants';
+import { PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, USDCX_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import { saveTxToHistory } from '@/components/app/TransactionHistory';
@@ -9,6 +9,7 @@ interface WalletExecute {
   requestTransaction?: (transaction: unknown) => Promise<{ transactionId: string } | undefined>;
   transactionStatus?: (txId: string) => Promise<{ status: string }>;
   connected: boolean;
+  address?: string | null;
 }
 
 interface TransactionParams {
@@ -88,11 +89,12 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const supplyCollateral = useCallback(
-    async (amount: number, nonce: number) => {
+    async (creditsRecord: string, amount: number, nonce: number) => {
       return executeTransaction(TRANSITIONS.SUPPLY_COLLATERAL, [
+        creditsRecord,
         microCreditsToInput(amount),
         fieldToInput(nonce),
-      ]);
+      ], TX_FEE_HIGH);
     },
     [executeTransaction],
   );
@@ -199,6 +201,58 @@ export function useTransaction(wallet: WalletExecute) {
     [executeTransaction],
   );
 
+  /** Convert public credits to a private record (needed before supply_collateral) */
+  const convertCreditsToPrivate = useCallback(
+    async (amountMicro: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+
+        const tx = createAleoTransaction(
+          CREDITS_PROGRAM,
+          'transfer_public_to_private',
+          [`${wallet.address ?? ''}`, microCreditsToInput(amountMicro)],
+          TX_FEE,
+        );
+
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Converting credits to private record...');
+
+        const confirmed = await pollTransactionStatus(txId, wallet);
+        if (confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Credits converted to private record!');
+        } else if (confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Conversion failed on-chain.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Conversion broadcast. Check explorer: ${txId}`);
+        }
+
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        const message = error instanceof Error ? error.message : 'Conversion failed';
+        toast.error(message);
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
   /** Transfer USDCx from user to the lending protocol address */
   const fundProtocol = useCallback(
     async (amountMicro: number) => {
@@ -260,6 +314,7 @@ export function useTransaction(wallet: WalletExecute) {
     liquidate,
     withdrawCollateral,
     updateOraclePrice,
+    convertCreditsToPrivate,
     fundProtocol,
     resetTransaction,
   };

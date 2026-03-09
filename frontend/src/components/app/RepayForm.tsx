@@ -106,7 +106,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
             Repay Loans
           </h2>
           <p className="text-xs text-text-secondary">
-            Repay USDCx debt and reclaim encrypted ALEO collateral
+            Repay USDCx debt and reclaim collateral as a private record
           </p>
         </div>
       </div>

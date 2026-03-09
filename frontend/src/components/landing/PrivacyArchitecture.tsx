@@ -10,6 +10,9 @@ const privateItems = [
   'Health Factor',
   'Liquidation Price',
   'Wallet ↔ Loan Link',
+  'Supplier Identity',
+  'Borrower Identity',
+  'Liquidator Identity',
 ];
 
 const publicItems = [
@@ -148,6 +151,61 @@ export function PrivacyArchitecture() {
         >
           Privacy isn't a feature — it's the architecture.
         </motion.p>
+
+        {/* Identity Protection Innovation */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ delay: 0.8, type: 'spring', stiffness: 120, damping: 20 }}
+          className="mt-16 p-6 md:p-8 rounded-2xl bg-gradient-to-br from-accent/5 to-transparent border border-accent/10"
+        >
+          <div className="flex items-start gap-4 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <ShieldIcon size={20} className="text-accent" />
+            </div>
+            <div>
+              <h3 className="font-heading text-lg font-semibold text-text-primary mb-1">
+                End-to-End Private Token Flows
+              </h3>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Most DeFi protocols on Aleo use public token transfers that expose participant
+                addresses on-chain. DARA Lend uses private transfer functions throughout —{' '}
+                <code className="text-accent text-xs bg-accent/5 px-1 py-0.5 rounded">transfer_private_to_public</code> for
+                supply and{' '}
+                <code className="text-accent text-xs bg-accent/5 px-1 py-0.5 rounded">transfer_public_to_private</code> for
+                borrow/withdraw/liquidate — hiding participant identities while maintaining protocol solvency.
+              </p>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg bg-bg-secondary border border-red-500/10">
+              <p className="text-[11px] text-red-400 uppercase tracking-wider mb-2 font-medium">
+                ✗ Typical Approach
+              </p>
+              <code className="text-xs text-text-secondary font-mono block leading-relaxed">
+                credits.aleo/transfer_public<br />
+                &nbsp;&nbsp;(borrower_addr, amount);<br />
+                <span className="text-red-400/60">// Address visible on-chain</span>
+              </code>
+              <p className="text-[10px] text-text-muted mt-2">
+                Exposes who is supplying, borrowing, withdrawing
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-bg-secondary border border-accent/10">
+              <p className="text-[11px] text-accent uppercase tracking-wider mb-2 font-medium">
+                ✓ DARA Lend Approach
+              </p>
+              <code className="text-xs text-text-secondary font-mono block leading-relaxed">
+                credits.aleo/transfer_public<br />
+                &nbsp;&nbsp;_to_private(addr, amount);<br />
+                <span className="text-accent/60">// Recipient gets private record</span>
+              </code>
+              <p className="text-[10px] text-text-muted mt-2">
+                Identity hidden — only aggregate TVL visible
+              </p>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

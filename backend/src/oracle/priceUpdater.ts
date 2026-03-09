@@ -6,7 +6,7 @@ import { executeTransition } from '../utils/transactionBuilder.js';
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 2000;
 
-async function fetchAleoPrice(): Promise<number> {
+async function fetchFromCoinGecko(): Promise<number> {
   const url = `${config.coingeckoApiUrl}/simple/price?ids=aleo&vs_currencies=usd`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`CoinGecko API error: ${res.status}`);
@@ -14,6 +14,36 @@ async function fetchAleoPrice(): Promise<number> {
   const price = data?.aleo?.usd;
   if (!price) throw new Error('ALEO price not available from CoinGecko');
   return price;
+}
+
+async function fetchFromCryptoCompare(): Promise<number> {
+  const res = await fetch('https://min-api.cryptocompare.com/data/price?fsym=ALEO&tsyms=USD');
+  if (!res.ok) throw new Error(`CryptoCompare API error: ${res.status}`);
+  const data = (await res.json()) as { USD?: number };
+  const price = data?.USD;
+  if (!price) throw new Error('ALEO price not available from CryptoCompare');
+  return price;
+}
+
+let lastFetchedPrice = 0;
+
+async function fetchAleoPrice(): Promise<number> {
+  // Try CoinGecko first, fall back to CryptoCompare
+  for (const fetcher of [fetchFromCoinGecko, fetchFromCryptoCompare]) {
+    try {
+      const price = await fetcher();
+      lastFetchedPrice = price;
+      return price;
+    } catch (err) {
+      console.warn(`[oracle] ${fetcher.name} failed: ${(err as Error).message}`);
+    }
+  }
+  // If all APIs fail but we have a cached price, use it
+  if (lastFetchedPrice > 0) {
+    console.warn(`[oracle] All price APIs failed, using cached price: $${lastFetchedPrice.toFixed(4)}`);
+    return lastFetchedPrice;
+  }
+  throw new Error('All price sources failed and no cached price available');
 }
 
 function priceToMicrocredits(usdPrice: number): number {
