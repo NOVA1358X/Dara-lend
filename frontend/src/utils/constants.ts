@@ -1,4 +1,4 @@
-export const PROGRAM_ID = 'dara_lend_v4.aleo';
+export const PROGRAM_ID = 'dara_lend_v5.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 
 export const ALEO_TESTNET_API = 'https://api.explorer.provable.com/v1/testnet';
@@ -12,8 +12,8 @@ export const MICROCREDITS_PER_CREDIT = 1_000_000;
 
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 
-// The on-chain address of dara_lend_v4.aleo (derived deterministically from program ID)
-export const PROTOCOL_ADDRESS = 'aleo10x8masftnd0l62h96crjrvv68h5qslkzer4ud3nnv9c9ksn3g5qqucf8d0';
+// The on-chain address of dara_lend_v5.aleo (derived deterministically from program ID)
+export const PROTOCOL_ADDRESS = 'aleo1lquusvxz6syfd4gq2rr2tk46484ee6q4nm5k4q3wmuclgxql7qyq7htwcn';
 
 // Protocol admin address (set during contract deployment)
 export const ADMIN_ADDRESS = 'aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8';

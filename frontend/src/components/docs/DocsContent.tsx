@@ -273,11 +273,11 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
         <p className="text-text-secondary leading-relaxed mb-4">
           The DARA Lend protocol is powered by a single Leo program deployed at{' '}
           <a
-            href="https://testnet.explorer.provable.com/program/dara_lend_v4.aleo"
+            href="https://testnet.explorer.provable.com/program/dara_lend_v5.aleo"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-accent hover:underline"
-          >dara_lend_v4.aleo</a>. The contract
+          >dara_lend_v5.aleo</a>. The contract
           manages all lending operations using Aleo&apos;s native encryption.
         </p>
 
@@ -454,23 +454,21 @@ Mapping::set(solvency_commitment, 1field, solvency);`}</CodeBlock>
         </ol>
 
         <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
-          On-Chain Freshness Enforcement
+          Flexible Oracle Architecture
         </h3>
         <p className="text-text-secondary leading-relaxed mb-2">
-          Unlike protocols that accept any oracle price regardless of age, DARA Lend enforces
-          freshness at the smart contract level:
+          DARA Lend&apos;s oracle uses on-chain price validation with deviation caps and round-based replay protection:
         </p>
-        <CodeBlock>{`// Smart contract oracle freshness check
-const MAX_PRICE_AGE: u32 = 100u32; // ~5 minutes on Aleo
+        <CodeBlock>{`// Smart contract oracle validation
+const MAX_PRICE_DEVIATION_BPS: u64 = 1_500u64; // 15% max change per update
 
-async function finalize_borrow(...) {
-    let last_update: u32 = Mapping::get(price_update_block, 0u8);
-    assert(block.height - last_update <= MAX_PRICE_AGE);
-    // Rejects transactions using stale oracle data
+async function finalize_update_oracle_price(...) {
+    assert(new_round > current_round);  // replay protection
+    let deviation = |new_price - old_price| * 10000 / old_price;
+    assert(deviation <= MAX_PRICE_DEVIATION_BPS);
 }`}</CodeBlock>
         <p className="text-text-secondary leading-relaxed mt-2 mb-4">
-          This prevents attacks that exploit outdated prices. Every borrow and liquidation
-          validates that the oracle was updated within the last 100 blocks (~5 minutes).
+          The oracle rejects price changes greater than 15% per update and enforces monotonic round counters to prevent replay attacks. Prices remain valid until the next update, ensuring uninterrupted access for all users.
         </p>
 
         <h3 className="font-heading text-lg font-semibold text-text-primary mt-6 mb-3">
@@ -523,7 +521,7 @@ async function finalize_borrow(...) {
                 'End-to-end private token flows — supply, borrow, withdraw, liquidate all use private transfers',
                 'Privacy leak fix — borrower address hashed in LiquidationAuth',
                 'Private credits record selector with public-to-private conversion',
-                'Oracle price freshness validation (100 block staleness window)',
+                'Oracle deviation cap (15%) + round-based replay protection',
                 '0.5% origination fee on borrow',
                 '5% liquidation incentive for liquidators',
                 'Max debt circuit breaker (100K USDCx cap)',

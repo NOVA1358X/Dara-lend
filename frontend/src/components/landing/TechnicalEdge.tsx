@@ -15,9 +15,9 @@ const features = [
   },
   {
     icon: ShieldIcon,
-    title: 'On-Chain Freshness Enforcement',
+    title: 'On-Chain Oracle Validation',
     description:
-      'The smart contract rejects stale prices. A MAX_PRICE_AGE of 100 blocks ensures borrowing and liquidation always use recent data. Prevents manipulation via outdated rates.',
+      'The smart contract enforces a 15% deviation cap per update and round-based replay protection. Prices remain valid until refreshed — no staleness lockouts for users.',
     tag: 'Safety',
   },
   {

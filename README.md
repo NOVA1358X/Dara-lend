@@ -11,8 +11,8 @@ Built for the **Aleo Privacy Buildathon Wave 3**.
 ## Live Demo
 
 - **Frontend:** *[Deploy URL — will be added after deployment]*
-- **Contract:** [`dara_lend_v4.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v4.aleo)
-- **Deployment TX:** [`at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc`](https://testnet.explorer.provable.com/transaction/at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc)
+- **Contract:** [`dara_lend_v5.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v5.aleo)
+- **Deployment TX:** [`at1vj2av6kdkjf6fsty3tjdw877xjquk4trw69nfzy3jv9u3gr27cpq8ww839`](https://testnet.explorer.provable.com/transaction/at1vj2av6kdkjf6fsty3tjdw877xjquk4trw69nfzy3jv9u3gr27cpq8ww839)
 
 ---
 
@@ -69,7 +69,7 @@ This ensures borrowers control their funds while the protocol can enforce solven
 
 ## Smart Contract
 
-**Program ID:** `dara_lend_v4.aleo`  
+**Program ID:** `dara_lend_v5.aleo`  
 **Network:** Aleo Testnet
 
 ### Transitions
@@ -167,7 +167,7 @@ Observers can see aggregate fund movements (credits entering/leaving the protoco
 
 ```
 dara-lend/
-├── contract/          Leo smart contract (dara_lend_v4.aleo)
+├── contract/          Leo smart contract (dara_lend_v5.aleo)
 │   └── src/main.leo   Full contract source
 ├── frontend/          React + TypeScript + Tailwind frontend
 │   └── src/
@@ -245,7 +245,7 @@ The backend runs the oracle price updater (CoinGecko → on-chain) every 2 minut
 
 ## Tech Stack
 
-- **Smart Contract:** Leo (Aleo) — deployed on Aleo Testnet as `dara_lend_v4.aleo`
+- **Smart Contract:** Leo (Aleo) — deployed on Aleo Testnet as `dara_lend_v5.aleo`
 - **Frontend:** React 18, TypeScript, Vite 5, Tailwind CSS, Framer Motion
 - **Backend:** Node.js, Express, TypeScript, `@provablehq/sdk`
 - **Wallet:** Shield Wallet via `@provablehq/aleo-wallet-adaptor-react`

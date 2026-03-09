@@ -1,7 +1,7 @@
 import credits.aleo;
 import test_usdcx_stablecoin.aleo;
 
-program dara_lend_v4.aleo {
+program dara_lend_v5.aleo {
 
     // ═══════════════════════════════════════════════════
     // CONSTANTS
@@ -15,7 +15,6 @@ program dara_lend_v4.aleo {
     const FEE_BPS: u128 = 50u128;                         // 0.5% origination fee
     const LIQUIDATION_BONUS_BPS: u128 = 500u128;          // 5% liquidation incentive
     const MAX_TOTAL_BORROWED: u128 = 100_000_000_000u128; // 100 000 USDCx cap
-    const MAX_PRICE_AGE: u32 = 100u32;                    // ~5 min staleness window
     const MAX_PRICE_DEVIATION_BPS: u64 = 1_500u64;        // reject >15% change per update
     const MIN_UPDATE_INTERVAL: u32 = 5u32;                // min blocks between updates
 
@@ -273,10 +272,6 @@ program dara_lend_v4.aleo {
         let stored_price: u64 = Mapping::get(oracle_price, 0u8);
         assert_eq(current_price, stored_price);
 
-        let last_update: u32 = Mapping::get_or_use(price_update_block, 0u8, 0u32);
-        let price_age: u32 = block.height - last_update;
-        assert(price_age <= MAX_PRICE_AGE);
-
         // Enforce max debt circuit breaker
         let current_borrowed: u128 = Mapping::get_or_use(total_borrowed, 0u8, 0u128);
         assert(current_borrowed + borrow_amount <= MAX_TOTAL_BORROWED);
@@ -405,10 +400,6 @@ program dara_lend_v4.aleo {
         // Validate oracle price matches and is fresh
         let stored_price: u64 = Mapping::get(oracle_price, 0u8);
         assert_eq(current_oracle_price, stored_price);
-
-        let last_update: u32 = Mapping::get_or_use(price_update_block, 0u8, 0u32);
-        let price_age: u32 = block.height - last_update;
-        assert(price_age <= MAX_PRICE_AGE);
 
         let current_collateral: u64 = Mapping::get(vault_total_collateral, 0u8);
         Mapping::set(vault_total_collateral, 0u8, current_collateral - total_seize);

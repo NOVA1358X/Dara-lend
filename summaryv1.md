@@ -4,9 +4,9 @@
 
 **DARA Lend** is a privacy-preserving decentralized lending protocol on Aleo. Users supply ALEO credits as collateral and borrow USDCx stablecoin — all positions are encrypted as private records on-chain. Public mappings track only aggregate totals (TVL, total borrowed, loan count) so anyone can verify protocol solvency without seeing individual positions.
 
-- **Contract**: `dara_lend_v4.aleo` — deployed on Aleo Testnet (v4: hardened oracle with multi-source aggregation)
-- **TX ID**: `at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc`
-- **Explorer**: https://testnet.explorer.provable.com/program/dara_lend_v4.aleo
+- **Contract**: `dara_lend_v5.aleo` — deployed on Aleo Testnet (v5: open oracle — no staleness window)
+- **TX ID**: `at1vj2av6kdkjf6fsty3tjdw877xjquk4trw69nfzy3jv9u3gr27cpq8ww839`
+- **Explorer**: https://testnet.explorer.provable.com/program/dara_lend_v5.aleo
 - **GitHub**: https://github.com/NOVA1358X/Dara-lend
 - **Total Files**: 103 source files (contract + frontend + backend) — 8 new files added in Phases 4+6+7+8
 - **Total Lines Changed**: ~3,200 insertions, ~600 deletions across ~50 files (post-initial commit)
@@ -40,7 +40,7 @@
 
 ---
 
-## Smart Contract — `dara_lend_v4.aleo`
+## Smart Contract — `dara_lend_v5.aleo`
 
 ### External Dependencies
 - `credits.aleo` — native ALEO credits (collateral)
@@ -591,8 +591,8 @@ DARA Lend v3 uses private token transfer functions throughout the protocol:
 
 | Constant | Value |
 |----------|-------|
-| PROGRAM_ID | `dara_lend_v4.aleo` |
-| PROTOCOL_ADDRESS | `aleo10x8masftnd0l62h96crjrvv68h5qslkzer4ud3nnv9c9ksn3g5qqucf8d0` |
+| PROGRAM_ID | `dara_lend_v5.aleo` |
+| PROTOCOL_ADDRESS | `aleo1lquusvxz6syfd4gq2rr2tk46484ee6q4nm5k4q3wmuclgxql7qyq7htwcn` |
 | ADMIN_ADDRESS | `aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8` |
 | USDCX_PROGRAM | `test_usdcx_stablecoin.aleo` |
 | CREDITS_PROGRAM | `credits.aleo` |
@@ -603,7 +603,7 @@ DARA Lend v3 uses private token transfer functions throughout the protocol:
 | FEE_BPS | 50 (0.5% origination fee) |
 | LIQUIDATION_BONUS_BPS | 500 (5% liquidation incentive) |
 | MAX_TOTAL_BORROWED | 100,000 USDCx (100,000,000,000 micro) |
-| MAX_PRICE_AGE | 100 blocks (~5 min oracle staleness window) |
+| MAX_PRICE_AGE | Removed — oracle prices valid until next update |
 | TX_FEE | 500,000 microcredits |
 | TX_FEE_HIGH | 1,000,000 microcredits (complex private transfers) |
 
@@ -613,8 +613,9 @@ DARA Lend v3 uses private token transfer functions throughout the protocol:
 
 | Item | Value |
 |------|-------|
-| Program | dara_lend_v4.aleo |
+| Program | dara_lend_v5.aleo |
 | Network | Aleo Testnet |
+| Deploy TX (v5) | at1vj2av6kdkjf6fsty3tjdw877xjquk4trw69nfzy3jv9u3gr27cpq8ww839 |
 | Deploy TX (v4) | at149ttcvge4hpu8n9tc5ey9j875447le32nzf4w4f0z9w88lmvns9s29tscc |
 | Deploy TX (v3) | at1jm98627sgwes0kx3nlqnqrw7e9qlre3mauzac9drt5mughpnjs8qmd8thl |
 | Deploy TX (v2) | at10vx3736ggtx9v2g436pxeyvgpg3knfg38lfd96jc022eju6ktyxsd6jzzs |
