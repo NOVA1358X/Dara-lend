@@ -126,7 +126,7 @@ export function OracleStatus() {
         </div>
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <span className="text-accent-success">✓</span>
-          <span>On-chain deviation cap (15%) + freshness check (100 blocks)</span>
+          <span>On-chain deviation cap (15%) + no staleness lockout</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <span className="text-accent-success">✓</span>
