@@ -10,6 +10,7 @@ import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
+import { TokenIcon } from '@/components/shared/TokenIcon';
 import { UnlockIcon } from '@/components/icons/UnlockIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import toast from 'react-hot-toast';
@@ -145,7 +146,8 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
               <p className="text-[11px] text-text-muted uppercase tracking-wider mb-1">
                 Collateral Amount
               </p>
-              <p className="font-mono text-lg font-semibold text-text-primary tabular-nums">
+              <p className="font-mono text-lg font-semibold text-text-primary tabular-nums flex items-center gap-1.5">
+                <TokenIcon token="ALEO" size={18} />
                 {formatCredits(receipt.collateralAmount)} ALEO
               </p>
             </div>

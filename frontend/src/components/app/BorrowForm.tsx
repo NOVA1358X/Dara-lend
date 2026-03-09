@@ -16,6 +16,7 @@ import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { ArrowDownIcon } from '@/components/icons/ArrowDownIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { LockIcon } from '@/components/icons/LockIcon';
+import { TokenIcon } from '@/components/shared/TokenIcon';
 import toast from 'react-hot-toast';
 
 interface BorrowFormProps {
@@ -160,9 +161,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
             Borrow Asset
           </label>
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-bg-secondary border border-border-default">
-            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-              <span className="text-[10px] font-bold text-blue-400">U</span>
-            </div>
+            <TokenIcon token="USDCx" size={24} />
             <span className="text-sm font-medium text-text-primary">USDCx Stablecoin</span>
           </div>
         </div>

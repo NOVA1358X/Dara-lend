@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { BACKEND_API } from '@/utils/constants';
 
 const PRICE_API_URL = `${BACKEND_API}/price`;
-const REFRESH_INTERVAL = 30_000; // 30 seconds
+const REFRESH_INTERVAL = 300_000; // 5 minutes
 
 interface MarketPriceResult {
   price: number | null;

@@ -6,6 +6,7 @@ import { useAppStore } from '@/stores/appStore';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { LockIcon } from '@/components/icons/LockIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
+import { TokenIcon } from '@/components/shared/TokenIcon';
 import { formatCredits } from '@/utils/formatting';
 import { ALEO_TESTNET_API } from '@/utils/constants';
 import toast from 'react-hot-toast';
@@ -195,9 +196,7 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
             Asset
           </label>
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-bg-secondary border border-border-default">
-            <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center">
-              <span className="text-[10px] font-bold text-accent">A</span>
-            </div>
+            <TokenIcon token="ALEO" size={24} />
             <span className="text-sm font-medium text-text-primary">ALEO Credits</span>
             <span className="ml-auto text-[10px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full">PRIVATE</span>
           </div>

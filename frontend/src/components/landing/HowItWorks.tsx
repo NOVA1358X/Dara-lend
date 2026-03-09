@@ -25,7 +25,7 @@ const steps = [
     icon: ArrowDownIcon,
     title: 'Borrow Privately',
     description:
-      'Borrow ALEO against your encrypted position. Your debt and liquidation price are invisible to everyone.',
+      'Borrow USDCx stablecoin against your encrypted position. Your debt and liquidation price are invisible to everyone.',
   },
   {
     number: '04',

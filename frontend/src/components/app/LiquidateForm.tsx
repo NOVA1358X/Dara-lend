@@ -11,6 +11,7 @@ import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
+import { TokenIcon } from '@/components/shared/TokenIcon';
 import { ZapIcon } from '@/components/icons/ZapIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import toast from 'react-hot-toast';
@@ -207,7 +208,8 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
                 <p className="text-[11px] text-text-muted uppercase tracking-wider mb-1">
                   Collateral
                 </p>
-                <p className="font-mono text-sm text-text-primary tabular-nums">
+                <p className="font-mono text-sm text-text-primary tabular-nums flex items-center gap-1.5">
+                  <TokenIcon token="ALEO" size={16} />
                   {formatCredits(auth.collateralAmount)} ALEO
                 </p>
               </div>
@@ -215,7 +217,8 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
                 <p className="text-[11px] text-text-muted uppercase tracking-wider mb-1">
                   Debt
                 </p>
-                <p className="font-mono text-sm text-text-primary tabular-nums">
+                <p className="font-mono text-sm text-text-primary tabular-nums flex items-center gap-1.5">
+                  <TokenIcon token="USDCx" size={16} />
                   {formatCredits(auth.debtAmount)} USDCx
                 </p>
               </div>

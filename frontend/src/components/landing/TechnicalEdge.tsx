@@ -10,7 +10,7 @@ const features = [
     icon: ChartIcon,
     title: 'Automated Oracle Price Feed',
     description:
-      'Multi-source oracle fetching live ALEO/USD from CoinGecko and CryptoCompare with cached fallback. Updates on-chain every 2 minutes automatically — no manual admin intervention.',
+      'Five-source oracle aggregating live ALEO/USD from CoinMarketCap, CoinGecko, CryptoCompare, Coinbase, and Binance with median filtering. Updates on-chain every 2 minutes automatically — no manual admin intervention.',
     tag: 'Automated',
   },
   {

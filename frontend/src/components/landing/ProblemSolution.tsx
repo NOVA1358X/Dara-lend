@@ -7,7 +7,7 @@ import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
 
 const exposedRows = [
   { label: 'Collateral', value: '10.00 ALEO' },
-  { label: 'Debt', value: '6.50 ALEO' },
+  { label: 'Debt', value: '6.50 USDCx' },
   { label: 'Health Factor', value: '1.12' },
   { label: 'Liquidation Price', value: '$1.34' },
 ];

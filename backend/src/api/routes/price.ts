@@ -12,7 +12,7 @@ interface PriceCache {
 }
 
 const cache: PriceCache = { price: null, timestamp: 0, source: null };
-const CACHE_TTL = 15_000; // 15 seconds
+const CACHE_TTL = 300_000; // 5 minutes
 
 async function fetchFromCoinMarketCap(): Promise<number> {
   if (!CMC_API_KEY) throw new Error('CMC_API_KEY not set');

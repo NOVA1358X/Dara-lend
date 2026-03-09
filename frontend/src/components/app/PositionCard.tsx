@@ -1,4 +1,5 @@
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
+import { TokenIcon } from '@/components/shared/TokenIcon';
 import { formatCredits, truncateAddress } from '@/utils/formatting';
 import type { DaraRecord } from '@/utils/records';
 import toast from 'react-hot-toast';
@@ -20,15 +21,15 @@ export function PositionCard({ record }: PositionCardProps) {
       case 'CollateralReceipt':
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} />
+            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} icon="ALEO" />
             <Field label="Nonce Hash" value={truncateAddress(record.nonceHash, 8, 4)} mono copyValue={record.nonceHash} />
           </div>
         );
       case 'DebtPosition':
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Debt" value={`${formatCredits(record.debtAmount)} ALEO`} />
-            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} />
+            <Field label="Debt" value={`${formatCredits(record.debtAmount)} USDCx`} icon="USDCx" />
+            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} icon="ALEO" />
             <Field label="Liquidation Price" value={`${(record.liquidationPrice / 1_000_000).toFixed(4)}`} />
             <Field label="Loan ID" value={truncateAddress(record.loanId, 8, 4)} mono copyValue={record.loanId} />
           </div>
@@ -36,24 +37,24 @@ export function PositionCard({ record }: PositionCardProps) {
       case 'RepaymentReceipt':
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Amount Repaid" value={`${formatCredits(record.amountRepaid)} ALEO`} />
-            <Field label="Collateral Returned" value={`${formatCredits(record.collateralReturned)} ALEO`} />
+            <Field label="Amount Repaid" value={`${formatCredits(record.amountRepaid)} USDCx`} icon="USDCx" />
+            <Field label="Collateral Returned" value={`${formatCredits(record.collateralReturned)} ALEO`} icon="ALEO" />
             <Field label="Loan ID" value={truncateAddress(record.loanId, 8, 4)} mono copyValue={record.loanId} />
           </div>
         );
       case 'LiquidationReceipt':
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Collateral Seized" value={`${formatCredits(record.collateralSeized)} ALEO`} />
-            <Field label="Debt Covered" value={`${formatCredits(record.debtCovered)} ALEO`} />
+            <Field label="Collateral Seized" value={`${formatCredits(record.collateralSeized)} ALEO`} icon="ALEO" />
+            <Field label="Debt Covered" value={`${formatCredits(record.debtCovered)} USDCx`} icon="USDCx" />
             <Field label="Loan ID" value={truncateAddress(record.loanId, 8, 4)} mono copyValue={record.loanId} />
           </div>
         );
       case 'LiquidationAuth':
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} />
-            <Field label="Debt" value={`${formatCredits(record.debtAmount)} ALEO`} />
+            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} icon="ALEO" />
+            <Field label="Debt" value={`${formatCredits(record.debtAmount)} USDCx`} icon="USDCx" />
             <Field label="Borrower (hash)" value={truncateAddress(record.borrowerHash, 8, 4)} mono copyValue={record.borrowerHash} />
           </div>
         );
@@ -88,11 +89,13 @@ function Field({
   value,
   mono = false,
   copyValue,
+  icon,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   copyValue?: string;
+  icon?: 'ALEO' | 'USDCx';
 }) {
   return (
     <div>
@@ -108,7 +111,8 @@ function Field({
           {value}
         </button>
       ) : (
-        <p className={`text-sm text-text-primary ${mono ? 'font-mono tabular-nums' : ''}`}>
+        <p className={`text-sm text-text-primary flex items-center gap-1.5 ${mono ? 'font-mono tabular-nums' : ''}`}>
+          {icon && <TokenIcon token={icon} size={16} />}
           {value}
         </p>
       )}
