@@ -120,7 +120,8 @@ program dara_lend_v2.aleo {
         assert(amount >= MIN_COLLATERAL);
 
         // Bind nonce to caller address to prevent grief attacks
-        let nonce_hash: field = BHP256::commit_to_field(nonce, self.signer);
+        let signer_field: field = BHP256::hash_to_field(self.signer);
+        let nonce_hash: field = BHP256::hash_to_field(nonce + signer_field);
 
         let receipt: CollateralReceipt = CollateralReceipt {
             owner: self.signer,

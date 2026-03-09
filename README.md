@@ -12,7 +12,7 @@ Built for the **Aleo Privacy Buildathon Wave 3**.
 
 - **Frontend:** *[Deploy URL — will be added after deployment]*
 - **Contract:** [`dara_lend_v2.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v2.aleo)
-- **Deployment TX:** [`at1chdltvfp6xrfh5x5ypn3ahw898knvhp9wclqrwmtv2556zwzsggq227v8m`](https://testnet.explorer.provable.com/transaction/at1chdltvfp6xrfh5x5ypn3ahw898knvhp9wclqrwmtv2556zwzsggq227v8m)
+- **Deployment TX:** [`at10vx3736ggtx9v2g436pxeyvgpg3knfg38lfd96jc022eju6ktyxsd6jzzs`](https://testnet.explorer.provable.com/transaction/at10vx3736ggtx9v2g436pxeyvgpg3knfg38lfd96jc022eju6ktyxsd6jzzs)
 
 ---
 

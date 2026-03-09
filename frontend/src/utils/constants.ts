@@ -12,8 +12,8 @@ export const MICROCREDITS_PER_CREDIT = 1_000_000;
 
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 
-// The on-chain address of dara_lend_v1.aleo (derived deterministically from program ID)
-export const PROTOCOL_ADDRESS = 'aleo1ce84yu9pku42csgua0d2llks9p98vaep3x9ysejef7lx540qagpqf6zlf3';
+// The on-chain address of dara_lend_v2.aleo (derived deterministically from program ID)
+export const PROTOCOL_ADDRESS = 'aleo1s5gs5qqs77hrv949sylvmfv0p78dy4fweyl9twfpstqtz75tmy8skxduqc';
 
 // Protocol admin address (set during contract deployment)
 export const ADMIN_ADDRESS = 'aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8';

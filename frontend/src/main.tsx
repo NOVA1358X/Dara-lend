@@ -33,7 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         wallets={wallets}
         decryptPermission={DecryptPermission.AutoDecrypt}
         network={Network.TESTNET}
-        programs={['dara_lend_v1.aleo', 'credits.aleo', 'test_usdcx_stablecoin.aleo']}
+        programs={['dara_lend_v2.aleo', 'credits.aleo', 'test_usdcx_stablecoin.aleo']}
       >
         <WalletModalProvider>
           <App />
