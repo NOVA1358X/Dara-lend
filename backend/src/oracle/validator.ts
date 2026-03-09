@@ -13,6 +13,7 @@ export function validatePrice(
   aggregated: AggregatedPrice,
   currentOnChainPrice: number,
   precision: number,
+  currentRound: number = 0,
 ): ValidationResult {
   // Must have at least 2 agreeing sources
   if (aggregated.confidence === 'none') {
@@ -30,7 +31,8 @@ export function validatePrice(
   }
 
   // Off-chain deviation check against current on-chain price
-  if (currentOnChainPrice > 0) {
+  // Skip on first update (round 0) — constructor default price is not real
+  if (currentRound > 0 && currentOnChainPrice > 0) {
     const onChainUsd = currentOnChainPrice / precision;
     const deviation = Math.abs(price - onChainUsd) / onChainUsd;
     if (deviation > MAX_DEVIATION) {

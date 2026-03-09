@@ -54,11 +54,12 @@ async function updatePrice(): Promise<void> {
       `failed: [${aggregated.failedSources.join(', ')}])`,
     );
 
-    // 2. Get current on-chain price
+    // 2. Get current on-chain price and round
     const currentPrice = await getCurrentOnChainPrice();
+    const onChainRound = await getCurrentRound();
 
-    // 3. Validate aggregated price
-    const validation = validatePrice(aggregated, currentPrice, config.precision);
+    // 3. Validate aggregated price (pass round so first update bypasses deviation check)
+    const validation = validatePrice(aggregated, currentPrice, config.precision, onChainRound);
     if (!validation.valid) {
       console.warn(`[oracle] Price rejected: ${validation.reason}`);
       return;
@@ -77,8 +78,7 @@ async function updatePrice(): Promise<void> {
       }
     }
 
-    // 5. Get current on-chain round and increment
-    const onChainRound = await getCurrentRound();
+    // 5. Increment round
     if (onChainRound >= currentRoundCounter) {
       currentRoundCounter = onChainRound;
     }

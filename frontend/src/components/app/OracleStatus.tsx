@@ -95,7 +95,7 @@ export function OracleStatus() {
             {livePrice ? `$${livePrice.toFixed(4)}` : '—'}
           </p>
           <p className="text-[10px] text-text-muted mt-0.5">
-            CoinGecko + CryptoCompare
+            CoinGecko + CryptoCompare + Coinbase + Binance
           </p>
         </div>
       </div>
@@ -122,15 +122,15 @@ export function OracleStatus() {
       <div className="mt-3 space-y-1.5">
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <span className="text-accent-success">✓</span>
-          <span>Multi-source: CoinGecko + CryptoCompare fallback</span>
+          <span>4-source median: CoinGecko + CryptoCompare + Coinbase + Binance</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <span className="text-accent-success">✓</span>
-          <span>On-chain freshness check (MAX_PRICE_AGE: 100 blocks)</span>
+          <span>On-chain deviation cap (15%) + freshness check (100 blocks)</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-text-secondary">
           <span className="text-accent-success">✓</span>
-          <span>Automated backend updater (every 2 minutes)</span>
+          <span>Round-based replay protection + min update interval</span>
         </div>
       </div>
     </motion.div>
