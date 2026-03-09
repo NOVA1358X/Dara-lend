@@ -2,7 +2,7 @@ export const PROGRAM_ID = 'dara_lend_v4.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 
 export const ALEO_TESTNET_API = 'https://api.explorer.provable.com/v1/testnet';
-export const BACKEND_API = '/api';
+export const BACKEND_API = import.meta.env.VITE_BACKEND_URL || '/api';
 
 export const PRECISION = 1_000_000;
 export const LTV_RATIO = 700_000;

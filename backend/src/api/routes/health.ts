@@ -9,7 +9,7 @@ const router = Router();
 router.get('/', async (_req, res) => {
   try {
     const blockHeight = await getLatestBlockHeight();
-    const oracle = getOracleStatus();
+    const oracle = await getOracleStatus();
     const monitor = getMonitorStatus();
 
     res.json({
@@ -19,9 +19,10 @@ router.get('/', async (_req, res) => {
       blockHeight,
       timestamp: Date.now(),
       oracle: {
-        lastUpdateTimestamp: oracle.lastUpdateTimestamp || null,
-        lastUpdatePrice: oracle.lastUpdatePrice || null,
-        ageMs: oracle.lastUpdateTimestamp ? Date.now() - oracle.lastUpdateTimestamp : null,
+        lastAggregationTimestamp: oracle.lastAggregationTimestamp || null,
+        medianPrice: oracle.medianPrice || null,
+        onChainPrice: oracle.onChainPrice || null,
+        ageMs: oracle.lastAggregationTimestamp ? Date.now() - oracle.lastAggregationTimestamp : null,
       },
       protocol: monitor
         ? {

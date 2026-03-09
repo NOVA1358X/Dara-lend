@@ -41,7 +41,10 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
     sources: Array<{ source: string; price: number }>;
     currentRound: number;
     onChainRound: number;
+    medianPrice?: number;
   } | null>(null);
+
+  const [autoUpdate, setAutoUpdate] = useState(false);
 
   const fetchOracleHealth = async () => {
     try {
@@ -78,6 +81,36 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
     fetchLiquidity();
     fetchOracleHealth();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto oracle update: when admin has toggle on, periodically check and trigger update
+  useEffect(() => {
+    if (!autoUpdate || !wallet?.connected || wallet?.address !== ADMIN_ADDRESS) return;
+    if (transactionPending) return;
+
+    const interval = setInterval(async () => {
+      if (transactionPending) return;
+      await fetchOracleHealth();
+      // Use the backend aggregated median price
+      const medianPrice = oracleHealth?.medianPrice;
+      if (!medianPrice || medianPrice <= 0) return;
+
+      const onChainPrice = stats?.oraclePrice ?? 0;
+      const medianMicro = Math.round(medianPrice * PRECISION);
+
+      // Check if price deviation exceeds 0.5%
+      if (onChainPrice > 0) {
+        const deviation = Math.abs(medianMicro - onChainPrice) / onChainPrice;
+        if (deviation < 0.005) return;
+      }
+
+      const currentRound = oracleHealth?.onChainRound ?? 0;
+      const nextRound = currentRound + 1;
+      toast('Auto-updating oracle price...', { icon: '🔄' });
+      await updateOraclePrice(medianMicro, nextRound);
+    }, 120_000); // Check every 2 minutes
+
+    return () => clearInterval(interval);
+  }, [autoUpdate, wallet?.connected, wallet?.address, transactionPending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isSolvent = stats
     ? stats.totalCollateral >= stats.totalBorrowed
@@ -286,6 +319,16 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
 
           <div className="flex gap-3">
             <button
+              onClick={() => setAutoUpdate((v) => !v)}
+              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                autoUpdate
+                  ? 'bg-accent/20 border-accent text-accent'
+                  : 'bg-bg-secondary border-border-default text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {autoUpdate ? '⏸ Auto On' : '▶ Auto Off'}
+            </button>
+            <button
               onClick={refreshPrice}
               disabled={priceLoading}
               className="px-4 py-3 rounded-lg bg-bg-secondary border border-border-default text-text-secondary text-sm hover:text-text-primary transition-colors disabled:opacity-40"
@@ -294,7 +337,8 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
             </button>
             <button
               onClick={async () => {
-                if (!livePrice) {
+                const priceToUse = livePrice || oracleHealth?.medianPrice;
+                if (!priceToUse) {
                   toast.error('Fetch live price first');
                   return;
                 }
@@ -302,13 +346,13 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                 await fetchOracleHealth();
                 const currentRound = oracleHealth?.onChainRound || oracleHealth?.currentRound || 0;
                 const nextRound = currentRound + 1;
-                const priceMicro = Math.round(livePrice * PRECISION);
+                const priceMicro = Math.round(priceToUse * PRECISION);
                 await updateOraclePrice(priceMicro, nextRound);
               }}
-              disabled={transactionPending || !livePrice}
+              disabled={transactionPending || (!livePrice && !oracleHealth?.medianPrice)}
               className="flex-1 py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
             >
-              {transactionPending ? 'Processing...' : livePrice ? `Update to $${livePrice.toFixed(6)}` : 'Fetch price first'}
+              {transactionPending ? 'Processing...' : (livePrice || oracleHealth?.medianPrice) ? `Update to $${(livePrice || oracleHealth?.medianPrice || 0).toFixed(6)}` : 'Fetch price first'}
             </button>
           </div>
 

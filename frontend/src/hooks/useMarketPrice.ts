@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 
-// Proxied through backend to avoid CORS issues
-const PRICE_API_URL = '/api/price';
+import { BACKEND_API } from '@/utils/constants';
+
+const PRICE_API_URL = `${BACKEND_API}/price`;
 const REFRESH_INTERVAL = 30_000; // 30 seconds
 
 interface MarketPriceResult {
