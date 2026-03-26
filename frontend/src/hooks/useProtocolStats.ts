@@ -19,8 +19,8 @@ export function useProtocolStats() {
     queryFn: async () => {
       const [collateralRaw, borrowedRaw, loansRaw, priceRaw] =
         await Promise.all([
-          getMappingValue(MAPPINGS.VAULT_TOTAL_COLLATERAL),
-          getMappingValue(MAPPINGS.TOTAL_BORROWED),
+          getMappingValue(MAPPINGS.VAULT_COLLATERAL_ALEO),
+          getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '0u8'),
           getMappingValue(MAPPINGS.LOAN_COUNT),
           getMappingValue(MAPPINGS.ORACLE_PRICE),
         ]);

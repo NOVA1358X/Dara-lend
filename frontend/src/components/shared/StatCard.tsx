@@ -19,9 +19,9 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div
-      className={`rounded-card bg-bg-tertiary p-5 hover:border hover:border-border-default border border-transparent transition-all duration-200 ${className}`}
+      className={`rounded-card glass-panel-sm p-5 transition-all duration-300 ${className}`}
     >
-      <p className="text-label uppercase text-text-muted tracking-widest mb-2">
+      <p className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-2">
         {label}
       </p>
       {loading ? (
@@ -30,7 +30,7 @@ export function StatCard({
         <div className="flex items-end gap-2">
           <p
             className={`text-2xl font-semibold text-text-primary ${
-              mono ? 'font-mono tabular-nums' : 'font-heading'
+              mono ? 'font-mono tabular-nums' : 'font-headline'
             }`}
           >
             {value}

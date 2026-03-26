@@ -72,9 +72,9 @@ export function PositionCard({ record }: PositionCardProps) {
   };
 
   return (
-    <div className="rounded-xl bg-bg-tertiary border border-border-default p-5 hover:border-border-hover transition-all duration-200">
+    <div className="rounded-xl glass-panel-sm p-5 transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-medium text-text-secondary">
+        <span className="font-label text-[10px] uppercase tracking-[0.2em] text-text-secondary">
           {typeLabel[record.type] || record.type}
         </span>
         <PrivacyBadge variant="private" />
@@ -105,7 +105,7 @@ function Field({
       {copyValue ? (
         <button
           onClick={() => copyToClipboard(copyValue)}
-          className={`text-sm text-text-primary hover:text-accent transition-colors cursor-pointer ${mono ? 'font-mono tabular-nums' : ''}`}
+          className={`text-sm text-text-primary hover:text-primary transition-colors cursor-pointer ${mono ? 'font-mono tabular-nums' : ''}`}
           title="Click to copy"
         >
           {value}

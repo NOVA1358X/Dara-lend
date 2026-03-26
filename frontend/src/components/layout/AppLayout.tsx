@@ -49,7 +49,7 @@ export function AppLayout({
           onDisconnect={handleDisconnect}
         />
 
-        <main className="p-6 max-w-[1200px] mx-auto">{children}</main>
+        <main className="p-6 lg:p-8 max-w-[1200px] mx-auto">{children}</main>
       </div>
     </div>
   );

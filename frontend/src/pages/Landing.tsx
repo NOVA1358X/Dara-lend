@@ -1,5 +1,6 @@
 import { LandingLayout } from '@/components/layout/LandingLayout';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { StatsBar } from '@/components/landing/StatsBar';
 import { ProblemSolution } from '@/components/landing/ProblemSolution';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { PrivacyArchitecture } from '@/components/landing/PrivacyArchitecture';
@@ -12,6 +13,7 @@ export default function Landing() {
   return (
     <LandingLayout>
       <HeroSection />
+      <StatsBar />
       <ProblemSolution />
       <HowItWorks />
       <PrivacyArchitecture />

@@ -86,7 +86,7 @@ function Section({
 }) {
   return (
     <div>
-      <h2 className="text-label uppercase text-text-muted tracking-widest mb-4">
+      <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
         {title}
       </h2>
       <div className="grid gap-4 sm:grid-cols-2">

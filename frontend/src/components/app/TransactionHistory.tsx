@@ -84,7 +84,7 @@ export function TransactionHistory() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.03 }}
-            className="rounded-xl bg-bg-tertiary border border-border-default p-4 hover:border-border-hover transition-all duration-200"
+            className="rounded-xl glass-panel-sm p-4 transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -113,7 +113,7 @@ export function TransactionHistory() {
                   href={`${EXPLORER_BASE}/${tx.txId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-mono text-accent hover:underline flex items-center gap-1"
+                  className="text-xs font-mono text-primary hover:underline flex items-center gap-1"
                   title={tx.txId}
                 >
                   {tx.txId.slice(0, 16)}...

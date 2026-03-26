@@ -1,44 +1,40 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { ArrowRightIcon } from '@/components/icons/ArrowRightIcon';
 
 export function CTASection() {
-  const { ref, inView } = useScrollReveal();
+  const { ref, inView } = useScrollReveal({ threshold: 0.3 });
 
   return (
-    <section className="py-section-mobile md:py-[100px] bg-bg-primary" ref={ref}>
-      <div className="max-w-[1280px] mx-auto px-6 text-center">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-          className="font-heading text-[32px] md:text-cta-headline text-text-primary mb-4"
-        >
-          Your collateral. Your debt. Your secret.
-        </motion.h2>
+    <section ref={ref} className="relative py-section-mobile md:py-section overflow-hidden">
+      <div className="absolute inset-0 bg-bg-primary" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/0 to-black/80" />
 
-        <motion.p
-          initial={{ opacity: 0, y: 15 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.1, type: 'spring', stiffness: 120, damping: 20 }}
-          className="text-base text-text-secondary mb-10"
-        >
-          Start borrowing privately on DARA Lend.
-        </motion.p>
-
+      <div className="relative z-10 max-w-[800px] mx-auto px-6 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.2, type: 'spring', stiffness: 120, damping: 20 }}
+          transition={{ duration: 0.7 }}
         >
-          <Link
-            to="/app"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-accent text-bg-primary text-base font-medium hover:bg-accent-hover hover:-translate-y-px transition-all duration-200 focus-ring"
-          >
-            Launch App
-            <ArrowRightIcon size={16} />
-          </Link>
+          <span className="font-label text-label uppercase tracking-[0.3em] text-secondary mb-6 block">
+            The Obsidian Ledger
+          </span>
+          <h2 className="font-headline text-cta-headline text-text-primary mb-6">
+            Ready to Build a<br />Private Future?
+          </h2>
+          <p className="text-[17px] text-text-secondary font-light mb-10 max-w-[500px] mx-auto">
+            Multi-collateral lending with institutional-grade privacy.
+            Your positions. Your data. Your keys.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link to="/app" className="btn-signature">
+              Enter the Vault
+            </Link>
+            <Link to="/docs" className="btn-outline">
+              Read the Docs
+            </Link>
+          </div>
         </motion.div>
       </div>
     </section>

@@ -139,14 +139,14 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-        className="rounded-xl bg-bg-tertiary border border-border-default p-6"
+        className="rounded-xl glass-panel p-6"
       >
         <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-            <ArrowDownIcon size={16} className="text-accent" />
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <ArrowDownIcon size={16} className="text-primary" />
           </div>
           <div>
-            <h2 className="font-heading text-lg font-semibold text-text-primary">
+            <h2 className="font-headline text-lg text-text-primary">
               Borrow
             </h2>
             <p className="text-xs text-text-secondary">
@@ -157,10 +157,10 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
         {/* Asset */}
         <div className="mb-4">
-          <label className="text-label uppercase text-text-muted tracking-widest block mb-2">
+          <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
             Borrow Asset
           </label>
-          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-bg-secondary border border-border-default">
+          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
             <TokenIcon token="USDCx" size={24} />
             <span className="text-sm font-medium text-text-primary">USDCx Stablecoin</span>
           </div>
@@ -169,13 +169,13 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
         {/* Collateral Selector */}
         {collateralReceipts.length > 1 && (
           <div className="mb-4">
-            <label className="text-label uppercase text-text-muted tracking-widest block mb-2">
+            <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
               Select Collateral
             </label>
             <select
               value={selectedCollateralIdx}
               onChange={(e) => setSelectedCollateralIdx(Number(e.target.value))}
-              className="w-full px-4 py-3 rounded-lg bg-bg-secondary border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent/30"
+              className="w-full px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary text-sm focus:outline-none focus:border-primary/30"
               aria-label="Select collateral receipt"
             >
               {collateralReceipts.map((r, idx) => (
@@ -189,7 +189,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-3 rounded-lg bg-bg-secondary">
+          <div className="p-3 rounded-lg bg-white/[0.03]">
             <p className="text-[11px] text-text-muted uppercase tracking-wider mb-1">
               Collateral
             </p>
@@ -197,7 +197,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               {formatCredits(collateralAmount)} ALEO
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-bg-secondary">
+          <div className="p-3 rounded-lg bg-white/[0.03]">
             <p className="text-[11px] text-text-muted uppercase tracking-wider mb-1">
               Max Borrow
             </p>
@@ -209,7 +209,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
         {/* Amount Input */}
         <div className="mb-4">
-          <label className="text-label uppercase text-text-muted tracking-widest block mb-2">
+          <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
             Borrow Amount
           </label>
           <input
@@ -219,7 +219,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
             placeholder="0.00"
             min="0"
             step="0.01"
-            className="w-full px-4 py-4 rounded-lg bg-bg-secondary border border-border-default text-text-primary font-mono text-xl tabular-nums placeholder:text-text-muted focus:outline-none focus:border-accent/30 transition-colors"
+            className="w-full px-4 py-4 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary font-mono text-xl tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary/30 transition-colors"
             aria-label="Borrow amount in USDCx"
           />
 
@@ -231,7 +231,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               max="100"
               value={Math.round(sliderPercent)}
               onChange={handleSlider}
-              className="w-full accent-accent h-1"
+              className="w-full accent-primary h-1"
               aria-label="Borrow percentage of max"
             />
             <div className="flex justify-between mt-1">
@@ -244,33 +244,33 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
         {/* Live Preview */}
         <div className="space-y-2 mb-4">
-          <div className="flex justify-between py-2 px-3 rounded-lg bg-bg-secondary">
+          <div className="flex justify-between py-2 px-3 rounded-lg bg-white/[0.03]">
             <span className="text-xs text-text-secondary">LTV Ratio</span>
             <span className={`font-mono text-xs tabular-nums ${ltvRatio > 65 ? 'text-accent-warning' : 'text-text-primary'}`}>
               {ltvRatio.toFixed(1)}%
             </span>
           </div>
-          <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-bg-secondary">
+          <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-white/[0.03]">
             <span className="text-xs text-text-secondary">Health Factor</span>
             <HealthFactorGauge value={projectedHealth} size={60} />
           </div>
-          <div className="flex justify-between py-2 px-3 rounded-lg bg-bg-secondary">
+          <div className="flex justify-between py-2 px-3 rounded-lg bg-white/[0.03]">
             <span className="text-xs text-text-secondary">Liquidation Price</span>
             <div className="flex items-center gap-1.5">
               <span className="font-mono text-xs text-text-primary tabular-nums">
                 {liquidationPrice > 0 ? `${(liquidationPrice / PRECISION).toFixed(4)}` : '—'}
               </span>
-              <LockIcon size={10} className="text-accent" />
+              <LockIcon size={10} className="text-primary" />
             </div>
           </div>
         </div>
 
         {/* Encrypted callout */}
-        <div className="mb-6 p-3 rounded-lg bg-accent/5 border border-accent/10">
+        <div className="mb-6 p-3 rounded-lg bg-primary/5 border border-primary/10">
           <div className="flex items-start gap-2">
-            <ShieldIcon size={14} className="text-accent mt-0.5 flex-shrink-0" />
+            <ShieldIcon size={14} className="text-primary mt-0.5 flex-shrink-0" />
             <p className="text-xs text-text-secondary leading-relaxed">
-              Your liquidation price will be <strong className="text-accent">ENCRYPTED</strong> on-chain.
+              Your liquidation price will be <strong className="text-primary">ENCRYPTED</strong> on-chain.
               MEV bots cannot see it.
             </p>
           </div>
@@ -286,7 +286,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
         <button
           onClick={handleSubmit}
           disabled={borrowAmount <= 0 || borrowAmount > maxBorrowAmount || transactionPending}
-          className="w-full py-4 rounded-lg bg-accent text-bg-primary font-medium text-[15px] hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+          className="w-full py-4 rounded-lg btn-signature text-[15px] font-label uppercase tracking-[0.1em] disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
         >
           {transactionPending ? 'Processing...' : 'Borrow'}
         </button>

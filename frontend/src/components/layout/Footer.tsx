@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Logo } from '@/components/shared/Logo';
 
 const footerColumns = [
   {
     title: 'Protocol',
     links: [
-      { label: 'App', href: '/app' },
-      { label: 'Docs', href: '/docs' },
+      { label: 'Launch App', href: '/app' },
+      { label: 'Documentation', href: '/docs' },
       { label: 'GitHub', href: '#' },
     ],
   },
@@ -15,7 +14,6 @@ const footerColumns = [
     links: [
       { label: 'Aleo', href: 'https://aleo.org' },
       { label: 'Shield Wallet', href: 'https://shield.app' },
-      { label: 'NEAR Intents', href: 'https://docs.near-intents.org' },
       { label: 'Provable', href: 'https://docs.provable.tools' },
     ],
   },
@@ -30,29 +28,31 @@ const footerColumns = [
 
 export function Footer() {
   return (
-    <footer className="bg-[#050508] border-t border-[rgba(255,255,255,0.04)]">
-      <div className="max-w-[1280px] mx-auto px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+    <footer className="bg-black border-t border-white/[0.06]">
+      <div className="max-w-[1280px] mx-auto px-6 py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
           <div className="col-span-2 md:col-span-1">
-            <Logo className="mb-4" />
-            <p className="text-sm text-text-secondary leading-relaxed mb-4">
-              Privacy-first money market on Aleo
+            <span className="font-headline text-2xl text-primary block mb-2">DARA LEND</span>
+            <p className="font-label text-[10px] uppercase tracking-[0.3em] text-text-muted mb-6">
+              The Obsidian Ledger
             </p>
-            <p className="text-xs text-text-muted">© 2025 DARA Lend</p>
+            <p className="text-sm text-text-secondary font-light leading-relaxed">
+              Privacy-first multi-collateral lending on Aleo.
+            </p>
           </div>
 
           {footerColumns.map((column) => (
             <div key={column.title}>
-              <h4 className="text-label uppercase text-text-muted tracking-widest mb-4">
+              <h4 className="font-label text-[10px] uppercase tracking-[0.25em] text-text-muted mb-5">
                 {column.title}
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-3">
                 {column.links.map((link) =>
                   link.href.startsWith('/') ? (
                     <li key={link.label}>
                       <Link
                         to={link.href}
-                        className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
+                        className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-300 font-light"
                       >
                         {link.label}
                       </Link>
@@ -63,7 +63,7 @@ export function Footer() {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
+                        className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-300 font-light"
                       >
                         {link.label}
                       </a>
@@ -75,10 +75,18 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 pt-6 border-t border-[rgba(255,255,255,0.04)] text-center">
-          <p className="text-xs text-text-muted">
-            Built for the Aleo Privacy Buildathon
+        <div className="mt-16 pt-8 border-t border-white/[0.06] flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="font-label text-[10px] uppercase tracking-[0.2em] text-text-muted">
+            &copy; 2025 DARA Lend &mdash; Built for the Aleo Privacy Buildathon
           </p>
+          <div className="flex items-center gap-6">
+            <span className="font-label text-[10px] uppercase tracking-[0.2em] text-text-muted">
+              Privacy Policy
+            </span>
+            <span className="font-label text-[10px] uppercase tracking-[0.2em] text-text-muted">
+              Terms
+            </span>
+          </div>
         </div>
       </div>
     </footer>

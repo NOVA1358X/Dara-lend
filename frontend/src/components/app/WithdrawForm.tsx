@@ -97,11 +97,11 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
   return (
     <div className="max-w-[560px] mx-auto space-y-4">
       <div className="flex items-center gap-2 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-          <UnlockIcon size={16} className="text-accent" />
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <UnlockIcon size={16} className="text-primary" />
         </div>
         <div>
-          <h2 className="font-heading text-lg font-semibold text-text-primary">
+          <h2 className="font-headline text-lg text-text-primary">
             Withdraw Collateral
           </h2>
           <p className="text-xs text-text-secondary">
@@ -111,9 +111,9 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
       </div>
 
       {/* Privacy Info */}
-      <div className="p-3 rounded-lg bg-accent/5 border border-accent/10">
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
         <div className="flex items-start gap-2">
-          <ShieldIcon size={14} className="text-accent mt-0.5 flex-shrink-0" />
+          <ShieldIcon size={14} className="text-primary mt-0.5 flex-shrink-0" />
           <p className="text-xs text-text-secondary leading-relaxed">
             Your collateral receipt is an encrypted private record. Only you can withdraw
             it — no one else can see or claim your deposit.
@@ -132,7 +132,7 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
             stiffness: 120,
             damping: 20,
           }}
-          className="rounded-xl bg-bg-tertiary border border-border-default p-5"
+          className="rounded-xl glass-panel p-5"
         >
           <div className="flex items-center justify-between mb-4">
             <PrivacyBadge variant="private" />
@@ -170,7 +170,7 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
           <button
             onClick={() => handleWithdraw(idx)}
             disabled={transactionPending}
-            className="w-full py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+              className="w-full py-3 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-sm disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
           >
             {transactionPending && selectedIdx === idx ? 'Processing...' : 'Withdraw Collateral'}
           </button>

@@ -123,7 +123,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 120, damping: 20 }}
       >
-        <h2 className="text-label uppercase text-text-muted tracking-widest mb-4">
+        <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Protocol Statistics
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -157,7 +157,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, type: 'spring', stiffness: 120, damping: 20 }}
       >
-        <h2 className="text-label uppercase text-text-muted tracking-widest mb-4">
+        <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Utilization
         </h2>
         <div className="grid grid-cols-3 gap-4">
@@ -196,12 +196,12 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, type: 'spring', stiffness: 120, damping: 20 }}
-        className="rounded-xl bg-bg-tertiary border border-border-default p-6"
+        className="rounded-xl glass-panel p-6"
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <ShieldIcon size={20} className="text-accent" />
-            <h3 className="font-heading text-lg font-semibold text-text-primary">
+            <ShieldIcon size={20} className="text-primary" />
+            <h3 className="font-headline text-lg text-text-primary">
               Protocol Solvency
             </h3>
           </div>
@@ -215,7 +215,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
         </p>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="p-4 rounded-lg bg-bg-secondary">
+          <div className="p-4 rounded-lg bg-white/[0.03]">
             <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
               Total Collateral
             </p>
@@ -223,7 +223,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               {stats ? `${formatCredits(stats.totalCollateral)} ALEO` : '—'}
             </p>
           </div>
-          <div className="p-4 rounded-lg bg-bg-secondary">
+          <div className="p-4 rounded-lg bg-white/[0.03]">
             <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
               Total Debt
             </p>
@@ -247,22 +247,22 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, type: 'spring', stiffness: 120, damping: 20 }}
-          className="rounded-xl bg-bg-tertiary border border-border-default p-6"
+          className="rounded-xl glass-panel p-6"
         >
           <div className="flex items-center gap-2 mb-4">
-            <ShieldIcon size={20} className="text-accent" />
-            <h3 className="font-heading text-lg font-semibold text-text-primary">
+            <ShieldIcon size={20} className="text-primary" />
+            <h3 className="font-headline text-lg text-text-primary">
               Update Oracle Price
             </h3>
           </div>
 
           <p className="text-sm text-text-secondary leading-relaxed mb-4">
             Fetch real ALEO/USD price from multiple sources and update the on-chain oracle.
-            This calls <code className="text-accent text-xs">update_oracle_price</code> on the contract.
+            This calls <code className="text-primary text-xs">update_oracle_price</code> on the contract.
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="p-4 rounded-lg bg-bg-secondary">
+            <div className="p-4 rounded-lg bg-white/[0.03]">
               <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
                 Current On-Chain Price
               </p>
@@ -270,7 +270,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                 {stats?.oraclePrice ? `$${(stats.oraclePrice / PRECISION).toFixed(6)}` : '—'}
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-bg-secondary">
+            <div className="p-4 rounded-lg bg-white/[0.03]">
               <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
                 Live Market Price
               </p>
@@ -283,7 +283,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
           {/* Oracle Health Info */}
           {oracleHealth && (
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="p-3 rounded-lg bg-bg-secondary">
+              <div className="p-3 rounded-lg bg-white/[0.03]">
                 <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Confidence</p>
                 <p className={`font-mono text-xs font-medium ${
                   oracleHealth.confidence === 'high' ? 'text-accent-success' :
@@ -293,7 +293,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                   {oracleHealth.confidence ?? 'N/A'}
                 </p>
               </div>
-              <div className="p-3 rounded-lg bg-bg-secondary">
+              <div className="p-3 rounded-lg bg-white/[0.03]">
                 <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Sources</p>
                 <p className="font-mono text-xs text-text-primary">
                   {oracleHealth.sourceCount} active
@@ -302,7 +302,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                   )}
                 </p>
               </div>
-              <div className="p-3 rounded-lg bg-bg-secondary">
+              <div className="p-3 rounded-lg bg-white/[0.03]">
                 <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Round</p>
                 <p className="font-mono text-xs text-text-primary">
                   #{oracleHealth.onChainRound || oracleHealth.currentRound || 0}
@@ -322,8 +322,8 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               onClick={() => setAutoUpdate((v) => !v)}
               className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
                 autoUpdate
-                  ? 'bg-accent/20 border-accent text-accent'
-                  : 'bg-bg-secondary border-border-default text-text-secondary hover:text-text-primary'
+                  ? 'bg-primary/20 border-primary text-primary'
+                  : 'bg-white/[0.03] border-white/[0.06] text-text-secondary hover:text-text-primary'
               }`}
             >
               {autoUpdate ? '⏸ Auto On' : '▶ Auto Off'}
@@ -331,7 +331,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
             <button
               onClick={refreshPrice}
               disabled={priceLoading}
-              className="px-4 py-3 rounded-lg bg-bg-secondary border border-border-default text-text-secondary text-sm hover:text-text-primary transition-colors disabled:opacity-40"
+              className="px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-secondary text-sm hover:text-text-primary transition-colors disabled:opacity-40"
             >
               {priceLoading ? 'Fetching...' : 'Refresh Price'}
             </button>
@@ -350,7 +350,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                 await updateOraclePrice(priceMicro, nextRound);
               }}
               disabled={transactionPending || (!livePrice && !oracleHealth?.medianPrice)}
-              className="flex-1 py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+              className="flex-1 py-3 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-sm disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
             >
               {transactionPending ? 'Processing...' : (livePrice || oracleHealth?.medianPrice) ? `Update to $${(livePrice || oracleHealth?.medianPrice || 0).toFixed(6)}` : 'Fetch price first'}
             </button>
@@ -373,22 +373,22 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, type: 'spring', stiffness: 120, damping: 20 }}
-          className="rounded-xl bg-bg-tertiary border border-border-default p-6"
+          className="rounded-xl glass-panel p-6"
         >
           <div className="flex items-center gap-2 mb-4">
-            <ShieldIcon size={20} className="text-accent" />
-            <h3 className="font-heading text-lg font-semibold text-text-primary">
+            <ShieldIcon size={20} className="text-primary" />
+            <h3 className="font-headline text-lg text-text-primary">
               Fund Protocol Liquidity
             </h3>
           </div>
 
           <p className="text-sm text-text-secondary leading-relaxed mb-4">
             Transfer USDCx stablecoin to the lending protocol so borrowers can take loans.
-            This calls <code className="text-accent text-xs">transfer_public</code> on the USDCx contract.
+            This calls <code className="text-primary text-xs">transfer_public</code> on the USDCx contract.
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="p-4 rounded-lg bg-bg-secondary">
+            <div className="p-4 rounded-lg bg-white/[0.03]">
               <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
                 Protocol USDCx Balance
               </p>
@@ -396,7 +396,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                 {usdcxLiquidity !== null ? `${formatCredits(usdcxLiquidity)} USDCx` : '—'}
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-bg-secondary">
+            <div className="p-4 rounded-lg bg-white/[0.03]">
               <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
                 Protocol Address
               </p>
@@ -414,7 +414,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               placeholder="Amount USDCx"
               min="1"
               step="1"
-              className="flex-1 px-4 py-3 rounded-lg bg-bg-secondary border border-border-default text-text-primary font-mono text-sm tabular-nums placeholder:text-text-muted focus:outline-none focus:border-accent/30"
+              className="flex-1 px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary font-mono text-sm tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary/30"
               aria-label="USDCx amount to fund"
             />
             <span className="text-sm text-text-secondary">USDCx</span>
@@ -439,7 +439,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               setTimeout(fetchLiquidity, 10_000);
             }}
             disabled={transactionPending}
-            className="w-full py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+            className="w-full py-3 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-sm disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
           >
             {transactionPending ? 'Processing...' : `Fund ${fundAmount || '0'} USDCx to Protocol`}
           </button>

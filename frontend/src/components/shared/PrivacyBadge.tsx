@@ -11,12 +11,12 @@ export function PrivacyBadge({ variant = 'private', className = '' }: PrivacyBad
     encrypted: {
       text: 'Encrypted',
       icon: <LockIcon size={12} />,
-      colors: 'bg-accent/5 text-accent border-accent/10',
+      colors: 'bg-primary/5 text-primary border-primary/10',
     },
     private: {
       text: 'Private Record',
       icon: <ShieldIcon size={12} />,
-      colors: 'bg-accent/5 text-accent border-accent/10',
+      colors: 'bg-primary/5 text-primary border-primary/10',
     },
     verified: {
       text: 'Verifiable On-Chain',

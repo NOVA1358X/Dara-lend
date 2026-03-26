@@ -39,9 +39,9 @@ export function TransactionFlow({ currentStep, txId, className = '' }: Transacti
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1, type: 'spring', stiffness: 120, damping: 20 }}
-            className={`flex items-center gap-3 py-3 px-4 rounded-lg transition-colors duration-200 ${
+            className={`flex items-center gap-3 py-3 px-4 rounded-lg transition-colors duration-300 ${
               isActive
-                ? 'bg-accent/5 border border-accent/10'
+                ? 'bg-primary/5 border border-primary/10'
                 : isComplete
                 ? 'bg-accent-success/5 border border-transparent'
                 : isFailed
@@ -54,10 +54,10 @@ export function TransactionFlow({ currentStep, txId, className = '' }: Transacti
                 isComplete
                   ? 'bg-accent-success/10 text-accent-success'
                   : isActive
-                  ? 'bg-accent/10 text-accent'
+                  ? 'bg-primary/10 text-primary'
                   : isFailed
                   ? 'bg-accent-danger/10 text-accent-danger'
-                  : 'bg-surface text-text-muted'
+                  : 'bg-white/[0.04] text-text-muted'
               }`}
             >
               {isActive && !isComplete ? (
@@ -71,7 +71,7 @@ export function TransactionFlow({ currentStep, txId, className = '' }: Transacti
             <span
               className={`text-sm font-medium ${
                 isActive
-                  ? 'text-accent'
+                  ? 'text-primary'
                   : isComplete
                   ? 'text-accent-success'
                   : isFailed

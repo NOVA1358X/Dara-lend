@@ -47,12 +47,12 @@ export function OracleStatus() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-      className="rounded-xl bg-bg-tertiary border border-border-default p-5"
+      className="rounded-xl glass-panel p-5"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-lg">📡</span>
-          <h3 className="font-heading text-base font-semibold text-text-primary">
+          <span className="material-symbols-outlined text-lg text-primary">sensors</span>
+          <h3 className="font-headline text-base text-text-primary">
             Oracle Price Feed
           </h3>
         </div>
@@ -74,7 +74,7 @@ export function OracleStatus() {
 
       <div className="grid grid-cols-2 gap-3">
         {/* On-chain price */}
-        <div className="p-3 rounded-lg bg-bg-secondary">
+        <div className="p-3 rounded-lg bg-white/[0.03]">
           <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">
             On-Chain Oracle
           </p>
@@ -87,7 +87,7 @@ export function OracleStatus() {
         </div>
 
         {/* Market price */}
-        <div className="p-3 rounded-lg bg-bg-secondary">
+        <div className="p-3 rounded-lg bg-white/[0.03]">
           <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">
             Market Price
           </p>
@@ -102,7 +102,7 @@ export function OracleStatus() {
 
       {/* Deviation indicator */}
       {deviation !== null && (
-        <div className="mt-3 flex items-center justify-between px-3 py-2 rounded-lg bg-bg-secondary">
+        <div className="mt-3 flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.03]">
           <span className="text-xs text-text-muted">Deviation</span>
           <span
             className={`text-xs font-mono font-medium ${

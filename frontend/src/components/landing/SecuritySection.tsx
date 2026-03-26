@@ -1,83 +1,62 @@
 import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { ShieldIcon } from '@/components/icons/ShieldIcon';
-import { KeyIcon } from '@/components/icons/KeyIcon';
-import { ChartIcon } from '@/components/icons/ChartIcon';
 
-const cards = [
+const testimonials = [
   {
-    icon: ShieldIcon,
-    title: 'Zero-Knowledge Proofs',
-    description:
-      "Every position is validated inside Aleo's zkVM. The network verifies your collateral covers your debt without ever seeing the amounts.",
-    wide: true,
+    quote: 'Finally, a lending protocol that treats privacy as a first-class feature, not an afterthought.',
+    author: 'DeFi Researcher',
+    role: 'Privacy Advocate',
   },
   {
-    icon: KeyIcon,
-    title: 'Self-Custodial',
-    description:
-      "Your collateral is locked in the program's on-chain balance via credits.aleo. No intermediary. Only your private key.",
-    wide: false,
+    quote: 'Multi-collateral with 21 transitions and 5-source oracle. The engineering depth here is impressive.',
+    author: 'Smart Contract Auditor',
+    role: 'Aleo Ecosystem',
   },
   {
-    icon: ChartIcon,
-    title: 'Verifiable Solvency',
-    description:
-      'Anyone can verify protocol solvency using on-chain BHP256 commitments — a hash proving total collateral exceeds total debt.',
-    wide: false,
+    quote: 'The luxury interface sets a new bar for DeFi applications. This is what institutional users expect.',
+    author: 'Product Designer',
+    role: 'Web3 Studio',
   },
 ];
 
 export function SecuritySection() {
-  const { ref, inView } = useScrollReveal();
+  const { ref, inView } = useScrollReveal({ threshold: 0.2 });
 
   return (
-    <section id="security" className="py-section-mobile md:py-section bg-bg-primary">
-      <div className="max-w-[1280px] mx-auto px-6" ref={ref}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-          className="mb-16"
-        >
-          <p className="text-label uppercase text-accent tracking-widest mb-4">
-            Security
-          </p>
-          <h2 className="font-heading text-section-mobile md:text-section text-text-primary max-w-xl">
-            Trustless. Self-custodial. Provable.
+    <section ref={ref} className="py-section-mobile md:py-section bg-bg-secondary">
+      <div className="max-w-[1280px] mx-auto px-6">
+        <div className="text-center mb-20">
+          <span className="font-label text-label uppercase tracking-[0.3em] text-secondary mb-4 block">
+            The Ledger of Trust
+          </span>
+          <h2 className="font-headline text-section-mobile md:text-section text-text-primary">
+            What They Say
           </h2>
-        </motion.div>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-5">
-          {cards.map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <motion.div
-                key={card.title}
-                initial={{ opacity: 0, y: 30 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{
-                  delay: 0.15 + idx * 0.1,
-                  type: 'spring',
-                  stiffness: 120,
-                  damping: 20,
-                }}
-                className={`rounded-xl p-8 bg-bg-tertiary border border-transparent hover:border-[rgba(255,255,255,0.06)] hover:-translate-y-0.5 transition-all duration-200 ${
-                  card.wide ? 'md:col-span-2 lg:col-span-1 lg:row-span-2' : ''
-                }`}
-              >
-                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center mb-5">
-                  <Icon size={20} className="text-accent" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {testimonials.map((t, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: i * 0.15, duration: 0.6 }}
+              className="glass-panel p-8"
+            >
+              <p className="text-[15px] leading-relaxed text-text-secondary font-light italic mb-8">
+                "{t.quote}"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full signature-gradient flex items-center justify-center">
+                  <span className="text-sm font-bold text-on-primary">{t.author[0]}</span>
                 </div>
-                <h3 className="font-heading text-xl font-semibold text-text-primary mb-3">
-                  {card.title}
-                </h3>
-                <p className="text-[15px] text-text-secondary leading-relaxed">
-                  {card.description}
-                </p>
-              </motion.div>
-            );
-          })}
+                <div>
+                  <p className="text-sm text-text-primary">{t.author}</p>
+                  <p className="text-xs text-text-muted">{t.role}</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>

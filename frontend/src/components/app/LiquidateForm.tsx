@@ -129,7 +129,7 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
           <ZapIcon size={16} className="text-accent-danger" />
         </div>
         <div>
-          <h2 className="font-heading text-lg font-semibold text-text-primary">
+          <h2 className="font-headline text-lg text-text-primary">
             Liquidation
           </h2>
           <p className="text-xs text-text-secondary">
@@ -139,10 +139,10 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
       </div>
 
       {/* Oracle Price Display */}
-      <div className="rounded-xl bg-bg-tertiary border border-border-default p-4">
+      <div className="rounded-xl glass-panel p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ShieldIcon size={14} className="text-accent" />
+            <ShieldIcon size={14} className="text-primary" />
             <span className="text-xs text-text-muted uppercase tracking-wider">
               Current Oracle Price
             </span>
@@ -156,9 +156,9 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
       </div>
 
       {/* Info */}
-      <div className="p-3 rounded-lg bg-accent/5 border border-accent/10">
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
         <div className="flex items-start gap-2">
-          <ShieldIcon size={14} className="text-accent mt-0.5 flex-shrink-0" />
+          <ShieldIcon size={14} className="text-primary mt-0.5 flex-shrink-0" />
           <p className="text-xs text-text-secondary leading-relaxed">
             Positions can be liquidated when the oracle price drops below the
             liquidation price. The collateral is seized and debt is cleared from
@@ -183,10 +183,10 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
               stiffness: 120,
               damping: 20,
             }}
-            className={`rounded-xl bg-bg-tertiary border p-5 ${
+            className={`rounded-xl glass-panel p-5 ${
               isUnderwater
                 ? 'border-accent-danger/40'
-                : 'border-border-default'
+                : ''
             }`}
           >
             <div className="flex items-center justify-between mb-4">

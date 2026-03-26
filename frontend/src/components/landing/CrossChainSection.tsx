@@ -1,139 +1,61 @@
 import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { ShieldIcon } from '@/components/icons/ShieldIcon';
-
-const chains = [
-  { symbol: 'E', label: 'Ethereum' },
-  { symbol: 'A', label: 'Arbitrum' },
-  { symbol: 'B', label: 'Base' },
-  { symbol: 'S', label: 'Solana' },
-  { symbol: 'N', label: 'NEAR' },
-];
-
-const features = [
-  'No Gas Management',
-  'No Wallet Switching',
-  'No Chain-Specific UX',
-];
+import { useProtocolStats } from '@/hooks/useProtocolStats';
+import { formatCredits } from '@/utils/formatting';
 
 export function CrossChainSection() {
-  const { ref, inView } = useScrollReveal();
+  const { ref, inView } = useScrollReveal({ threshold: 0.3 });
+  const { data: stats } = useProtocolStats();
+
+  const numbers = [
+    { value: stats?.totalCollateral ? formatCredits(stats.totalCollateral) : '0', label: 'Total Value Locked', suffix: ' ALEO' },
+    { value: stats?.loanCount?.toString() ?? '0', label: 'Active Loans', suffix: '' },
+    { value: '0.5', label: 'Protocol Fee', suffix: '%' },
+    { value: '70', label: 'Max Borrow LTV', suffix: '%' },
+  ];
 
   return (
-    <section id="cross-chain" className="py-section-mobile md:py-section bg-bg-secondary">
-      <div className="max-w-[1280px] mx-auto px-6" ref={ref}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-          className="mb-16"
+    <section id="numbers" ref={ref} className="relative py-section-mobile md:py-section overflow-hidden">
+      {/* Video background */}
+      <div className="absolute inset-0">
+        <video
+          autoPlay muted loop playsInline
+          className="w-full h-full object-cover opacity-20"
+          poster="/images/bg.png"
         >
-          <p className="text-label uppercase text-accent tracking-widest mb-4">
-            Roadmap — Cross-Chain
-          </p>
-          <h2 className="font-heading text-section-mobile md:text-section text-text-primary max-w-xl">
-            Supply from anywhere. Borrow privately.
+          <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260324_024928_1efd0b0d-6c02-45a8-8847-1030900c4f63.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/70" />
+      </div>
+
+      <div className="relative z-10 max-w-[1280px] mx-auto px-6">
+        <div className="text-center mb-20">
+          <span className="font-label text-label uppercase tracking-[0.3em] text-secondary mb-4 block">
+            The Numbers
+          </span>
+          <h2 className="font-headline text-section-mobile md:text-section text-text-primary">
+            Protocol at a Glance
           </h2>
-          <p className="text-sm text-text-muted mt-3 max-w-lg">
-            Coming soon — Shield Wallet&apos;s native NEAR Intents will enable collateral supply
-            from any chain, directly into your private DARA Lend position.
-          </p>
-        </motion.div>
-
-        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-          {/* Chain circles */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 120, damping: 20 }}
-            className="relative flex flex-wrap justify-center gap-4 lg:gap-5"
-          >
-            {chains.map((chain, idx) => (
-              <motion.div
-                key={chain.symbol}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={inView ? { opacity: 1, scale: 1 } : {}}
-                transition={{
-                  delay: 0.3 + idx * 0.08,
-                  type: 'spring',
-                  stiffness: 120,
-                  damping: 20,
-                }}
-                className="flex flex-col items-center gap-1.5"
-              >
-                <div className="w-12 h-12 rounded-full bg-[rgba(255,255,255,0.1)] flex items-center justify-center text-text-primary font-heading text-sm font-semibold">
-                  {chain.symbol}
-                </div>
-                <span className="text-[10px] text-text-muted">{chain.label}</span>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Connecting dots */}
-          <div className="hidden lg:flex items-center gap-1">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0 }}
-                animate={inView ? { opacity: 0.3 } : {}}
-                transition={{ delay: 0.5 + i * 0.04 }}
-                className="w-1 h-1 rounded-full bg-text-muted"
-              />
-            ))}
-          </div>
-
-          {/* Shield destination */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ delay: 0.4, type: 'spring', stiffness: 120, damping: 20 }}
-            className="flex flex-col items-center lg:items-start"
-          >
-            <div className="w-20 h-20 rounded-2xl bg-accent/5 border border-accent/10 flex items-center justify-center mb-4">
-              <ShieldIcon size={32} className="text-accent" />
-            </div>
-            <h3 className="font-heading text-lg font-semibold text-text-primary mb-1">
-              DARA Lend
-            </h3>
-            <p className="text-sm text-text-secondary mb-6">Private Vault</p>
-
-            <div className="flex flex-wrap gap-2 mb-6">
-              {features.map((feature) => (
-                <span
-                  key={feature}
-                  className="px-3 py-1.5 rounded-full text-[13px] text-text-secondary bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)]"
-                >
-                  {feature}
-                </span>
-              ))}
-            </div>
-
-            <p className="text-base text-text-secondary leading-relaxed max-w-[540px]">
-              Shield Wallet integrates NEAR Intents natively. Swap from Ethereum, Solana,
-              or any of 100+ assets across 35+ chains — directly into your DARA Lend
-              position.
-            </p>
-          </motion.div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.6, type: 'spring', stiffness: 120, damping: 20 }}
-          className="mt-12 flex items-center justify-center gap-6"
-        >
-          <span className="text-xs text-text-muted uppercase tracking-wider">
-            Powered by
-          </span>
-          {['Aleo', 'NEAR Protocol', 'Shield Wallet'].map((name) => (
-            <span
-              key={name}
-              className="text-xs text-text-muted font-medium"
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+          {numbers.map((num, i) => (
+            <motion.div
+              key={num.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: i * 0.1, duration: 0.5 }}
+              className="text-center"
             >
-              {name}
-            </span>
+              <div className="font-headline text-stat-mobile md:text-stat signature-text-gradient stat-glow mb-2">
+                {num.value}{num.suffix}
+              </div>
+              <p className="font-label text-[10px] uppercase tracking-[0.25em] text-text-muted">
+                {num.label}
+              </p>
+            </motion.div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

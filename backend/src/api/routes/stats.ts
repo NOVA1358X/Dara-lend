@@ -20,25 +20,41 @@ router.get('/', async (_req, res) => {
   }
 
   try {
-    const [collateralRaw, borrowedRaw, loansRaw, priceRaw] =
+    const [collateralAleoRaw, collateralUsdcxRaw, collateralUsadRaw, borrowedUsdcxRaw, borrowedUsadRaw, borrowedCreditsRaw, priceAleoRaw, loansRaw] =
       await Promise.all([
-        getMappingValue('vault_total_collateral'),
-        getMappingValue('total_borrowed'),
+        getMappingValue('vault_collateral_aleo'),
+        getMappingValue('vault_collateral_usdcx'),
+        getMappingValue('vault_collateral_usad'),
+        getMappingValue('pool_total_borrowed', '0u8'),
+        getMappingValue('pool_total_borrowed', '1u8'),
+        getMappingValue('pool_total_borrowed', '2u8'),
+        getMappingValue('oracle_price', '0u8'),
         getMappingValue('loan_count'),
-        getMappingValue('oracle_price'),
       ]);
 
-    const totalCollateral = parseAleoU64(collateralRaw);
-    const totalBorrowed = parseAleoU64(borrowedRaw);
+    const collateralAleo = parseAleoU64(collateralAleoRaw);
+    const collateralUsdcx = parseAleoU64(collateralUsdcxRaw);
+    const collateralUsad = parseAleoU64(collateralUsadRaw);
+    const borrowedUsdcx = parseAleoU64(borrowedUsdcxRaw);
+    const borrowedUsad = parseAleoU64(borrowedUsadRaw);
+    const borrowedCredits = parseAleoU64(borrowedCreditsRaw);
+    const totalBorrowed = borrowedUsdcx + borrowedUsad + borrowedCredits;
     const loanCount = parseAleoU64(loansRaw);
-    const oraclePrice = parseAleoU64(priceRaw);
+    const oraclePrice = parseAleoU64(priceAleoRaw);
 
+    const totalCollateral = collateralAleo;
     const utilizationRate =
       totalCollateral > 0 ? totalBorrowed / totalCollateral : 0;
 
     const data = {
       totalCollateral,
+      collateralAleo,
+      collateralUsdcx,
+      collateralUsad,
       totalBorrowed,
+      borrowedUsdcx,
+      borrowedUsad,
+      borrowedCredits,
       loanCount,
       oraclePrice,
       oraclePriceFormatted: (oraclePrice / config.precision).toFixed(4),

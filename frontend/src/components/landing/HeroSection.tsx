@@ -1,101 +1,109 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShieldIcon } from '@/components/icons/ShieldIcon';
-import { ArrowRightIcon } from '@/components/icons/ArrowRightIcon';
-import { StatsBar } from './StatsBar';
 
-const wordVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.1,
-      type: 'spring' as const,
-      stiffness: 120,
-      damping: 20,
-    },
-  }),
-};
+function PrivacyGauge() {
+  const radius = 45;
+  const circumference = 2 * Math.PI * radius;
+  const progress = 0.75;
+  const offset = circumference * (1 - progress);
 
-const headlineWords = ['Borrow', 'Without', 'Being', 'Watched.'];
+  return (
+    <div className="relative w-[140px] h-[140px] md:w-[180px] md:h-[180px]">
+      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+        <circle
+          cx="50" cy="50" r={radius} fill="none"
+          stroke="url(#gaugeGradient)" strokeWidth="3" strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          className="animate-gauge-fill"
+        />
+        <defs>
+          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#C9DDFF" />
+            <stop offset="100%" stopColor="#D6C5A1" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+        <span className="font-headline text-3xl md:text-4xl signature-text-gradient">75%</span>
+        <span className="font-label text-[9px] uppercase tracking-[0.2em] text-text-muted mt-1">Privacy</span>
+      </div>
+    </div>
+  );
+}
 
 export function HeroSection() {
   return (
     <section className="relative min-h-[700px] h-screen flex items-center overflow-hidden">
+      {/* Video Background */}
       <div className="absolute inset-0">
-        <img
-          src="/images/bg.png"
-          alt=""
-          className="w-full h-full object-cover object-center"
-          loading="eager"
-        />
+        <video
+          autoPlay muted loop playsInline
+          className="w-full h-full object-cover"
+          poster="/images/bg.png"
+        >
+          <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260324_024928_1efd0b0d-6c02-45a8-8847-1030900c4f63.mp4" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 hero-gradient" />
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pb-32">
+      <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 flex items-center justify-between">
         <div className="max-w-[620px]">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-            className="flex items-center gap-2 mb-6"
+            transition={{ duration: 0.6 }}
+            className="mb-6"
           >
-            <ShieldIcon size={12} className="text-accent" />
-            <span className="text-label uppercase text-accent tracking-[0.12em]">
-              Privacy-First Lending on Aleo
+            <span className="font-label text-label uppercase text-secondary tracking-[0.3em]">
+              The Obsidian Ledger
             </span>
           </motion.div>
 
-          <h1 className="font-heading text-hero-mobile md:text-hero text-text-primary mb-5">
-            {headlineWords.map((word, i) => (
-              <motion.span
-                key={word}
-                custom={i}
-                initial="hidden"
-                animate="visible"
-                variants={wordVariants}
-                className="inline-block mr-[0.3em]"
-              >
-                {word}
-              </motion.span>
-            ))}
-          </h1>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.8 }}
+            className="font-headline text-hero-mobile md:text-hero text-text-primary mb-6"
+          >
+            Borrow Without<br />Being Watched.
+          </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, type: 'spring', stiffness: 120, damping: 20 }}
-            className="text-[17px] leading-relaxed text-text-secondary max-w-[480px] mb-9"
+            transition={{ delay: 0.4, duration: 0.7 }}
+            className="text-[17px] leading-relaxed text-text-secondary max-w-[480px] mb-10 font-light"
           >
-            Your collateral, debt, and liquidation price — encrypted inside zero-knowledge
-            proofs. MEV bots can't target what they can't see.
+            The world's first institutional-grade privacy ledger for decentralized lending.
+            Multi-collateral. Zero-knowledge. Fully encrypted.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, type: 'spring', stiffness: 120, damping: 20 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
             className="flex flex-wrap items-center gap-4"
           >
-            <Link
-              to="/app"
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-accent text-bg-primary text-[15px] font-medium hover:bg-accent-hover hover:-translate-y-px transition-all duration-200 focus-ring"
-            >
-              Launch App
-              <ArrowRightIcon size={16} />
+            <Link to="/app" className="btn-signature">
+              Enter the Vault
             </Link>
-            <Link
-              to="/docs"
-              className="inline-flex items-center px-7 py-3.5 rounded-lg border border-[rgba(255,255,255,0.12)] text-text-primary text-[15px] font-medium hover:border-[rgba(255,255,255,0.25)] hover:bg-[rgba(255,255,255,0.03)] transition-all duration-200 focus-ring"
-            >
+            <Link to="/docs" className="btn-outline">
               Documentation
             </Link>
           </motion.div>
         </div>
-      </div>
 
-      <StatsBar />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="hidden lg:block"
+        >
+          <PrivacyGauge />
+        </motion.div>
+      </div>
     </section>
   );
 }

@@ -7,6 +7,7 @@ import healthRouter from './routes/health.js';
 import transactionRouter from './routes/transaction.js';
 import priceRouter from './routes/price.js';
 import oracleRouter from './routes/oracle.js';
+import analyticsRouter from './routes/analytics.js';
 
 export function createServer() {
   const app = express();
@@ -30,12 +31,14 @@ export function createServer() {
   app.use('/api/transaction', transactionRouter);
   app.use('/api/price', priceRouter);
   app.use('/api/oracle', oracleRouter);
+  app.use('/api/analytics', analyticsRouter);
 
   app.get('/', (_req, res) => {
     res.json({
       name: 'DARA Lend API',
-      version: '1.0.0',
-      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status'],
+      version: '2.0.0',
+      program: 'dara_lend_v6.aleo',
+      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview'],
     });
   });
 

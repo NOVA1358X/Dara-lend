@@ -103,7 +103,7 @@ export function Dashboard({ wallet }: DashboardProps) {
       )}
       {/* User Position Stats */}
       <div>
-        <h2 className="text-label uppercase text-text-muted tracking-widest mb-4">
+        <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Your Position
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -121,8 +121,8 @@ export function Dashboard({ wallet }: DashboardProps) {
             }
             loading={isLoading}
           />
-          <div className="rounded-card bg-bg-tertiary p-5 border border-transparent hover:border-border-default transition-all duration-200">
-            <p className="text-label uppercase text-text-muted tracking-widest mb-2">
+          <div className="rounded-card glass-panel-sm p-5">
+            <p className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-2">
               Health Factor
             </p>
             {!wallet.connected ? (
@@ -152,7 +152,7 @@ export function Dashboard({ wallet }: DashboardProps) {
 
       {/* Protocol Overview */}
       <div>
-        <h2 className="text-label uppercase text-text-muted tracking-widest mb-4">
+        <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Protocol Overview
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -186,7 +186,7 @@ export function Dashboard({ wallet }: DashboardProps) {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-label uppercase text-text-muted tracking-widest mb-4">
+        <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Quick Actions
         </h2>
         <div className="grid sm:grid-cols-3 gap-4">
@@ -206,12 +206,12 @@ export function Dashboard({ wallet }: DashboardProps) {
               >
                 <Link
                   to={action.href}
-                  className="block p-5 rounded-card bg-bg-tertiary border border-transparent hover:border-border-default hover:-translate-y-0.5 transition-all duration-200"
+                  className="block p-5 rounded-card glass-panel-sm hover:-translate-y-0.5 transition-all duration-300"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center mb-3">
-                    <Icon size={18} className="text-accent" />
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+                    <Icon size={18} className="text-primary" />
                   </div>
-                  <h3 className="font-heading text-base font-semibold text-text-primary mb-1">
+                  <h3 className="font-headline text-base text-text-primary mb-1">
                     {action.label}
                   </h3>
                   <p className="text-sm text-text-secondary">{action.description}</p>

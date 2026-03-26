@@ -1,0 +1,289 @@
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useProtocolStats } from '@/hooks/useProtocolStats';
+import { useMarketPrice } from '@/hooks/useMarketPrice';
+import { formatCredits } from '@/utils/formatting';
+import { PRECISION, BACKEND_API } from '@/utils/constants';
+import { StatCard } from '@/components/shared/StatCard';
+import { ShieldIcon } from '@/components/icons/ShieldIcon';
+import { ChartIcon } from '@/components/icons/ChartIcon';
+
+interface DataPoint {
+  timestamp: number;
+  value: number;
+}
+
+interface InterestRates {
+  rateBaseBps: number;
+  rateSlopeBps: number;
+  supplyApyBps: number;
+  borrowApyBps: number;
+}
+
+export function Analytics() {
+  const { data: stats, isLoading } = useProtocolStats();
+  const { price: livePrice } = useMarketPrice();
+  const [tvlHistory, setTvlHistory] = useState<DataPoint[]>([]);
+  const [priceHistory, setPriceHistory] = useState<DataPoint[]>([]);
+  const [rates, setRates] = useState<InterestRates | null>(null);
+
+  useEffect(() => {
+    async function fetchAnalytics() {
+      try {
+        const [tvlRes, priceRes, ratesRes] = await Promise.all([
+          fetch(`${BACKEND_API}/analytics/tvl`).then((r) => (r.ok ? r.json() : null)),
+          fetch(`${BACKEND_API}/analytics/price-history`).then((r) => (r.ok ? r.json() : null)),
+          fetch(`${BACKEND_API}/analytics/interest-rates`).then((r) => (r.ok ? r.json() : null)),
+        ]);
+        if (tvlRes?.history) setTvlHistory(tvlRes.history);
+        if (priceRes?.history) setPriceHistory(priceRes.history);
+        if (ratesRes) setRates(ratesRes);
+      } catch {
+        // Backend may not be running
+      }
+    }
+    fetchAnalytics();
+    const interval = setInterval(fetchAnalytics, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const collateralValueUsd =
+    stats && livePrice ? (stats.totalCollateral / PRECISION) * livePrice : 0;
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <ChartIcon size={20} className="text-primary" />
+        </div>
+        <div>
+          <h1 className="font-headline text-2xl text-text-primary">Analytics</h1>
+          <p className="font-label text-[10px] uppercase tracking-[0.2em] text-text-muted">
+            Protocol Metrics & Performance
+          </p>
+        </div>
+      </div>
+
+      {/* Key Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+      >
+        <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
+          Key Metrics
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="TVL (ALEO)"
+            value={stats ? `${formatCredits(stats.totalCollateral)}` : '—'}
+            loading={isLoading}
+          />
+          <StatCard
+            label="TVL (USD)"
+            value={collateralValueUsd > 0 ? `$${collateralValueUsd.toFixed(2)}` : '—'}
+            loading={isLoading}
+          />
+          <StatCard
+            label="Total Borrowed"
+            value={stats ? `${formatCredits(stats.totalBorrowed)}` : '—'}
+            loading={isLoading}
+          />
+          <StatCard
+            label="Utilization"
+            value={stats ? `${(stats.utilizationRate * 100).toFixed(1)}%` : '—'}
+            loading={isLoading}
+          />
+        </div>
+      </motion.div>
+
+      {/* Interest Rate Panel */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, type: 'spring', stiffness: 120, damping: 20 }}
+        className="rounded-xl glass-panel p-6"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-primary text-lg">trending_up</span>
+          <h3 className="font-headline text-base text-text-primary">Interest Rate Model</h3>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">
+              Base Rate
+            </p>
+            <p className="font-mono text-lg text-text-primary tabular-nums">
+              {rates ? `${(rates.rateBaseBps / 100).toFixed(2)}%` : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">
+              Slope
+            </p>
+            <p className="font-mono text-lg text-text-primary tabular-nums">
+              {rates ? `${(rates.rateSlopeBps / 100).toFixed(2)}%` : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">
+              Supply APY
+            </p>
+            <p className="font-mono text-lg text-accent-success tabular-nums">
+              {rates ? `${(rates.supplyApyBps / 100).toFixed(2)}%` : '—'}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">
+              Borrow APY
+            </p>
+            <p className="font-mono text-lg text-secondary tabular-nums">
+              {rates ? `${(rates.borrowApyBps / 100).toFixed(2)}%` : '—'}
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Collateral Composition */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, type: 'spring', stiffness: 120, damping: 20 }}
+        className="rounded-xl glass-panel p-6"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-primary text-lg">pie_chart</span>
+          <h3 className="font-headline text-base text-text-primary">Multi-Collateral Composition</h3>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <CompositionCard
+            token="ALEO"
+            label="Aleo Credits"
+            color="#C9DDFF"
+            description="Native privacy-preserving collateral"
+          />
+          <CompositionCard
+            token="USDCx"
+            label="USDCx Stablecoin"
+            color="#D6C5A1"
+            description="Privacy-wrapped USDC"
+          />
+          <CompositionCard
+            token="USAD"
+            label="USAD Stablecoin"
+            color="#34D399"
+            description="Aleo-native stablecoin"
+          />
+        </div>
+      </motion.div>
+
+      {/* Price History Chart (text-based) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, type: 'spring', stiffness: 120, damping: 20 }}
+        className="rounded-xl glass-panel p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">show_chart</span>
+            <h3 className="font-headline text-base text-text-primary">Oracle Price Feed</h3>
+          </div>
+          <span className="font-mono text-sm text-primary tabular-nums">
+            {livePrice ? `$${livePrice.toFixed(4)}` : '—'}
+          </span>
+        </div>
+
+        {priceHistory.length > 0 ? (
+          <div className="space-y-1">
+            {priceHistory.slice(-12).map((point, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between py-1.5 px-3 rounded bg-white/[0.02]"
+              >
+                <span className="text-xs text-text-muted">
+                  {new Date(point.timestamp).toLocaleTimeString()}
+                </span>
+                <span className="font-mono text-xs text-text-primary tabular-nums">
+                  ${(point.value / PRECISION).toFixed(4)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-text-muted py-8 text-center">
+            Price history will populate when the backend is running.
+          </p>
+        )}
+      </motion.div>
+
+      {/* Protocol Security */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, type: 'spring', stiffness: 120, damping: 20 }}
+        className="rounded-xl glass-panel p-6"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <ShieldIcon size={18} className="text-primary" />
+          <h3 className="font-headline text-base text-text-primary">Protocol Security</h3>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <SecurityItem icon="lock" label="Records Encrypted" description="All positions stored as private records" />
+          <SecurityItem icon="gavel" label="Circuit Breaker" description="Emergency pause/resume by admin" />
+          <SecurityItem icon="verified" label="5-Source Oracle" description="Median price from 5 exchanges" />
+          <SecurityItem icon="shield" label="Privacy Hardened" description="Version-pinned privacy model" />
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function CompositionCard({
+  token,
+  label,
+  color,
+  description,
+}: {
+  token: string;
+  label: string;
+  color: string;
+  description: string;
+}) {
+  return (
+    <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+        <span className="font-label text-xs uppercase tracking-[0.1em] text-text-primary">
+          {token}
+        </span>
+      </div>
+      <p className="text-sm text-text-secondary mb-1">{label}</p>
+      <p className="text-[11px] text-text-muted">{description}</p>
+    </div>
+  );
+}
+
+function SecurityItem({
+  icon,
+  label,
+  description,
+}: {
+  icon: string;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="p-3 rounded-lg bg-white/[0.03]">
+      <span className="material-symbols-outlined text-primary text-lg mb-2 block">{icon}</span>
+      <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-primary mb-0.5">
+        {label}
+      </p>
+      <p className="text-[11px] text-text-muted leading-relaxed">{description}</p>
+    </div>
+  );
+}

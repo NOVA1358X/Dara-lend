@@ -13,21 +13,28 @@ interface ProtocolSnapshot {
   blockHeight: number | null;
   globalLtv: number;
   isHealthy: boolean;
+  isPaused: boolean;
 }
 
 async function getProtocolSnapshot(): Promise<ProtocolSnapshot> {
-  const [collateralRaw, borrowedRaw, loansRaw, priceRaw, blockHeight] = await Promise.all([
-    getMappingValue('vault_total_collateral'),
-    getMappingValue('total_borrowed'),
+  const [collateralAleoRaw, collateralUsdcxRaw, collateralUsadRaw, borrowedUsdcxRaw, borrowedUsadRaw, borrowedCreditsRaw, priceRaw, loansRaw, pausedRaw, blockHeight] = await Promise.all([
+    getMappingValue('vault_collateral_aleo'),
+    getMappingValue('vault_collateral_usdcx'),
+    getMappingValue('vault_collateral_usad'),
+    getMappingValue('pool_total_borrowed', '0u8'),
+    getMappingValue('pool_total_borrowed', '1u8'),
+    getMappingValue('pool_total_borrowed', '2u8'),
+    getMappingValue('oracle_price', '0u8'),
     getMappingValue('loan_count'),
-    getMappingValue('oracle_price'),
+    getMappingValue('protocol_paused'),
     getLatestBlockHeight(),
   ]);
 
-  const totalCollateral = parseAleoU64(collateralRaw);
-  const totalBorrowed = parseAleoU64(borrowedRaw);
+  const totalCollateral = parseAleoU64(collateralAleoRaw) + parseAleoU64(collateralUsdcxRaw) + parseAleoU64(collateralUsadRaw);
+  const totalBorrowed = parseAleoU64(borrowedUsdcxRaw) + parseAleoU64(borrowedUsadRaw) + parseAleoU64(borrowedCreditsRaw);
   const loanCount = parseAleoU64(loansRaw);
   const oraclePrice = parseAleoU64(priceRaw);
+  const isPaused = (pausedRaw?.replace(/["\s]/g, '') === '1u8') || false;
 
   const collateralValueUsd = oraclePrice > 0 ? (totalCollateral * oraclePrice) / PRECISION : 0;
   const globalLtv = collateralValueUsd > 0 ? (totalBorrowed / collateralValueUsd) * 100 : 0;
@@ -40,6 +47,7 @@ async function getProtocolSnapshot(): Promise<ProtocolSnapshot> {
     blockHeight,
     globalLtv,
     isHealthy: globalLtv < LTV_THRESHOLD,
+    isPaused,
   };
 }
 
@@ -55,16 +63,18 @@ async function runMonitorCycle(): Promise<void> {
     const price = (snapshot.oraclePrice / PRECISION).toFixed(4);
 
     console.log(
-      `[monitor] Block ${snapshot.blockHeight} | Collateral: ${collAleo} ALEO | Borrowed: ${borrowUsd} USDCx | Price: $${price} | LTV: ${snapshot.globalLtv.toFixed(2)}% | ${snapshot.isHealthy ? 'HEALTHY' : 'WARNING'}`,
+      `[sentinel] Block ${snapshot.blockHeight} | Collateral: ${collAleo} ALEO | Borrowed: ${borrowUsd} USDCx | Price: $${price} | LTV: ${snapshot.globalLtv.toFixed(2)}% | ${snapshot.isPaused ? 'PAUSED' : snapshot.isHealthy ? 'HEALTHY' : 'WARNING'}`,
     );
 
-    if (!snapshot.isHealthy) {
+    if (snapshot.isPaused) {
+      console.warn('[sentinel] Circuit breaker active — protocol paused');
+    } else if (!snapshot.isHealthy) {
       console.warn(
-        `[monitor] ⚠ Global LTV ${snapshot.globalLtv.toFixed(2)}% exceeds ${LTV_THRESHOLD}% threshold — liquidation opportunities likely exist`,
+        `[sentinel] ⚠ Global LTV ${snapshot.globalLtv.toFixed(2)}% exceeds ${LTV_THRESHOLD}% threshold — liquidation opportunities likely exist`,
       );
     }
   } catch (err) {
-    console.error('[monitor] Monitoring cycle failed:', err);
+    console.error('[sentinel] Monitoring cycle failed:', err);
   }
 }
 
@@ -73,7 +83,7 @@ export function getMonitorStatus() {
 }
 
 export function startLiquidationMonitor(): void {
-  console.log('[monitor] Starting liquidation monitor (every 2 minutes)');
+  console.log('[sentinel] Starting liquidation sentinel (every 2 minutes)');
 
   runMonitorCycle();
 

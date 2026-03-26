@@ -24,7 +24,7 @@ export function DocsSidebar({
 
   return (
     <nav aria-label="Documentation sections">
-      <p className="text-label uppercase text-text-muted tracking-widest mb-4">
+      <p className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
         Documentation
       </p>
       <ul className="space-y-1">
@@ -32,10 +32,10 @@ export function DocsSidebar({
           <li key={section.id}>
             <button
               onClick={() => handleClick(section.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
                 activeSection === section.id
-                  ? 'text-accent bg-accent/10 font-medium'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary'
+                  ? 'text-primary bg-primary/10 font-medium'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.03]'
               }`}
             >
               {section.label}

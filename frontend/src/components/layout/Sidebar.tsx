@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Logo } from '@/components/shared/Logo';
 import { useAppStore } from '@/stores/appStore';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { WalletIcon } from '@/components/icons/WalletIcon';
@@ -20,7 +19,8 @@ const navItems = [
   { path: '/app/positions', label: 'Positions', icon: LockIcon, end: false },
   { path: '/app/liquidate', label: 'Liquidate', icon: ZapIcon, end: false },
   { path: '/app/history', label: 'History', icon: ClockIcon, end: false },
-  { path: '/app/stats', label: 'Stats', icon: ChartIcon, end: false },
+  { path: '/app/analytics', label: 'Analytics', icon: ChartIcon, end: false },
+  { path: '/app/stats', label: 'Stats', icon: ShieldIcon, end: false },
 ];
 
 export function Sidebar() {
@@ -31,13 +31,17 @@ export function Sidebar() {
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-bg-primary border-r border-[rgba(255,255,255,0.05)] transition-all duration-300 z-40 ${
+        className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-black border-r border-white/[0.06] transition-all duration-300 z-40 ${
           sidebarCollapsed ? 'w-16' : 'w-60'
         }`}
       >
-        <div className={`h-16 flex items-center border-b border-[rgba(255,255,255,0.05)] ${sidebarCollapsed ? 'justify-center px-2' : 'px-5'}`}>
+        <div className={`h-[72px] flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? 'justify-center px-2' : 'px-5'}`}>
           <NavLink to="/" aria-label="DARA Lend Home">
-            <Logo collapsed={sidebarCollapsed} />
+            {sidebarCollapsed ? (
+              <span className="font-headline text-lg text-primary">D</span>
+            ) : (
+              <span className="font-headline text-xl text-primary tracking-wide">DARA</span>
+            )}
           </NavLink>
         </div>
 
@@ -54,48 +58,42 @@ export function Sidebar() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 rounded-lg transition-all duration-200 relative ${
+                className={`flex items-center gap-3 rounded-lg transition-all duration-300 relative ${
                   sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'
                 } ${
                   active
-                    ? 'bg-[rgba(0,229,204,0.05)] text-text-primary'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-[rgba(255,255,255,0.02)]'
+                    ? 'bg-white/[0.04] text-text-primary'
+                    : 'text-text-muted hover:text-text-secondary hover:bg-white/[0.02]'
                 }`}
                 aria-label={item.label}
               >
                 {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 bg-accent rounded-r" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 signature-gradient rounded-r" />
                 )}
                 <Icon size={20} />
                 {!sidebarCollapsed && (
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="font-label text-xs uppercase tracking-[0.12em]">{item.label}</span>
                 )}
               </NavLink>
             );
           })}
         </nav>
 
-        <div className={`border-t border-[rgba(255,255,255,0.05)] p-3 space-y-2`}>
+        <div className="border-t border-white/[0.06] p-3 space-y-2">
           <div className={`flex items-center gap-2 ${sidebarCollapsed ? 'justify-center' : 'px-2'}`}>
             <div className="w-2 h-2 rounded-full bg-accent-success flex-shrink-0" />
             {!sidebarCollapsed && (
-              <span className="text-xs text-text-muted">Aleo Testnet</span>
+              <span className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted">Aleo Testnet</span>
             )}
           </div>
           <button
             onClick={toggleSidebar}
-            className="w-full flex items-center justify-center p-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-surface transition-all duration-200"
+            className="w-full flex items-center justify-center p-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-white/[0.03] transition-all duration-300"
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <svg
-              width={16}
-              height={16}
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              width={16} height={16} viewBox="0 0 16 16" fill="none"
+              stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
               className={`transition-transform duration-300 ${sidebarCollapsed ? 'rotate-180' : ''}`}
             >
               <polyline points="10 4 6 8 10 12" />
@@ -105,7 +103,7 @@ export function Sidebar() {
       </aside>
 
       {/* Mobile bottom tab bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg-primary border-t border-[rgba(255,255,255,0.05)] backdrop-blur-[16px]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/90 border-t border-white/[0.06] backdrop-blur-[20px]">
         <div className="flex items-center justify-around px-2 py-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -119,13 +117,13 @@ export function Sidebar() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors duration-200 ${
-                  active ? 'text-accent' : 'text-text-muted'
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors duration-300 ${
+                  active ? 'text-primary' : 'text-text-muted'
                 }`}
                 aria-label={item.label}
               >
-                <Icon size={20} />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <Icon size={18} />
+                <span className="font-label text-[9px] uppercase tracking-[0.1em]">{item.label}</span>
               </NavLink>
             );
           })}

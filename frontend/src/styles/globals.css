@@ -17,31 +17,31 @@
 
   body {
     font-family: 'Inter', sans-serif;
-    background-color: #080A12;
-    color: #F0F0F0;
+    background-color: #000000;
+    color: #E2E2E2;
     overflow-x: hidden;
   }
 
   ::selection {
-    background-color: rgba(0, 229, 204, 0.2);
-    color: #F0F0F0;
+    background-color: rgba(201, 221, 255, 0.25);
+    color: #0A0A0A;
   }
 
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
   }
 
   ::-webkit-scrollbar-track {
-    background: #080A12;
+    background: #000000;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
   }
 
   input[type='number']::-webkit-inner-spin-button,
@@ -56,38 +56,65 @@
 }
 
 @layer components {
-  .noise-overlay {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.02;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 256px 256px;
+  .glass-panel {
+    background: rgba(31, 31, 31, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
   }
 
-  .hero-gradient {
-    background: linear-gradient(
-      90deg,
-      rgba(8, 10, 18, 0.93) 0%,
-      rgba(8, 10, 18, 0.75) 40%,
-      rgba(8, 10, 18, 0.3) 65%,
-      transparent 100%
-    );
+  .glass-panel-sm {
+    background: rgba(31, 31, 31, 0.3);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
   }
 
-  .text-gradient-subtle {
-    background: linear-gradient(180deg, #F0F0F0 0%, #8A919E 100%);
+  .signature-gradient {
+    background: linear-gradient(135deg, #C9DDFF 0%, #D6C5A1 100%);
+  }
+
+  .signature-text-gradient {
+    background: linear-gradient(135deg, #C9DDFF 0%, #D6C5A1 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
+  .text-gradient-subtle {
+    background: linear-gradient(180deg, #E2E2E2 0%, #999999 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.95) 0%,
+      rgba(0, 0, 0, 0.8) 35%,
+      rgba(0, 0, 0, 0.4) 65%,
+      transparent 100%
+    );
+  }
+
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }
+
   .skeleton-shimmer {
     position: relative;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.04);
   }
 
   .skeleton-shimmer::after {
@@ -98,16 +125,23 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.03),
       transparent
     );
     animation: shimmer 2s infinite;
   }
 
+  .marquee-track {
+    display: flex;
+    gap: 3rem;
+    animation: marquee 30s linear infinite;
+    width: max-content;
+  }
+
   .encrypted-text {
     font-family: 'JetBrains Mono', monospace;
     letter-spacing: 0.05em;
-    color: #4B5263;
+    color: #666666;
   }
 
   .tabular-nums {
@@ -115,13 +149,29 @@
   }
 
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-accent/30 focus:ring-offset-2 focus:ring-offset-bg-primary;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 focus:ring-offset-bg-primary;
+  }
+
+  .btn-signature {
+    @apply inline-flex items-center justify-center px-8 py-3 font-label text-label uppercase tracking-[0.25em] text-on-primary signature-gradient rounded-pill transition-all duration-300 hover:opacity-90 hover:shadow-[0_0_30px_rgba(201,221,255,0.2)];
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-8 py-3 font-label text-label uppercase tracking-[0.25em] text-text-primary border border-white/10 rounded-pill transition-all duration-300 hover:border-white/25 hover:bg-white/5;
+  }
+
+  .stat-glow {
+    text-shadow: 0 0 40px rgba(201, 221, 255, 0.15);
   }
 }
 
 @layer utilities {
-  .font-heading {
-    font-family: 'Instrument Sans', sans-serif;
+  .font-headline {
+    font-family: 'Gilda Display', serif;
+  }
+
+  .font-label-grotesk {
+    font-family: 'Space Grotesk', sans-serif;
   }
 
   .font-mono {

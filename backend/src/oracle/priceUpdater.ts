@@ -26,7 +26,7 @@ async function refreshAggregation(): Promise<void> {
 async function getOnChainState() {
   try {
     const [priceRaw, roundRaw] = await Promise.all([
-      getMappingValue('oracle_price'),
+      getMappingValue('oracle_price', '0u8'),
       getMappingValue('price_round'),
     ]);
     return {

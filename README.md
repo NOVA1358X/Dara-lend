@@ -1,35 +1,19 @@
-# DARA Lend
+# DARA Lend — The Obsidian Ledger
 
 <div align="center">
 
-**Borrow Without Being Watched.**
+**Privacy-First Multi-Collateral Lending on Aleo**
 
-The first privacy-preserving lending protocol on Aleo — supply ALEO collateral, borrow USDCx stablecoin, and keep every position detail encrypted inside zero-knowledge proofs.
+Supply ALEO, USDCx, or USAD as collateral — borrow against them — keep every position encrypted inside zero-knowledge proofs. MEV bots can't target what they can't see.
 
-[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-00E5CC?style=flat-square)](https://testnet.explorer.provable.com/program/dara_lend_v5.aleo)
+[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-C9DDFF?style=flat-square)](https://testnet.explorer.provable.com/program/dara_lend_v6.aleo)
 [![Leo](https://img.shields.io/badge/Leo-3.4.0-blue?style=flat-square)](https://leo-lang.org)
+[![Transitions](https://img.shields.io/badge/Transitions-21-D6C5A1?style=flat-square)](#smart-contract)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](#license)
 
-Built for the **Aleo Privacy Buildathon — Wave 3**
+Built for the **Aleo Privacy Buildathon — Wave 4**
 
 </div>
-
----
-
-## Table of Contents
-
-- [Live Demo](#live-demo)
-- [Why DARA Lend?](#why-dara-lend)
-- [Privacy Architecture](#privacy-architecture)
-- [Working Features](#working-features)
-- [Smart Contract](#smart-contract)
-- [Oracle System](#oracle-system)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Deployment](#deployment)
-- [License](#license)
 
 ---
 
@@ -39,257 +23,161 @@ Built for the **Aleo Privacy Buildathon — Wave 3**
 |-----------|------|
 | **Frontend** | [dara-lend.vercel.app](https://dara-lend.vercel.app) |
 | **Backend API** | [dara-lend-api.onrender.com](https://dara-lend-api.onrender.com/api/health) |
-| **Smart Contract** | [`dara_lend_v5.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v5.aleo) |
-| **Deployment TX** | [`at1vj2av...q8ww839`](https://testnet.explorer.provable.com/transaction/at1vj2av6kdkjf6fsty3tjdw877xjquk4trw69nfzy3jv9u3gr27cpq8ww839) |
+| **Smart Contract** | [`dara_lend_v6.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v6.aleo) |
+| **Deploy TX** | [`at1awvn7ge...slxjfk3`](https://testnet.explorer.provable.com/transaction/at1awvn7ge79yhscpymgdeuuq025xtghqnrf0yxcjuhgjr55gtz75yslxjfk3) |
 
 ---
 
-## Why DARA Lend?
+## What's New in v6
 
-On transparent chains like Ethereum and Solana, lending protocols (Aave, Compound, MarginFi) expose every user's collateral, debt, and liquidation price on a public ledger. This creates a playground for MEV bots:
-
-- **Frontrunning** — bots see pending liquidation calls and jump ahead
-- **Targeted liquidation** — bots monitor health factors and manipulate prices to trigger liquidations
-- **Privacy leaks** — anyone can map wallet addresses to financial positions
-
-> *In 2023, MEV bots extracted over $600M on Ethereum by targeting visible liquidation thresholds.*
-
-**DARA Lend eliminates this entire attack surface** by leveraging Aleo's privacy-by-default architecture. All position data — collateral amounts, debt sizes, health factors, and liquidation prices — is encrypted inside zero-knowledge proofs. MEV bots can't target what they can't see.
+| Feature | Description |
+|---------|-------------|
+| **Multi-Collateral Vaults** | Supply ALEO, USDCx, or USAD — separate vault mappings per token type |
+| **Multi-Borrow** | Borrow USDCx, USAD, or ALEO credits against any supported collateral |
+| **Interest Rate Model** | On-chain base rate + slope parameters (BPS), utilization-based supply/borrow APY |
+| **Emergency Circuit Breaker** | Admin can `emergency_pause()` / `resume_protocol()` all operations |
+| **MerkleProof Compliance** | Stablecoin operations verified against freeze-list via merkle_tree.aleo |
+| **21 Transitions** | Expanded from 6 → 21 (3.5× complexity) for full multi-collateral support |
+| **812 Statements** | 1,982,846 variables, 1,497,807 constraints compiled |
+| **Sentinel Monitor** | Backend liquidation bot with circuit breaker awareness |
+| **Analytics Dashboard** | TVL time-series, interest rates, collateral composition, oracle feed history |
+| **Obsidian Ledger Design** | Luxury UI — Gilda Display serif, glass panels, signature gradients |
 
 ---
 
-## Privacy Architecture
+## Why Privacy Matters
 
-DARA Lend implements a two-layer privacy model that separates individual positions (private) from protocol health metrics (public):
+On transparent chains, lending protocols expose every user's collateral, debt, and liquidation price. MEV bots extracted **$600M+** on Ethereum in 2023 by targeting visible liquidation thresholds.
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║                     PRIVATE LAYER (Records)                   ║
-║                                                               ║
-║  CollateralReceipt  ·  DebtPosition  ·  LiquidationAuth      ║
-║  RepaymentReceipt   ·  LiquidationReceipt                    ║
-║                                                               ║
-║  → Only the record owner can decrypt these                    ║
-║  → Consumed on use (UTXO model — prevents double-spending)   ║
-║  → Participant identities hidden at the transfer layer        ║
-╠═══════════════════════════════════════════════════════════════╣
-║                     PUBLIC LAYER (Mappings)                    ║
-║                                                               ║
-║  Total TVL  ·  Total Borrowed  ·  Loan Count  ·  Oracle Price ║
-║  Fees Collected  ·  Active Loans  ·  Price History            ║
-║                                                               ║
-║  → Aggregate data only — no individual positions exposed      ║
-║  → Anyone can verify protocol solvency on-chain              ║
-╚═══════════════════════════════════════════════════════════════╝
-```
+**DARA Lend eliminates this attack surface:**
 
-### What's Private vs. Public
-
-| Data Point | Visibility | How |
-|---|---|---|
-| Collateral Amount | **Private** | Stored in `CollateralReceipt` record, encrypted |
-| Debt Size | **Private** | Stored in `DebtPosition` record, encrypted |
-| Health Factor | **Private** | Computed client-side, never touches the chain |
-| Liquidation Price | **Private** | Stored in `DebtPosition` + `LiquidationAuth` records |
-| Supplier Identity | **Private** | `credits.aleo/transfer_private_to_public` hides sender |
-| Borrower Identity | **Private** | Hashed via `BHP256` in `LiquidationAuth` |
-| Liquidator Identity | **Private** | `credits.aleo/transfer_public_to_private` hides recipient |
-| Wallet ↔ Loan Link | **Private** | No on-chain mapping between addresses and loans |
-| Total Protocol TVL | Public | `vault_total_collateral` mapping |
-| Active Loan Count | Public | `loan_count` mapping |
-| Oracle Price | Public | `oracle_price` mapping |
-| Solvency Proof | Public | Verifiable via public aggregate data |
+| Data | Visibility | How |
+|------|------------|-----|
+| Collateral amounts | **Encrypted** | `CollateralReceipt` record (UTXO) |
+| Debt positions | **Encrypted** | `DebtPosition` record with `collateral_token` + `debt_token` |
+| Liquidation prices | **Encrypted** | Stored in `DebtPosition` + `LiquidationAuth` |
+| Health factors | **Client-only** | Computed in browser, never on-chain |
+| Participant identity | **Hidden** | Private transfer functions per token type |
+| Borrower address | **Hashed** | BHP256 in `LiquidationAuth` — no raw leak |
+| Protocol TVL/Debt | Public | Aggregate vault mappings — verifiable solvency |
 
 ### Dual-Record Pattern
 
-When a user borrows, two private records are created simultaneously:
+When a user borrows, two records are created:
 
-1. **`DebtPosition`** (owned by the borrower) — contains collateral amount, debt amount, liquidation price, and loan ID. Used for repayment.
-2. **`LiquidationAuth`** (owned by the orchestrator) — mirrors the position data but with the borrower's address hashed. Used for liquidation when the position goes underwater.
+1. **`DebtPosition`** → owned by borrower (for repayment)
+2. **`LiquidationAuth`** → owned by orchestrator (for liquidation)
 
-This ensures borrowers control their own funds while the protocol can still enforce solvency — without ever exposing position data publicly.
-
-### Token Transfer Privacy
-
-| Operation | Token Flow | Function Used | Privacy |
-|---|---|---|---|
-| Supply | ALEO → Protocol | `credits.aleo/transfer_private_to_public` | Sender identity hidden |
-| Borrow | USDCx → Borrower | `test_usdcx_stablecoin.aleo/transfer_public_to_private` | Recipient identity hidden |
-| Repay | USDCx → Protocol | `test_usdcx_stablecoin.aleo/transfer_from_public` | Approval-based |
-| Withdraw | ALEO → User | `credits.aleo/transfer_public_to_private` | Recipient identity hidden |
-| Liquidate | ALEO → Liquidator | `credits.aleo/transfer_public_to_private` | Recipient identity hidden |
-
-**5 out of 6 transitions use private transfer functions**, ensuring participant identities are hidden at the token transfer layer.
-
----
-
-## Working Features
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Supply Collateral | ✅ Working | Lock ALEO credits as encrypted collateral via `transfer_private_to_public` |
-| Borrow USDCx | ✅ Working | Borrow USDCx stablecoin with 0.5% origination fee, oracle freshness check, circuit breaker |
-| Repay Debt | ✅ Working | Repay full debt, reclaim collateral as private credits record |
-| Withdraw Collateral | ✅ Working | Withdraw unused collateral deposits as private credits record |
-| Liquidation | ✅ Working | Liquidate underwater positions with 5% liquidator incentive bonus |
-| Dashboard | ✅ Working | Real-time protocol stats, health factor alerts, liquidation risk banner |
-| Position Viewer | ✅ Working | Decrypt and display all private records from Shield Wallet |
-| Protocol Stats | ✅ Working | TVL, total borrowed, loan count, oracle price — all live from on-chain |
-| Oracle Price Feed | ✅ Working | 5-source oracle (CoinMarketCap, CoinGecko, CryptoCompare, Coinbase, Binance) |
-| Transaction History | ✅ Working | Persistent transaction log with status tracking and explorer links |
-| Documentation | ✅ Working | In-app docs with privacy model, smart contract reference, and roadmap |
-| Circuit Breaker | ✅ Working | 100,000 USDCx maximum total borrowed cap to prevent runaway debt |
-| Emergency Pause | ✅ Working | Admin can freeze protocol instantly if anomalies are detected |
+The borrower's address is hashed (BHP256) inside `LiquidationAuth` — solvency is enforceable without exposing position data.
 
 ---
 
 ## Smart Contract
 
-**Program ID:** `dara_lend_v5.aleo`  
-**Language:** Leo 3.4.0  
-**Network:** Aleo Testnet  
-**Source:** [`contract/dara_lend_v1/src/main.leo`](contract/dara_lend_v1/src/main.leo) (445 lines)
+**Program:** `dara_lend_v6.aleo` · **Leo 3.4.0** · **Aleo Testnet**
+**Source:** [`contract/dara_lend_v1/src/main.leo`](contract/dara_lend_v1/src/main.leo)
+**Cost:** 38.461253 credits · 812 statements · 1,982,846 variables
 
-### Transitions (6)
+### 21 Transitions
 
-| # | Transition | Description |
-|---|---|---|
-| 1 | `update_oracle_price` | Admin-only price update with round-based replay protection, 15% deviation cap, and minimum block interval |
-| 2 | `supply_collateral` | Accept private credits record → lock as encrypted `CollateralReceipt` → nonce-based replay protection |
-| 3 | `borrow` | Borrow USDCx against collateral → creates `DebtPosition` + `LiquidationAuth` → 0.5% origination fee → oracle freshness check |
-| 4 | `repay` | Burn `DebtPosition` → repay USDCx via approval pattern → reclaim ALEO collateral as private record |
-| 5 | `liquidate` | Consume `LiquidationAuth` → verify price ≤ liquidation price → seize collateral + 5% bonus as private record |
-| 6 | `withdraw_collateral` | Consume `CollateralReceipt` → return collateral as private credits record |
+| Category | Transitions | Description |
+|----------|-------------|-------------|
+| **Admin/Oracle** | `update_oracle_price`, `set_rate_params`, `emergency_pause`, `resume_protocol`, `accrue_interest` | Price feed, interest model, circuit breaker |
+| **Supply** (3) | `supply_collateral`, `supply_usdcx_collateral`, `supply_usad_collateral` | Deposit ALEO/USDCx/USAD as collateral |
+| **Borrow** (3) | `borrow`, `borrow_usad`, `borrow_credits` | Borrow USDCx/USAD/ALEO against collateral |
+| **Repay** (4) | `repay`, `repay_usad`, `repay_credits_usdcx`, `repay_credits_usad` | Repay debt per type, return collateral |
+| **Liquidate** (3) | `liquidate`, `liquidate_usdcx`, `liquidate_usad` | Seize collateral + 5% bonus per type |
+| **Withdraw** (3) | `withdraw_collateral`, `withdraw_usdcx_collateral`, `withdraw_usad_collateral` | Return collateral to owner |
 
-### Records (5 private)
+### 5 Private Records
 
-| Record | Owner | Purpose |
-|---|---|---|
-| `CollateralReceipt` | Supplier | Proves collateral deposit, used for withdraw or borrow |
-| `DebtPosition` | Borrower | Contains loan details, consumed during repayment |
-| `LiquidationAuth` | Orchestrator | Authorizes liquidation, borrower address hashed for privacy |
-| `RepaymentReceipt` | Borrower | Proof of successful repayment |
-| `LiquidationReceipt` | Liquidator | Proof of successful liquidation |
+| Record | Key Fields | Purpose |
+|--------|------------|---------|
+| `CollateralReceipt` | `token_type`, `collateral_amount`, `collateral_amount_u128`, `nonce_hash` | Proves deposit |
+| `DebtPosition` | `collateral_token`, `debt_token`, `debt_amount`, `liquidation_price`, `loan_id` | Loan details |
+| `LiquidationAuth` | `collateral_token`, `debt_token`, `borrower_hash`, `liquidation_price` | Authorizes liquidation |
+| `RepaymentReceipt` | `amount_repaid`, `collateral_returned`, `loan_id` | Proof of repayment |
+| `LiquidationReceipt` | `collateral_seized`, `debt_covered`, `loan_id` | Proof of liquidation |
 
-### Mappings (11 public)
+### Key Mappings
 
 | Mapping | Purpose |
-|---|---|
-| `vault_total_collateral` | Aggregate TVL in microcredits |
-| `total_borrowed` | Total outstanding USDCx debt |
-| `loan_count` | Number of active loans |
-| `oracle_price` | Current ALEO/USD price (6 decimal precision) |
-| `price_update_block` | Block height of last oracle update |
-| `used_nonces` | Replay protection for supply deposits |
-| `protocol_admin` | Admin address for oracle updates |
-| `active_loans` | Boolean flag per loan ID |
-| `total_fees_collected` | Accumulated origination fees |
-| `price_round` | Monotonic round counter for oracle |
-| `price_history` | Previous price for deviation checking |
+|---------|---------|
+| `vault_collateral_aleo` / `_usdcx` / `_usad` | Total collateral per type |
+| `pool_total_borrowed[0\|1\|2]` | Total borrowed: 0=USDCx, 1=USAD, 2=ALEO |
+| `oracle_price[0\|1\|2]` | Price: 0=ALEO, 1=USDCx, 2=USAD |
+| `rate_base_bps` / `rate_slope_bps` | Interest rate parameters |
+| `supply_apy_bps` / `borrow_apy_bps` | Current APY rates |
+| `protocol_paused` | Circuit breaker flag |
+
+### External Programs
+
+```
+credits.aleo               → ALEO supply/withdraw/borrow/liquidate
+test_usdcx_stablecoin.aleo → USDCx borrow/repay/supply (+ MerkleProof)
+test_usad_stablecoin.aleo  → USAD borrow/repay/supply (+ MerkleProof)
+merkle_tree.aleo           → Freeze-list compliance verification
+```
 
 ### Protocol Parameters
 
-| Parameter | Value | Description |
-|---|---|---|
-| LTV Ratio | 70% | Maximum borrow ratio (collateral value) |
-| Liquidation Threshold | 80% | Position becomes liquidatable |
-| Min Collateral | 0.1 ALEO | 100,000 microcredits minimum deposit |
-| Origination Fee | 0.5% | Charged on borrow (50 BPS) |
-| Liquidation Bonus | 5% | Incentive for liquidators (500 BPS) |
-| Max Total Borrowed | 100,000 USDCx | Circuit breaker cap |
-| Max Oracle Age | 100 blocks | ~5 minute freshness window |
-| Max Price Deviation | 15% | Single-update change cap |
-| Min Update Interval | 5 blocks | Minimum gap between oracle updates |
-| Precision | 6 decimals | 1,000,000 = 1.0 |
-
-### External Program Integration
-
-```
-credits.aleo
-├── transfer_private_to_public   → Supply (private inflow)
-├── transfer_public_to_private   → Withdraw / Liquidate / Repay collateral return (private outflow)
-
-test_usdcx_stablecoin.aleo
-├── transfer_public_to_private   → Borrow (private USDCx to borrower)
-├── transfer_from_public         → Repay (approval-based USDCx return)
-```
+| Parameter | Value |
+|-----------|-------|
+| LTV Ratio | 70% (7,000 BPS) |
+| Liquidation Threshold | 80% (8,000 BPS) |
+| Min Collateral | 0.1 ALEO (100,000 μcredits) |
+| Origination Fee | 0.5% (50 BPS) |
+| Liquidation Bonus | 5% (500 BPS) |
+| Max Borrowed | 100,000 USDCx |
+| Max Oracle Age | 100 blocks |
+| Max Price Deviation | 15% per update |
+| Precision | 6 decimals |
 
 ---
 
 ## Oracle System
 
-DARA Lend runs a production-grade 5-source oracle aggregation system:
+5-source price aggregation with automated on-chain updates:
 
 ```
-                    ┌──────────────────┐
-                    │  CoinMarketCap   │ ← Primary source
-                    │    (API key)     │
-                    └────────┬─────────┘
-                             │
-┌──────────┐  ┌──────────┐  │  ┌──────────┐  ┌──────────┐
-│ CoinGecko│  │CryptoComp│  │  │ Coinbase │  │ Binance  │
-│  (free)  │  │  (free)  │  │  │  (free)  │  │  (free)  │
-└────┬─────┘  └────┬─────┘  │  └────┬─────┘  └────┬─────┘
-     │             │        │       │              │
-     └─────────────┴────────┴───────┴──────────────┘
-                             │
-                    ┌────────▼─────────┐
-                    │   Aggregator     │
-                    │  Median filter   │
-                    │  Outlier reject  │
-                    │  15% deviation   │
-                    └────────┬─────────┘
-                             │
-                    ┌────────▼─────────┐
-                    │  On-Chain Price   │
-                    │  update_oracle    │
-                    │  (every 2 min)   │
-                    └──────────────────┘
+  CoinGecko · CryptoCompare · Coinbase · Binance · CoinMarketCap
+                          ↓
+              Median filter + outlier rejection (>2σ)
+                          ↓
+              15% deviation cap · round replay protection
+                          ↓
+              update_oracle_price → on-chain (every 2 min)
 ```
 
-**How it works:**
-1. Backend fetches ALEO/USD from all 5 sources in parallel every 2 minutes
-2. Outlier prices (>2σ from median) are rejected
-3. Remaining prices are median-aggregated for manipulation resistance
-4. On-chain smart contract enforces an additional 15% deviation cap per update
-5. Round-based replay protection prevents duplicate price submissions
-6. Frontend serves cached prices via `/api/price` with 5-minute TTL and cascading fallback (CMC → CoinGecko → CryptoCompare)
+**Pipeline:** Fetch all 5 → reject outliers → median → compare vs on-chain → submit if >0.1% change → contract enforces 15% cap + 5-block interval + round counter.
 
 ---
 
-## Tech Stack
+## Architecture
 
-### Frontend
-| Technology | Purpose |
-|---|---|
-| React 18 | UI framework |
-| TypeScript | Type safety |
-| Vite 5 | Build tool & dev server |
-| Tailwind CSS 3 | Utility-first styling |
-| Framer Motion 11 | Animations & transitions |
-| React Router 6 | Client-side routing |
-| Zustand 5 | State management |
-| React Query 5 | Server state & caching |
-| React Hot Toast | Notification system |
-| @provablehq/aleo-wallet-adaptor | Shield Wallet integration |
-| @provablehq/sdk | Aleo SDK for on-chain reads |
+```
+┌─────────────────────────────────────────────────────────┐
+│  Frontend (React 18 + Vite + Tailwind)                  │
+│  Shield Wallet ←→ Private record decrypt/display        │
+│  Analytics dashboard, glass-panel luxury UI              │
+├─────────────────────────────────────────────────────────┤
+│  Backend Sentinel (Express + TypeScript)                 │
+│  5-source oracle · analytics API · liquidation monitor   │
+├─────────────────────────────────────────────────────────┤
+│  Smart Contract (dara_lend_v6.aleo · Leo 3.4.0)         │
+│  21 transitions · 3 collateral types · interest model    │
+│  credits.aleo · usdcx · usad · merkle_tree.aleo         │
+└─────────────────────────────────────────────────────────┘
+```
 
-### Backend
-| Technology | Purpose |
-|---|---|
-| Express 4 | HTTP server |
-| TypeScript | Type safety |
-| node-cron | Scheduled oracle updates |
-| @provablehq/sdk | Transaction building & signing |
-| dotenv | Environment configuration |
+### Tech Stack
 
-### Smart Contract
-| Technology | Purpose |
-|---|---|
-| Leo 3.4.0 | Smart contract language |
-| Aleo VM | Zero-knowledge execution |
-| credits.aleo | Native ALEO token transfers |
-| test_usdcx_stablecoin.aleo | USDCx stablecoin integration |
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | React 18, TypeScript, Vite 5, Tailwind CSS 3, Framer Motion 11, Zustand 5, React Query 5 |
+| **Backend** | Express 4, TypeScript, node-cron, @provablehq/sdk |
+| **Contract** | Leo 3.4.0, credits.aleo, test_usdcx_stablecoin.aleo, test_usad_stablecoin.aleo, merkle_tree.aleo |
+| **Design** | Gilda Display (serif), Inter (body), Space Grotesk (labels), Material Symbols Outlined |
 
 ---
 
@@ -297,70 +185,33 @@ DARA Lend runs a production-grade 5-source oracle aggregation system:
 
 ```
 DARA-Lend/
-├── contract/                    # Leo smart contract
-│   └── dara_lend_v1/
-│       └── src/main.leo         # dara_lend_v5.aleo (445 lines)
+├── contract/dara_lend_v1/
+│   └── src/main.leo              # dara_lend_v6.aleo (812 statements, 21 transitions)
 │
-├── backend/                     # Express API + Oracle service
-│   └── src/
-│       ├── index.ts             # Entry point
-│       ├── api/
-│       │   ├── server.ts        # Express app setup
-│       │   └── routes/          # REST endpoints
-│       │       ├── health.ts    # Health check
-│       │       ├── oracle.ts    # Oracle status
-│       │       ├── price.ts     # Price feed (5-min cache)
-│       │       ├── solvency.ts  # Protocol solvency
-│       │       ├── stats.ts     # On-chain stats
-│       │       └── transaction.ts # TX building
-│       ├── oracle/
-│       │   ├── aggregator.ts    # 5-source median aggregation
-│       │   ├── priceUpdater.ts  # Cron-based on-chain updates
-│       │   ├── validator.ts     # Price validation rules
-│       │   └── sources/         # Individual price sources
-│       │       ├── binance.ts
-│       │       ├── coinbase.ts
-│       │       ├── coingecko.ts
-│       │       ├── coinmarketcap.ts
-│       │       └── cryptocompare.ts
-│       ├── liquidation/
-│       │   └── monitor.ts       # Liquidation monitoring
-│       └── utils/
-│           ├── aleoClient.ts    # Aleo RPC client
-│           ├── config.ts        # Environment config
-│           └── transactionBuilder.ts
+├── backend/src/
+│   ├── index.ts                  # Sentinel entry point
+│   ├── api/
+│   │   ├── server.ts             # Express v2.0.0
+│   │   └── routes/               # health, oracle, price, solvency, stats, analytics, transaction
+│   ├── oracle/                   # 5-source aggregator, priceUpdater (2-min cron), validator
+│   ├── liquidation/monitor.ts    # Sentinel — liquidation + circuit breaker monitor
+│   └── utils/                    # aleoClient, config (v6), transactionBuilder
 │
-├── frontend/                    # React SPA
-│   └── src/
-│       ├── App.tsx              # Router setup
-│       ├── main.tsx             # Entry point
-│       ├── pages/
-│       │   ├── Landing.tsx      # Marketing landing page
-│       │   ├── AppDashboard.tsx # Main app dashboard
-│       │   └── Docs.tsx         # Documentation page
-│       ├── components/
-│       │   ├── app/             # Dashboard components
-│       │   ├── landing/         # Landing page sections
-│       │   ├── layout/          # Sidebar, header, layouts
-│       │   ├── shared/          # Reusable UI components
-│       │   ├── icons/           # SVG icon components
-│       │   └── docs/            # Documentation components
-│       ├── hooks/               # Custom React hooks
-│       │   ├── useAleoClient.ts # On-chain data reads
-│       │   ├── useMarketPrice.ts # Price polling
-│       │   ├── useProtocolStats.ts # TVL, loans, oracle
-│       │   ├── useTransaction.ts # TX execution
-│       │   └── useWalletRecords.ts # Private record decryption
-│       ├── stores/
-│       │   └── appStore.ts      # Zustand global state
-│       └── utils/
-│           ├── constants.ts     # Program IDs, addresses
-│           ├── formatting.ts    # Number/credit formatters
-│           └── records.ts       # Record parsing utilities
+├── frontend/src/
+│   ├── pages/                    # Landing, AppDashboard, Docs
+│   ├── components/
+│   │   ├── app/                  # Dashboard, Supply, Borrow, Repay, Withdraw, Liquidate,
+│   │   │                         # Positions, OracleStatus, ProtocolStats, Analytics, History
+│   │   ├── landing/              # Hero, Features, Privacy, Stats, Oracle, Multi-collateral, CTA
+│   │   ├── layout/               # Sidebar, TopBar, AppLayout, Navbar, Footer
+│   │   ├── shared/               # StatCard, WalletButton, GlowCard, PrivacyBadge, etc.
+│   │   └── docs/                 # DocsContent, DocsSidebar, DocsLayout
+│   ├── hooks/                    # useAleoClient, useMarketPrice, useTransaction, useWalletRecords
+│   ├── stores/appStore.ts        # Zustand state
+│   └── utils/                    # constants (v6), formatting, records
 │
-├── render.yaml                  # Render.com backend deployment
-├── vercel.json                  # Vercel frontend deployment
-└── README.md
+├── render.yaml                   # Backend deployment (Render)
+└── vercel.json                   # Frontend deployment (Vercel)
 ```
 
 ---
@@ -370,44 +221,30 @@ DARA-Lend/
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn
-- Shield Wallet browser extension ([Install Shield](https://www.shieldwallet.co))
+- [Shield Wallet](https://www.shieldwallet.co) browser extension (Aleo Testnet)
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/DARA-Lend.git
-cd DARA-Lend
-```
-
-### 2. Backend Setup
+### Backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env
-# Edit .env with your keys (see Environment Variables below)
-npm run dev
+cp .env.example .env    # Set PRIVATE_KEY, ADMIN_ADDRESS, CMC_API_KEY
+npm run dev             # Starts on :3001 with oracle cron
 ```
 
-The backend starts on `http://localhost:3001`.
-
-### 3. Frontend Setup
+### Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev             # Starts on :3000
 ```
 
-The frontend starts on `http://localhost:3000`.
+### Connect & Use
 
-### 4. Connect Shield Wallet
-
-1. Install the [Shield Wallet](https://www.shieldwallet.co) browser extension
-2. Create or import an Aleo testnet account
-3. Get testnet credits from the [Aleo faucet](https://faucet.aleo.org)
-4. Click "Connect Wallet" in the app
+1. Install Shield Wallet → switch to Aleo Testnet
+2. Get testnet credits from [faucet.aleo.org](https://faucet.aleo.org)
+3. Click **Connect Wallet** → Supply collateral → Borrow → Repay → Withdraw
 
 ---
 
@@ -416,14 +253,9 @@ The frontend starts on `http://localhost:3000`.
 ### Backend (`backend/.env`)
 
 ```env
-# Required
-PRIVATE_KEY=APrivateKey1...        # Admin key for oracle price updates
-ADMIN_ADDRESS=aleo1...             # Must match protocol_admin in contract
-
-# Oracle
-CMC_API_KEY=your_coinmarketcap_key # CoinMarketCap API key (free tier)
-
-# Infrastructure
+PRIVATE_KEY=APrivateKey1...         # Admin key for oracle updates
+ADMIN_ADDRESS=aleo1...              # Must match protocol_admin
+CMC_API_KEY=your_key                # CoinMarketCap (optional)
 PORT=3001
 ALEO_RPC_URL=https://api.explorer.provable.com/v1
 FRONTEND_URL=http://localhost:3000
@@ -439,226 +271,50 @@ VITE_BACKEND_URL=http://localhost:3001/api
 
 ## Deployment
 
-### Frontend → Vercel
-
-The frontend is deployed to Vercel with the config in `vercel.json`. API requests are proxied to the backend via Vercel rewrites.
-
-### Backend → Render
-
-The backend is deployed to Render using the `render.yaml` blueprint. The oracle cron job runs automatically every 2 minutes to keep on-chain prices fresh.
-
-### Smart Contract → Aleo Testnet
-
-The contract is deployed as `dara_lend_v5.aleo` on Aleo Testnet. Deployment was done via the Leo CLI:
+| Target | Method | Config |
+|--------|--------|--------|
+| **Frontend** | Vercel | `vercel.json` — API proxy rewrites |
+| **Backend** | Render | `render.yaml` — auto-deploy, oracle cron |
+| **Contract** | Aleo Testnet | `leo deploy --network testnet` → `dara_lend_v6.aleo` |
 
 ```bash
+# Contract deployment (already done)
 cd contract/dara_lend_v1
-leo build
-snarkos developer deploy dara_lend_v5.aleo \
-  --private-key $PRIVATE_KEY \
-  --query https://api.explorer.provable.com/v1 \
-  --broadcast https://api.explorer.provable.com/v1/testnet/transaction/broadcast \
-  --fee 5000000
+leo deploy --network testnet \
+  --endpoint https://api.explorer.provable.com/v1 \
+  --broadcast --yes
+# TX: at1awvn7ge79yhscpymgdeuuq025xtghqnrf0yxcjuhgjr55gtz75yslxjfk3
+# Cost: 38.461253 credits
 ```
 
 ---
 
-## License
+## Wave 4 Changelog (v5 → v6)
 
-MIT
-
-### Record Types
-
-All position data is stored in **private encrypted records**:
-
-```
-CollateralReceipt { owner, collateral_amount, deposit_block, nonce_hash }
-DebtPosition      { owner, collateral_amount, debt_amount, liquidation_price, loan_id }
-LiquidationAuth   { owner, loan_id, collateral_amount, debt_amount, liquidation_price, borrower_hash }
-RepaymentReceipt  { owner, amount_repaid, collateral_returned, loan_id }
-LiquidationReceipt{ owner, loan_id, collateral_seized, debt_covered }
-```
-
-> **Privacy improvement (v2):** `LiquidationAuth` now stores `borrower_hash` (a field hash of the borrower address) instead of the raw `borrower` address, preventing the orchestrator/liquidator from identifying borrowers.
-
-### Public Mappings (Aggregates Only)
-
-```
-vault_total_collateral: u8 => u64    — Total ALEO locked
-total_borrowed:         u8 => u128   — Total USDCx borrowed
-loan_count:             u8 => u64    — Number of active loans
-oracle_price:           u8 => u64    — Current ALEO/USD price
-used_nonces:            field => bool — Replay protection
-active_loans:           field => bool — Loan state tracking
-protocol_admin:         u8 => address — Admin address
-price_update_block:     u8 => u32    — Block height of last oracle update
-total_fees_collected:   u8 => u128   — Total origination fees collected
-```
-
-**No individual user addresses appear in any public mapping.**
-
-## Privacy Model
-
-### What's Encrypted
-- Individual collateral amounts
-- Debt positions and amounts
-- Liquidation prices and thresholds
-- Position ownership (wallet addresses)
-- Health factors (computed client-side)
-- **Supplier identity** — private credits records consumed via `transfer_private_to_public`
-- **Borrower identity** — USDCx disbursed via `transfer_public_to_private` (private Token record)
-- **Withdrawer/Liquidator identity** — collateral returned via `transfer_public_to_private`
-- **Borrower hash** — `LiquidationAuth` stores `borrower_hash` (BHP256) instead of raw address
-
-### What's Public
-- Aggregate TVL (total collateral)
-- Aggregate debt (total borrowed)
-- Loan count
-- Oracle price
-
-### Private Transfer Architecture
-
-DARA Lend uses privacy-preserving token transfer functions throughout:
-
-| Operation | Function | Privacy |
-|---|---|---|
-| Supply Collateral | `credits.aleo/transfer_private_to_public` | Supplier identity hidden — private record consumed |
-| Borrow USDCx | `test_usdcx_stablecoin.aleo/transfer_public_to_private` | Borrower receives private Token record |
-| Repay USDCx | `test_usdcx_stablecoin.aleo/transfer_from_public` | Uses approval pattern |
-| Return Collateral | `credits.aleo/transfer_public_to_private` | Repayer receives private credits record |
-| Withdraw Collateral | `credits.aleo/transfer_public_to_private` | Withdrawer receives private credits record |
-| Liquidation Payout | `credits.aleo/transfer_public_to_private` | Liquidator receives private credits record |
-
-Observers can see aggregate fund movements (credits entering/leaving the protocol) but **cannot identify individual participants**.
-
-## Project Structure
-
-```
-dara-lend/
-├── contract/          Leo smart contract (dara_lend_v5.aleo)
-│   └── src/main.leo   Full contract source
-├── frontend/          React + TypeScript + Tailwind frontend
-│   └── src/
-│       ├── components/app/   Supply, Borrow, Repay, Withdraw, Liquidate, Dashboard, Stats, History
-│       ├── hooks/            useTransaction, useWalletRecords, useProtocolStats
-│       └── utils/            Record parsing, formatting, constants
-└── backend/           Express API server + Oracle price updater + Liquidation monitor
-    └── src/
-        ├── oracle/    CoinGecko price feed → on-chain update_oracle_price (2-min, retry logic)
-        ├── liquidation/ Protocol health monitor (LTV tracking, alerts)
-        └── api/       Stats, solvency, health, transaction endpoints
-```
-
-## Quick Start
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 18+
-- [Shield Wallet](https://shield.app) browser extension (Aleo Testnet)
-- [snarkOS](https://github.com/ProvableHQ/snarkOS) (for backend oracle only)
+### Smart Contract
+- Multi-collateral vaults: `vault_collateral_aleo`, `vault_collateral_usdcx`, `vault_collateral_usad`
+- Multi-borrow: `borrow` (USDCx), `borrow_usad`, `borrow_credits` with per-type `pool_total_borrowed`
+- Interest rate model: `set_rate_params`, `accrue_interest`, `supply_apy_bps`, `borrow_apy_bps`
+- Emergency controls: `emergency_pause` / `resume_protocol` with `protocol_paused` mapping
+- MerkleProof: Stablecoin supply/repay verified against `merkle_tree.aleo` freeze-list
+- Records expanded: `token_type`, `collateral_token`, `debt_token` fields
+- 6 → 21 transitions, 445 → 812 statements, 1.98M variables
 
 ### Frontend
+- Luxury "Obsidian Ledger" design: Gilda Display serif, glass panels, signature gradients
+- All components themed: primary #C9DDFF, secondary #D6C5A1, bg #000000, surface #131313
+- Analytics dashboard: TVL time-series, interest rates, collateral composition
+- Updated docs: 21-transition reference, v6 mappings, multi-collateral privacy model
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Backend (Sentinel)
+- Config updated to `dara_lend_v6.aleo`
+- Stats API: Multi-collateral breakdown (ALEO/USDCx/USAD)
+- Solvency API: Circuit breaker pause status
+- Analytics API: `/analytics/tvl`, `/price-history`, `/borrow-history`, `/interest-rates`, `/overview`
+- Monitor → Sentinel: Circuit breaker awareness, multi-vault tracking
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-### Backend (Oracle + API)
-
-```bash
-cd backend
-cp .env.example .env
-# Edit .env: set PRIVATE_KEY and ADMIN_ADDRESS
-npm install
-npm run dev
-```
-
-The backend runs the oracle price updater (CoinGecko → on-chain) every 2 minutes with retry logic, a liquidation monitor for protocol health tracking, and exposes API endpoints for protocol stats.
-
-## Wave 3 Changelog
-
-### Contract Upgrade (v1 → v2)
-- **Privacy fix:** LiquidationAuth stores `borrower_hash` (field hash) instead of raw `borrower` address
-- **Oracle freshness:** `update_oracle_price` records `block.height`; `borrow` and `liquidate` assert price is within 100 blocks
-- **Origination fee:** 0.5% fee deducted from borrow amount, tracked in `total_fees_collected` mapping
-- **Liquidation incentive:** 5% bonus collateral awarded to liquidators
-- **Circuit breaker:** `borrow` enforces `MAX_TOTAL_BORROWED` cap of 100K USDCx
-- **Nonce binding:** `supply_collateral` uses `BHP256::commit_to_field(nonce, self.signer)` to prevent grief attacks
-
-### Contract Upgrade (v2 → v3) — Private Transfer Migration
-- **Private supply:** `supply_collateral` now accepts a private `credits.aleo/credits` record and uses `transfer_private_to_public` — supplier identity is hidden from chain observers
-- **Private borrow disbursement:** `borrow` now sends USDCx via `transfer_public_to_private` — borrower receives a private Token record, their identity is hidden
-- **Private collateral return:** `repay`, `withdraw_collateral`, and `liquidate` now return credits via `transfer_public_to_private` — recipient identity hidden
-- **Full privacy pipeline:** Only aggregate fund movements (TVL in/out) are visible; no individual participant addresses appear in any transaction
-
-### Backend Improvements
-- Oracle update interval reduced from 5 min to 2 min
-- Added retry logic with exponential backoff (3 attempts)
-- Liquidation monitor with global LTV tracking and health alerts
-- Enhanced `/health` endpoint with oracle status, protocol snapshot, and LTV data
-
-### Frontend Improvements
-- Transaction history page with localStorage persistence and explorer links
-- Health factor color alerts (green/yellow/orange/red) with liquidation risk banner
-- Click-to-copy on position card fields (loan_id, nonce_hash, borrower_hash)
-- Cryptographically secure nonce generation (`crypto.getRandomValues`)
-- Private credits record selector for supply (with public-to-private conversion helper)
-- Balance auto-refresh after supply
-- In-app roadmap section in documentation
-- TopBar route labels for all pages
-
-## Tech Stack
-
-- **Smart Contract:** Leo (Aleo) — deployed on Aleo Testnet as `dara_lend_v5.aleo`
-- **Frontend:** React 18, TypeScript, Vite 5, Tailwind CSS, Framer Motion
-- **Backend:** Node.js, Express, TypeScript, `@provablehq/sdk`
-- **Wallet:** Shield Wallet via `@provablehq/aleo-wallet-adaptor-react`
-- **Token Integration:** `credits.aleo` (collateral) + `test_usdcx_stablecoin.aleo` (USDCx debt)
-- **Oracle:** Multi-source aggregated (CoinGecko + CryptoCompare + Coinbase + Binance), median pricing, outlier rejection, round-based replay protection, 2-min automated updates, on-chain deviation cap + freshness validation
-- **Data:** On-chain mappings via Aleo Explorer API, real-time polling
-
-## What Sets DARA Lend Apart
-
-### 1. End-to-End Private Token Flows
-DARA Lend uses Aleo's private transfer functions throughout the entire lending lifecycle:
-- **Supply:** `credits.aleo/transfer_private_to_public` — observer sees credits arriving at the protocol but **cannot identify the depositor**
-- **Borrow:** `test_usdcx_stablecoin.aleo/transfer_public_to_private` — borrower receives USDCx as a **private Token record**, their identity is never exposed
-- **Withdraw/Repay/Liquidate:** `credits.aleo/transfer_public_to_private` — collateral returned as **private credits records**, recipient identity hidden
-- **Borrower hash:** `LiquidationAuth` stores `BHP256::hash_to_field(borrower)` instead of the raw address
-
-No individual participant addresses appear in any public mapping or finalize block.
-
-### 2. Automated Oracle (Not Manual Admin)
-Unlike protocols that rely on an admin clicking "Update Price" manually, DARA Lend runs an automated oracle backend that:
-- Fetches from **multiple independent sources** (CoinGecko → CryptoCompare → cached fallback)
-- Updates on-chain every **2 minutes** with retry logic and exponential backoff
-- Skips updates for price changes below 0.1% (saves gas)
-- Supports **delegated proving** via Provable API for cloud deployment
-- The admin panel serves as a **backup**, not the primary mechanism
-
-### 3. On-Chain Safety Mechanisms
-- **Oracle freshness**: Contract rejects stale prices (>100 blocks old)
-- **Circuit breaker**: Emergency pause and max debt cap (100K USDCx)
-- **Origination fee**: 0.5% on-chain fee with transparent tracking
-- **Liquidation bonus**: 5% incentive ensures liquidators act quickly
-
-### 4. Production-Grade Architecture
-Three-tier system (smart contract + React frontend + Express backend) with:
-- Real-time oracle status widget showing on-chain vs market price deviation
-- Health factor gauge with color-coded risk alerts
-- Private credits record selector with public-to-private conversion
-- Transaction history with explorer links
-- Liquidation monitoring bot with global LTV tracking
-- Comprehensive in-app documentation
+---
 
 ## License
 
 MIT
-
----
-
-Built with privacy in mind for the Aleo Privacy Buildathon Wave 3.

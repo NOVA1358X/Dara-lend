@@ -13,6 +13,7 @@ import { ProtocolStats } from '@/components/app/ProtocolStats';
 import { WithdrawForm } from '@/components/app/WithdrawForm';
 import { LiquidateForm } from '@/components/app/LiquidateForm';
 import { TransactionHistory } from '@/components/app/TransactionHistory';
+import { Analytics } from '@/components/app/Analytics';
 
 export default function AppDashboard() {
   const {
@@ -63,6 +64,7 @@ export default function AppDashboard() {
         <Route path="withdraw" element={<WithdrawForm wallet={walletProps} />} />
         <Route path="liquidate" element={<LiquidateForm wallet={walletProps} />} />
         <Route path="history" element={<TransactionHistory />} />
+        <Route path="analytics" element={<Analytics />} />
         <Route path="stats" element={<ProtocolStats wallet={walletProps} />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>

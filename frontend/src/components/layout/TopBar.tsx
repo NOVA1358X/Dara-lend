@@ -26,13 +26,16 @@ export function TopBar({ address, connected, connecting, onConnect, onDisconnect
   const title = pageTitles[location.pathname] || 'Dashboard';
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 bg-[rgba(8,10,18,0.9)] backdrop-blur-[12px] border-b border-[rgba(255,255,255,0.05)] sticky top-0 z-30">
-      <h1 className="font-heading text-lg font-semibold text-text-primary">{title}</h1>
+    <header className="h-[72px] flex items-center justify-between px-6 bg-black/80 backdrop-blur-[20px] border-b border-white/[0.06] sticky top-0 z-30">
+      <div>
+        <h1 className="font-headline text-lg text-text-primary">{title}</h1>
+        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-text-muted">dara_lend_v6</p>
+      </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface">
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
           <div className="w-1.5 h-1.5 rounded-full bg-accent-success" />
-          <span className="text-xs text-text-muted font-medium">Testnet</span>
+          <span className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted">Testnet</span>
         </div>
 
         <WalletButton

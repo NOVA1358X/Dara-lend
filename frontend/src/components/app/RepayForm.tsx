@@ -99,11 +99,11 @@ export function RepayForm({ wallet }: RepayFormProps) {
   return (
     <div className="max-w-[560px] mx-auto space-y-4">
       <div className="flex items-center gap-2 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-          <UnlockIcon size={16} className="text-accent" />
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <UnlockIcon size={16} className="text-primary" />
         </div>
         <div>
-          <h2 className="font-heading text-lg font-semibold text-text-primary">
+          <h2 className="font-headline text-lg text-text-primary">
             Repay Loans
           </h2>
           <p className="text-xs text-text-secondary">
@@ -130,7 +130,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
               stiffness: 120,
               damping: 20,
             }}
-            className="rounded-xl bg-bg-tertiary border border-border-default p-5"
+            className="rounded-xl glass-panel p-5"
           >
             <div className="flex items-center justify-between mb-4">
               <PrivacyBadge variant="private" />
@@ -187,7 +187,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
             <button
               onClick={() => handleRepay(idx)}
               disabled={transactionPending}
-              className="w-full py-3 rounded-lg bg-accent text-bg-primary font-medium text-sm hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+              className="w-full py-3 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-sm disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
             >
               {transactionPending && selectedLoanIdx === idx
                 ? repayStep === 'approving'

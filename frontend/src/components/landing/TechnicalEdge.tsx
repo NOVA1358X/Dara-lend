@@ -1,102 +1,52 @@
 import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { ShieldIcon } from '@/components/icons/ShieldIcon';
-import { ZapIcon } from '@/components/icons/ZapIcon';
-import { LockIcon } from '@/components/icons/LockIcon';
-import { ChartIcon } from '@/components/icons/ChartIcon';
 
-const features = [
-  {
-    icon: ChartIcon,
-    title: 'Automated Oracle Price Feed',
-    description:
-      'Five-source oracle aggregating live ALEO/USD from CoinMarketCap, CoinGecko, CryptoCompare, Coinbase, and Binance with median filtering. Updates on-chain every 2 minutes automatically — no manual admin intervention.',
-    tag: 'Automated',
-  },
-  {
-    icon: ShieldIcon,
-    title: 'On-Chain Oracle Validation',
-    description:
-      'The smart contract enforces a 15% deviation cap per update and round-based replay protection. Prices remain valid until refreshed — no staleness lockouts for users.',
-    tag: 'Safety',
-  },
-  {
-    icon: ZapIcon,
-    title: 'Circuit Breaker & Emergency Pause',
-    description:
-      'Admin can instantly freeze the protocol if anomalies are detected. Protects user collateral during flash crashes, oracle failures, or exploit attempts.',
-    tag: 'Protection',
-  },
-  {
-    icon: LockIcon,
-    title: 'End-to-End Private Token Flows',
-    description:
-      'All token transfers use private functions — transfer_private_to_public for supply, transfer_public_to_private for borrow/withdraw/liquidate. Participant identities are hidden at the transfer layer.',
-    tag: 'Privacy',
-  },
+const techPoints = [
+  { title: '21 Transitions', desc: 'Multi-collateral lending engine with interest rate model and circuit breaker.' },
+  { title: '5-Source Oracle', desc: 'CoinGecko, CryptoCompare, Coinbase, Binance, CoinMarketCap — median aggregated.' },
+  { title: '3 Token Types', desc: 'ALEO, USDCx, and USAD as collateral and borrow assets with cross-pair support.' },
+  { title: 'Automated Sentinel', desc: 'Liquidation monitoring service that auto-executes when health drops below threshold.' },
 ];
 
 export function TechnicalEdge() {
-  const { ref, inView } = useScrollReveal();
+  const { ref, inView } = useScrollReveal({ threshold: 0.2 });
 
   return (
-    <section className="py-section-mobile md:py-section bg-bg-secondary/50">
-      <div className="max-w-[1280px] mx-auto px-6" ref={ref}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-          className="mb-12"
-        >
-          <p className="text-label uppercase text-accent tracking-widest mb-4">
-            Technical Edge
-          </p>
-          <h2 className="font-heading text-section-mobile md:text-section text-text-primary max-w-2xl">
-            Production-Grade DeFi Infrastructure
-          </h2>
-          <p className="text-base text-text-secondary mt-4 max-w-xl">
-            Beyond basic lending — automated oracle feeds, on-chain safety mechanisms,
-            and economic incentives built into the smart contract layer.
-          </p>
-        </motion.div>
+    <section ref={ref} className="py-section-mobile md:py-section bg-bg-primary">
+      <div className="max-w-[1280px] mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <span className="font-label text-label uppercase tracking-[0.3em] text-secondary mb-4 block">
+              Technical Edge
+            </span>
+            <h2 className="font-headline text-section-mobile md:text-section text-text-primary mb-6">
+              Engineered for<br />Institutional Privacy
+            </h2>
+            <p className="text-[17px] leading-relaxed text-text-secondary font-light max-w-[440px]">
+              Every transaction path is fully private. No user addresses appear in any on-chain finalize function.
+              The protocol enforces privacy at the architecture level.
+            </p>
+          </div>
 
-        <div className="grid sm:grid-cols-2 gap-6">
-          {features.map((feature, idx) => {
-            const Icon = feature.icon;
-            return (
+          <div className="space-y-4">
+            {techPoints.map((point, i) => (
               <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 30 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{
-                  delay: 0.15 + idx * 0.1,
-                  type: 'spring',
-                  stiffness: 120,
-                  damping: 20,
-                }}
-                className="p-6 rounded-xl bg-bg-tertiary border border-border-default hover:border-accent/20 transition-all duration-300"
+                key={point.title}
+                initial={{ opacity: 0, x: 20 }}
+                animate={inView ? { opacity: 1, x: 0 } : {}}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="glass-panel-sm p-6 flex gap-5 items-start"
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <Icon size={20} className="text-accent" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-heading text-base font-semibold text-text-primary">
-                        {feature.title}
-                      </h3>
-                      <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
-                        {feature.tag}
-                      </span>
-                    </div>
-                    <p className="text-sm text-text-secondary leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </div>
+                <div className="w-8 h-8 rounded-full signature-gradient flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-on-primary">{i + 1}</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-text-primary mb-1">{point.title}</h3>
+                  <p className="text-sm text-text-secondary font-light">{point.desc}</p>
                 </div>
               </motion.div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     </section>

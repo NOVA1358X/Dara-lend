@@ -18,7 +18,7 @@ export function HealthFactorGauge({ value, size = 120, className = '' }: HealthF
       c = '#34D399';
       l = 'Safe';
     } else if (value >= 1.5) {
-      c = '#00E5CC';
+      c = '#C9DDFF';
       l = 'Moderate';
     } else if (value >= 1.2) {
       c = '#F59E0B';

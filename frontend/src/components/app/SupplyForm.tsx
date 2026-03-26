@@ -174,14 +174,14 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-        className="rounded-xl bg-bg-tertiary border border-border-default p-6"
+        className="rounded-xl glass-panel p-6"
       >
         <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-            <LockIcon size={16} className="text-accent" />
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <LockIcon size={16} className="text-primary" />
           </div>
           <div>
-            <h2 className="font-heading text-lg font-semibold text-text-primary">
+            <h2 className="font-headline text-lg text-text-primary">
               Supply Collateral
             </h2>
             <p className="text-xs text-text-secondary">
@@ -192,10 +192,10 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
 
         {/* Asset */}
         <div className="mb-4">
-          <label className="text-label uppercase text-text-muted tracking-widest block mb-2">
+          <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
             Asset
           </label>
-          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-bg-secondary border border-border-default">
+          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
             <TokenIcon token="ALEO" size={24} />
             <span className="text-sm font-medium text-text-primary">ALEO Credits</span>
             <span className="ml-auto text-[10px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full">PRIVATE</span>
@@ -205,13 +205,13 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
         {/* Private Record Selector */}
         {hasPrivateRecords && privateRecords.length > 1 && (
           <div className="mb-4">
-            <label className="text-label uppercase text-text-muted tracking-widest block mb-2">
+            <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
               Select Private Record
             </label>
             <select
               value={selectedRecordIdx}
               onChange={(e) => setSelectedRecordIdx(Number(e.target.value))}
-              className="w-full px-4 py-3 rounded-lg bg-bg-secondary border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent/30"
+              className="w-full px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary text-sm focus:outline-none focus:border-primary/30"
             >
               {privateRecords.map((r, i) => (
                 <option key={i} value={i}>
@@ -241,12 +241,12 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
         {/* Amount Input */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-label uppercase text-text-muted tracking-widest">
+            <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em]">
               Amount
             </label>
             <button
               onClick={handleMax}
-              className="text-[11px] font-medium text-accent hover:text-accent-hover transition-colors"
+              className="text-[11px] font-label uppercase tracking-[0.1em] text-primary hover:text-secondary transition-colors"
             >
               MAX
             </button>
@@ -259,7 +259,7 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
               placeholder="0.00"
               min="0.1"
               step="0.01"
-              className="w-full px-4 py-4 rounded-lg bg-bg-secondary border border-border-default text-text-primary font-mono text-xl tabular-nums placeholder:text-text-muted focus:outline-none focus:border-accent/30 transition-colors"
+              className="w-full px-4 py-4 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary font-mono text-xl tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary/30 transition-colors"
               aria-label="Supply amount in ALEO"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-muted">
@@ -270,7 +270,7 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
             <span className="text-xs text-text-muted">Min: 0.1 ALEO</span>
             <div className="text-right">
               {hasPrivateRecords && (
-                <span className="text-xs text-accent block">
+                <span className="text-xs text-primary block">
                   Private: {formatCredits(totalPrivateBalance)} ALEO
                 </span>
               )}
@@ -282,9 +282,9 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
         </div>
 
         {/* Privacy Info */}
-        <div className="mb-6 p-3 rounded-lg bg-accent/5 border border-accent/10">
+        <div className="mb-6 p-3 rounded-lg bg-primary/5 border border-primary/10">
           <div className="flex items-start gap-2">
-            <ShieldIcon size={14} className="text-accent mt-0.5 flex-shrink-0" />
+            <ShieldIcon size={14} className="text-primary mt-0.5 flex-shrink-0" />
             <p className="text-xs text-text-secondary leading-relaxed">
               Your collateral is supplied from a private credits record. No one on the 
               network can see who deposited or how much — only aggregate TVL is public.
@@ -303,7 +303,7 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
         <button
           onClick={handleSubmit}
           disabled={!wallet.connected || !isValidAmount || transactionPending || !hasPrivateRecords || !selectedRecordHasEnough}
-          className="w-full py-4 rounded-lg bg-accent text-bg-primary font-medium text-[15px] hover:bg-accent-hover transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+          className="w-full py-4 rounded-lg btn-signature text-[15px] font-label uppercase tracking-[0.1em] disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
         >
           {transactionPending
             ? 'Processing...'
