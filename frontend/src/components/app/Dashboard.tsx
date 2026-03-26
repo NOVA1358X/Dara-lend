@@ -56,19 +56,23 @@ export function Dashboard({ wallet }: DashboardProps) {
   const totalCollateralStable = collateralReceipts
     .filter(r => r.tokenType === TOKEN_TYPES.USDCX || r.tokenType === TOKEN_TYPES.USAD)
     .reduce((sum, r) => sum + r.collateralAmountU128, 0);
-  const totalDebt = debtPositions.reduce(
-    (sum, r) => sum + r.debtAmount, 0,
-  );
   const oraclePrice = stats?.oraclePrice || 0;
   const aleoPrice = oraclePrice || PRECISION;
+
+  // Total debt in USD (microdollars): ALEO debt at oracle price, stablecoin debt at $1
+  const totalDebtUsd = debtPositions.reduce((sum, r) => {
+    const dt = r.debtToken ?? 0;
+    if (dt === TOKEN_TYPES.ALEO) return sum + Math.floor((r.debtAmount * aleoPrice) / PRECISION);
+    return sum + r.debtAmount; // USDCx/USAD already in microdollars
+  }, 0);
 
   // Total collateral value in USD (microdollars)
   const totalCollateralValueUsd = Math.floor((totalCollateralAleo * aleoPrice) / PRECISION) + totalCollateralStable;
 
-  const healthFactor = totalDebt > 0
-    ? ((totalCollateralValueUsd * 800_000) / PRECISION) / totalDebt
+  const healthFactor = totalDebtUsd > 0
+    ? ((totalCollateralValueUsd * 800_000) / PRECISION) / totalDebtUsd
     : Infinity;
-  const maxBorrow = Math.floor((totalCollateralValueUsd * 7_000) / 10_000) - totalDebt;
+  const maxBorrow = Math.floor((totalCollateralValueUsd * 7_000) / 10_000) - totalDebtUsd;
 
   const isLoading = recordsLoading && wallet.connected;
 
@@ -85,7 +89,7 @@ export function Dashboard({ wallet }: DashboardProps) {
   return (
     <div className="space-y-8">
       {/* Health Alert Banner */}
-      {wallet.connected && !isLoading && totalDebt > 0 && healthFactor < 1.5 && (
+      {wallet.connected && !isLoading && totalDebtUsd > 0 && healthFactor < 1.5 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -126,7 +130,7 @@ export function Dashboard({ wallet }: DashboardProps) {
           <StatCard
             label="Your Debt"
             value={
-              !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalDebt)}`
+              !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalDebtUsd)}`
             }
             loading={isLoading}
           />
@@ -167,12 +171,12 @@ export function Dashboard({ wallet }: DashboardProps) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total Value Locked"
-            value={stats ? `${formatCredits(stats.totalCollateral)} ALEO` : '—'}
+            value={stats ? `$${formatCredits(stats.totalCollateral)}` : '—'}
             loading={statsLoading}
           />
           <StatCard
             label="Total Borrowed"
-            value={stats ? `${formatCredits(stats.totalBorrowed)} Stablecoins` : '—'}
+            value={stats ? `$${formatCredits(stats.totalBorrowed)}` : '—'}
             loading={statsLoading}
           />
           <StatCard

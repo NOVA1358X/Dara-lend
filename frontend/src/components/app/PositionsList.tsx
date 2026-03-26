@@ -40,15 +40,15 @@ export function PositionsList({ wallet }: PositionsListProps) {
   }
 
   const collateralRecords = allRecords.filter(
-    (r) => r.type === RECORD_TYPES.COLLATERAL_RECEIPT,
+    (r) => r.type === RECORD_TYPES.COLLATERAL_RECEIPT && !r.spent,
   );
   const debtRecords = allRecords.filter(
-    (r) => r.type === RECORD_TYPES.DEBT_POSITION,
+    (r) => r.type === RECORD_TYPES.DEBT_POSITION && !r.spent,
   );
   const historyRecords = allRecords.filter(
     (r) =>
-      r.type === RECORD_TYPES.REPAYMENT_RECEIPT ||
-      r.type === RECORD_TYPES.LIQUIDATION_RECEIPT,
+      (r.type === RECORD_TYPES.REPAYMENT_RECEIPT ||
+      r.type === RECORD_TYPES.LIQUIDATION_RECEIPT) && !r.spent,
   );
 
   if (allRecords.length === 0) {
