@@ -5,8 +5,9 @@ const GLOBAL_KEY = '0u8';
 export async function getMappingValue(
   mapping: string,
   key: string = GLOBAL_KEY,
+  programId: string = config.programId,
 ): Promise<string | null> {
-  const url = `${config.aleoApiUrl}/program/${config.programId}/mapping/${mapping}/${key}`;
+  const url = `${config.aleoApiUrl}/program/${programId}/mapping/${mapping}/${key}`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;

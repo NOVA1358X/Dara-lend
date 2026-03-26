@@ -1,0 +1,28 @@
+{
+  "program": "dara_lend_v7_vault.aleo",
+  "version": "0.1.0",
+  "description": "DARA Lend v7 Vault — Yield pools, private transfers, and analytics companion program",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}

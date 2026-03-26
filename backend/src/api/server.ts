@@ -36,9 +36,9 @@ export function createServer() {
   app.get('/', (_req, res) => {
     res.json({
       name: 'DARA Lend API',
-      version: '2.0.0',
-      program: 'dara_lend_v6.aleo',
-      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview'],
+      version: '3.0.0',
+      programs: [config.programId, config.vaultProgramId],
+      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price'],
     });
   });
 

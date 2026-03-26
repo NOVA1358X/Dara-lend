@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, VAULT_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import { saveTxToHistory } from '@/components/app/TransactionHistory';
@@ -636,8 +636,137 @@ export function useTransaction(wallet: WalletExecute) {
     [wallet, setTransactionPending, setTransactionStep, setTransactionId],
   );
 
+  // ── Vault Program Transactions ──
+
+  const executeVaultTransaction = useCallback(
+    async (functionName: string, inputs: string[], fee: number = TX_FEE) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+
+        const tx = createAleoTransaction(VAULT_PROGRAM_ID, functionName, inputs, fee);
+
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Vault transaction submitted');
+
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        const historyTxId = pollResult.realTxId || txId;
+        if (pollResult.confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Vault transaction confirmed!');
+          saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'confirmed' });
+        } else if (pollResult.confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Vault transaction rejected on-chain.');
+          saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'failed' });
+          setTransactionPending(false);
+          return null;
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Vault TX broadcast. Check explorer: ${historyTxId}`);
+          saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'pending' });
+        }
+
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        const message = error instanceof Error ? error.message : 'Vault transaction failed';
+        toast.error(message);
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
+  // ── Yield Pool Operations ──
+
+  /** Deposit USDCx to yield pool (requires private token record) */
+  const provideUsdcxCapital = useCallback(
+    async (tokenRecord: string, amount: number, nonce: number) => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.PROVIDE_USDCX_CAPITAL, [
+        tokenRecord,
+        FREEZE_LIST_PROOF,
+        microCreditsToU128Input(amount),
+        fieldToInput(nonce),
+      ], TX_FEE_HIGH);
+    },
+    [executeVaultTransaction],
+  );
+
+  /** Deposit USAD to yield pool (requires private token record) */
+  const provideUsadCapital = useCallback(
+    async (tokenRecord: string, amount: number, nonce: number) => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.PROVIDE_USAD_CAPITAL, [
+        tokenRecord,
+        FREEZE_LIST_PROOF,
+        microCreditsToU128Input(amount),
+        fieldToInput(nonce),
+      ], TX_FEE_HIGH);
+    },
+    [executeVaultTransaction],
+  );
+
+  /** Redeem USDCx shares from yield pool (pass PoolShare record) */
+  const redeemUsdcxCapital = useCallback(
+    async (poolShareRecord: string) => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.REDEEM_USDCX_CAPITAL, [poolShareRecord], TX_FEE_HIGH);
+    },
+    [executeVaultTransaction],
+  );
+
+  /** Redeem USAD shares from yield pool (pass PoolShare record) */
+  const redeemUsadCapital = useCallback(
+    async (poolShareRecord: string) => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.REDEEM_USAD_CAPITAL, [poolShareRecord], TX_FEE_HIGH);
+    },
+    [executeVaultTransaction],
+  );
+
+  // ── Private Transfer Operations ──
+
+  /** Private transfer USDCx via vault relay (requires private token record) */
+  const privateTransferUsdcx = useCallback(
+    async (tokenRecord: string, recipient: string, amount: number, nonce: number) => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.PRIVATE_TRANSFER_USDCX, [
+        tokenRecord,
+        FREEZE_LIST_PROOF,
+        recipient,
+        microCreditsToU128Input(amount),
+        fieldToInput(nonce),
+      ], TX_FEE_HIGH);
+    },
+    [executeVaultTransaction],
+  );
+
+  /** Private transfer USAD via vault relay (requires private token record) */
+  const privateTransferUsad = useCallback(
+    async (tokenRecord: string, recipient: string, amount: number, nonce: number) => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.PRIVATE_TRANSFER_USAD, [
+        tokenRecord,
+        FREEZE_LIST_PROOF,
+        recipient,
+        microCreditsToU128Input(amount),
+        fieldToInput(nonce),
+      ], TX_FEE_HIGH);
+    },
+    [executeVaultTransaction],
+  );
+
   return {
     executeTransaction,
+    executeVaultTransaction,
     supplyCollateral,
     supplyUsdcxCollateral,
     supplyUsadCollateral,
@@ -665,6 +794,13 @@ export function useTransaction(wallet: WalletExecute) {
     fundProtocol,
     fundProtocolUsad,
     fundProtocolAleo,
+    // Vault operations
+    provideUsdcxCapital,
+    provideUsadCapital,
+    redeemUsdcxCapital,
+    redeemUsadCapital,
+    privateTransferUsdcx,
+    privateTransferUsad,
     resetTransaction,
   };
 }

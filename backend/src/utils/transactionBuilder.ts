@@ -1,17 +1,58 @@
-/**
- * Transaction builder — DEPRECATED.
- *
- * On-chain writes are now handled by the frontend wallet (Shield wallet handles proving).
- * The backend is a read-only price aggregation service.
- * This file is kept for reference but is not imported anywhere.
- */
+import { config } from './config.js';
 
+/**
+ * Build and broadcast a transaction by calling the Aleo API execute endpoint.
+ * Uses the admin private key for oracle auto-push and liquidation bot.
+ */
+export async function buildAndBroadcastTransaction(
+  programId: string,
+  transition: string,
+  inputs: string[],
+  fee: number = 500_000,
+): Promise<string | null> {
+  if (!config.privateKey) {
+    console.warn('[tx-builder] No PRIVATE_KEY configured');
+    return null;
+  }
+
+  try {
+    // Use the Aleo SDK for transaction building
+    const sdk = await import('@provablehq/sdk');
+    const account = new sdk.Account({ privateKey: config.privateKey });
+    const pm = new sdk.ProgramManager(
+      config.aleoApiUrl,
+      undefined,
+      undefined,
+    );
+    pm.setAccount(account);
+
+    const txId = await pm.execute({
+      programName: programId,
+      functionName: transition,
+      inputs: inputs,
+      fee: fee,
+      privateFee: false,
+    } as any);
+
+    if (txId) {
+      console.log(`[tx-builder] Broadcast ${programId}/${transition} → ${txId}`);
+      return typeof txId === 'string' ? txId : String(txId);
+    }
+    return null;
+  } catch (err) {
+    console.error(`[tx-builder] Failed to execute ${transition}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Legacy export for backwards compat
+ */
 export async function executeTransition(
-  _transition: string,
-  _inputs: string[],
+  transition: string,
+  inputs: string[],
 ): Promise<string> {
-  throw new Error(
-    'Backend no longer handles on-chain writes. ' +
-    'Oracle updates are submitted via the frontend wallet.',
-  );
+  const txId = await buildAndBroadcastTransaction(config.programId, transition, inputs);
+  if (!txId) throw new Error('Transaction broadcast failed');
+  return txId;
 }

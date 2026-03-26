@@ -6,9 +6,9 @@
 
 Supply ALEO, USDCx, or USAD as collateral — borrow against them — keep every position encrypted inside zero-knowledge proofs. MEV bots can't target what they can't see.
 
-[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-C9DDFF?style=flat-square)](https://testnet.explorer.provable.com/program/dara_lend_v6.aleo)
+[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-C9DDFF?style=flat-square)](https://testnet.explorer.provable.com/program/dara_lend_v7.aleo)
 [![Leo](https://img.shields.io/badge/Leo-3.4.0-blue?style=flat-square)](https://leo-lang.org)
-[![Transitions](https://img.shields.io/badge/Transitions-21-D6C5A1?style=flat-square)](#smart-contract)
+[![Transitions](https://img.shields.io/badge/Transitions-31-D6C5A1?style=flat-square)](#smart-contract)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](#license)
 
 Built for the **Aleo Privacy Buildathon — Wave 4**
@@ -23,24 +23,31 @@ Built for the **Aleo Privacy Buildathon — Wave 4**
 |-----------|------|
 | **Frontend** | [dara-lend.vercel.app](https://dara-lend.vercel.app) |
 | **Backend API** | [dara-lend-api.onrender.com](https://dara-lend-api.onrender.com/api/health) |
-| **Smart Contract** | [`dara_lend_v6.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v6.aleo) |
-| **Deploy TX** | [`at1awvn7ge...slxjfk3`](https://testnet.explorer.provable.com/transaction/at1awvn7ge79yhscpymgdeuuq025xtghqnrf0yxcjuhgjr55gtz75yslxjfk3) |
+| **Smart Contract (Lending)** | [`dara_lend_v7.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v7.aleo) |
+| **Smart Contract (Vault)** | [`dara_lend_v7_vault.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v7_vault.aleo) |
+| **Lending Deploy TX** | [`at17alxm45...sjrnesl`](https://testnet.explorer.provable.com/transaction/at17alxm45te8xjcuc8n4h6zajjf8ke5s0sa6tvvp4umwrwlmje4q8sjrnesl) |
+| **Vault Deploy TX** | [`at16d0eejg...axvdge`](https://testnet.explorer.provable.com/transaction/at16d0eejg60l3xatmxl6uyrvyajyuy3h6808d225dsac48chgf2yzsaxvdge) |
 
 ---
 
-## What's New in v6
+## What's New in v7
 
 | Feature | Description |
 |---------|-------------|
+| **Dual-Program Architecture** | Lending + Vault companion — 31 total transitions across 2 programs |
+| **Yield Vault** | Deposit USDCx/USAD to earn yield from protocol fees via `dara_lend_v7_vault.aleo` |
+| **Private Transfers** | ZK-shielded token relay — breaks on-chain link between sender and recipient |
+| **Multi-Asset Oracle** | 6 token price feeds: ALEO, USDCx, USAD, BTC, ETH, SOL |
+| **Auto Oracle Bot** | Automated multi-asset price pusher with cron scheduling |
+| **Auto Liquidation Bot** | Dual-program liquidation executor with circuit breaker awareness |
 | **Multi-Collateral Vaults** | Supply ALEO, USDCx, or USAD — separate vault mappings per token type |
 | **Multi-Borrow** | Borrow USDCx, USAD, or ALEO credits against any supported collateral |
 | **Interest Rate Model** | On-chain base rate + slope parameters (BPS), utilization-based supply/borrow APY |
 | **Emergency Circuit Breaker** | Admin can `emergency_pause()` / `resume_protocol()` all operations |
 | **MerkleProof Compliance** | Stablecoin operations verified against freeze-list via merkle_tree.aleo |
-| **21 Transitions** | Expanded from 6 → 21 (3.5× complexity) for full multi-collateral support |
-| **812 Statements** | 1,982,846 variables, 1,497,807 constraints compiled |
-| **Sentinel Monitor** | Backend liquidation bot with circuit breaker awareness |
-| **Analytics Dashboard** | TVL time-series, interest rates, collateral composition, oracle feed history |
+| **21+10 Transitions** | 21 lending + 10 vault = 31 total (2 deployed programs) |
+| **2.8M Variables** | 1,982,846 (lending) + 822,245 (vault) compiled |
+| **Analytics Dashboard** | TVL, multi-asset prices, vault stats, bot status, interest rates |
 | **Obsidian Ledger Design** | Luxury UI — Gilda Display serif, glass panels, signature gradients |
 
 ---
@@ -74,11 +81,11 @@ The borrower's address is hashed (BHP256) inside `LiquidationAuth` — solvency 
 
 ## Smart Contract
 
-**Program:** `dara_lend_v6.aleo` · **Leo 3.4.0** · **Aleo Testnet**
-**Source:** [`contract/dara_lend_v1/src/main.leo`](contract/dara_lend_v1/src/main.leo)
-**Cost:** 38.461253 credits · 812 statements · 1,982,846 variables
+### Program 1: `dara_lend_v7.aleo` — Lending Core
+**Leo 3.4.0** · **Aleo Testnet** · **21 transitions** · **1,982,846 variables**
+**Cost:** 38.461253 credits · 812 statements
 
-### 21 Transitions
+### 21 Lending Transitions
 
 | Category | Transitions | Description |
 |----------|-------------|-------------|
@@ -88,6 +95,24 @@ The borrower's address is hashed (BHP256) inside `LiquidationAuth` — solvency 
 | **Repay** (4) | `repay`, `repay_usad`, `repay_credits_usdcx`, `repay_credits_usad` | Repay debt per type, return collateral |
 | **Liquidate** (3) | `liquidate`, `liquidate_usdcx`, `liquidate_usad` | Seize collateral + 5% bonus per type |
 | **Withdraw** (3) | `withdraw_collateral`, `withdraw_usdcx_collateral`, `withdraw_usad_collateral` | Return collateral to owner |
+
+### Program 2: `dara_lend_v7_vault.aleo` — Yield + Privacy
+**Leo 3.4.0** · **Aleo Testnet** · **10 transitions** · **822,245 variables**
+
+### 10 Vault Transitions
+
+| Category | Transitions | Description |
+|----------|-------------|-------------|
+| **Admin** (3) | `initialize`, `emergency_pause_vault`, `resume_vault` | Setup admin, circuit breaker |
+| **Yield Pool** (5) | `provide_usdcx_capital`, `provide_usad_capital`, `redeem_usdcx_capital`, `redeem_usad_capital`, `distribute_yield` | Deposit/redeem/distribute yield |
+| **Privacy Relay** (2) | `private_transfer_usdcx`, `private_transfer_usad` | ZK-shielded token transfers |
+
+### Vault Records
+
+| Record | Key Fields | Purpose |
+|--------|------------|---------|
+| `PoolShare` | `token_type`, `share_amount` | Proves yield pool deposit |
+| `PrivateTransferReceipt` | `amount`, `token_type`, `nonce_hash` | Proof of private transfer |
 
 ### 5 Private Records
 
@@ -105,7 +130,7 @@ The borrower's address is hashed (BHP256) inside `LiquidationAuth` — solvency 
 |---------|---------|
 | `vault_collateral_aleo` / `_usdcx` / `_usad` | Total collateral per type |
 | `pool_total_borrowed[0\|1\|2]` | Total borrowed: 0=USDCx, 1=USAD, 2=ALEO |
-| `oracle_price[0\|1\|2]` | Price: 0=ALEO, 1=USDCx, 2=USAD |
+| `oracle_price[0\|1\|2\|3\|4\|5]` | Price: 0=ALEO, 1=USDCx, 2=USAD, 3=BTC, 4=ETH, 5=SOL |
 | `rate_base_bps` / `rate_slope_bps` | Interest rate parameters |
 | `supply_apy_bps` / `borrow_apy_bps` | Current APY rates |
 | `protocol_paused` | Circuit breaker flag |
@@ -159,13 +184,17 @@ merkle_tree.aleo           → Freeze-list compliance verification
 ┌─────────────────────────────────────────────────────────┐
 │  Frontend (React 18 + Vite + Tailwind)                  │
 │  Shield Wallet ←→ Private record decrypt/display        │
-│  Analytics dashboard, glass-panel luxury UI              │
+│  Analytics, Yield Vault, Private Transfer, glass UI     │
 ├─────────────────────────────────────────────────────────┤
 │  Backend Sentinel (Express + TypeScript)                 │
-│  5-source oracle · analytics API · liquidation monitor   │
+│  5-source oracle · auto-pusher · liquidation bot · API   │
 ├─────────────────────────────────────────────────────────┤
-│  Smart Contract (dara_lend_v6.aleo · Leo 3.4.0)         │
-│  21 transitions · 3 collateral types · interest model    │
+│  dara_lend_v7.aleo (Lending · 21 transitions)           │
+│  3 collateral types · interest model · circuit breaker   │
+├─────────────────────────────────────────────────────────┤
+│  dara_lend_v7_vault.aleo (Vault · 10 transitions)       │
+│  Yield pool · private relay · PoolShare records          │
+├─────────────────────────────────────────────────────────┤
 │  credits.aleo · usdcx · usad · merkle_tree.aleo         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -185,30 +214,33 @@ merkle_tree.aleo           → Freeze-list compliance verification
 
 ```
 DARA-Lend/
-├── contract/dara_lend_v1/
-│   └── src/main.leo              # dara_lend_v6.aleo (812 statements, 21 transitions)
+├── contract/
+│   ├── dara_lend_v1/src/main.leo              # dara_lend_v7.aleo (21 transitions, 1.98M vars)
+│   └── dara_lend_v7_vault/src/main.leo        # dara_lend_v7_vault.aleo (10 transitions, 822K vars)
 │
 ├── backend/src/
 │   ├── index.ts                  # Sentinel entry point
 │   ├── api/
 │   │   ├── server.ts             # Express v2.0.0
 │   │   └── routes/               # health, oracle, price, solvency, stats, analytics, transaction
-│   ├── oracle/                   # 5-source aggregator, priceUpdater (2-min cron), validator
-│   ├── liquidation/monitor.ts    # Sentinel — liquidation + circuit breaker monitor
-│   └── utils/                    # aleoClient, config (v6), transactionBuilder
+│   ├── oracle/                   # 5-source aggregator, priceUpdater, autoPusher, validator
+│   ├── liquidation/              # monitor.ts + executor.ts (dual-program)
+│   └── utils/                    # aleoClient, config (v7), transactionBuilder
 │
 ├── frontend/src/
 │   ├── pages/                    # Landing, AppDashboard, Docs
 │   ├── components/
 │   │   ├── app/                  # Dashboard, Supply, Borrow, Repay, Withdraw, Liquidate,
-│   │   │                         # Positions, OracleStatus, ProtocolStats, Analytics, History
+│   │   │                         # Positions, OracleStatus, ProtocolStats, Analytics,
+│   │   │                         # YieldVault, PrivateTransfer, History
 │   │   ├── landing/              # Hero, Features, Privacy, Stats, Oracle, Multi-collateral, CTA
 │   │   ├── layout/               # Sidebar, TopBar, AppLayout, Navbar, Footer
 │   │   ├── shared/               # StatCard, WalletButton, GlowCard, PrivacyBadge, etc.
 │   │   └── docs/                 # DocsContent, DocsSidebar, DocsLayout
-│   ├── hooks/                    # useAleoClient, useMarketPrice, useTransaction, useWalletRecords
+│   ├── hooks/                    # useAleoClient, useMarketPrice, useTransaction,
+│   │                             # useWalletRecords, useVaultStats
 │   ├── stores/appStore.ts        # Zustand state
-│   └── utils/                    # constants (v6), formatting, records
+│   └── utils/                    # constants (v7), formatting, records
 │
 ├── render.yaml                   # Backend deployment (Render)
 └── vercel.json                   # Frontend deployment (Vercel)
@@ -275,43 +307,50 @@ VITE_BACKEND_URL=http://localhost:3001/api
 |--------|--------|--------|
 | **Frontend** | Vercel | `vercel.json` — API proxy rewrites |
 | **Backend** | Render | `render.yaml` — auto-deploy, oracle cron |
-| **Contract** | Aleo Testnet | `leo deploy --network testnet` → `dara_lend_v6.aleo` |
+| **Contract** | Aleo Testnet | `leo deploy --network testnet` → `dara_lend_v7.aleo` + `dara_lend_v7_vault.aleo` |
 
 ```bash
 # Contract deployment (already done)
-cd contract/dara_lend_v1
-leo deploy --network testnet \
-  --endpoint https://api.explorer.provable.com/v1 \
-  --broadcast --yes
-# TX: at1awvn7ge79yhscpymgdeuuq025xtghqnrf0yxcjuhgjr55gtz75yslxjfk3
+# Lending core:
+# TX: at17alxm45te8xjcuc8n4h6zajjf8ke5s0sa6tvvp4umwrwlmje4q8sjrnesl
 # Cost: 38.461253 credits
+
+# Vault companion:
+# TX: at16d0eejg60l3xatmxl6uyrvyajyuy3h6808d225dsac48chgf2yzsaxvdge
+# Cost: 16.15 credits
 ```
 
 ---
 
-## Wave 4 Changelog (v5 → v6)
+## Wave 4 Changelog (v6 → v7)
 
 ### Smart Contract
-- Multi-collateral vaults: `vault_collateral_aleo`, `vault_collateral_usdcx`, `vault_collateral_usad`
-- Multi-borrow: `borrow` (USDCx), `borrow_usad`, `borrow_credits` with per-type `pool_total_borrowed`
-- Interest rate model: `set_rate_params`, `accrue_interest`, `supply_apy_bps`, `borrow_apy_bps`
-- Emergency controls: `emergency_pause` / `resume_protocol` with `protocol_paused` mapping
-- MerkleProof: Stablecoin supply/repay verified against `merkle_tree.aleo` freeze-list
-- Records expanded: `token_type`, `collateral_token`, `debt_token` fields
-- 6 → 21 transitions, 445 → 812 statements, 1.98M variables
+- **Dual-program architecture**: `dara_lend_v7.aleo` (lending) + `dara_lend_v7_vault.aleo` (yield+privacy)
+- Yield pool: `provide_usdcx_capital`, `provide_usad_capital`, `redeem_usdcx_capital`, `redeem_usad_capital`, `distribute_yield`
+- Private transfers: `private_transfer_usdcx`, `private_transfer_usad` — ZK relay with nonce protection
+- Vault admin: `initialize`, `emergency_pause_vault`, `resume_vault`
+- New records: `PoolShare`, `PrivateTransferReceipt`
+- New mappings: `supply_pool_total`, `supply_pool_shares`, `pool_yield_accumulated`, `transfer_count`, `total_volume`
+- Multi-asset oracle: 6 token IDs (ALEO=0, USDCx=1, USAD=2, BTC=3, ETH=4, SOL=5)
+- 21 + 10 = 31 total transitions across 2 deployed programs
+- Total: 2,805,091 variables (1.98M + 822K)
 
 ### Frontend
-- Luxury "Obsidian Ledger" design: Gilda Display serif, glass panels, signature gradients
-- All components themed: primary #C9DDFF, secondary #D6C5A1, bg #000000, surface #131313
-- Analytics dashboard: TVL time-series, interest rates, collateral composition
-- Updated docs: 21-transition reference, v6 mappings, multi-collateral privacy model
+- YieldVault.tsx: Deposit/redeem with private token record selection + PoolShare record listing
+- PrivateTransfer.tsx: ZK-shielded transfer with token record selection
+- Analytics.tsx: Extended with multi-asset prices, vault stats, bot status
+- Dashboard.tsx: Quick actions for Yield Vault + Private Transfer
+- Sidebar + TopBar: New routes `/app/yield`, `/app/transfer`, `/app/analytics`
+- DocsContent: Dual-program architecture docs, 31 transitions, v7 TX IDs
+- All v6 references eliminated — programs array includes both v7 + vault
 
 ### Backend (Sentinel)
-- Config updated to `dara_lend_v6.aleo`
+- Config updated to `dara_lend_v7.aleo` + `dara_lend_v7_vault.aleo`
+- Auto Oracle Pusher: Multi-asset price submission bot
+- Liquidation Executor: Dual-program monitoring
+- Analytics routes: `/analytics/vault`, `/analytics/multi-price`, `/analytics/overview`
 - Stats API: Multi-collateral breakdown (ALEO/USDCx/USAD)
 - Solvency API: Circuit breaker pause status
-- Analytics API: `/analytics/tvl`, `/price-history`, `/borrow-history`, `/interest-rates`, `/overview`
-- Monitor → Sentinel: Circuit breaker awareness, multi-vault tracking
 
 ---
 

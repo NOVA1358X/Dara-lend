@@ -93,11 +93,11 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           <p className="text-sm text-text-secondary">
             <strong className="text-primary">Program ID:</strong>{' '}
             <a
-              href="https://testnet.explorer.provable.com/program/dara_lend_v6.aleo"
+              href="https://testnet.explorer.provable.com/program/dara_lend_v7.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-primary hover:underline"
-            >dara_lend_v6.aleo</a>
+            >dara_lend_v7.aleo</a>
             {' · '}
             <strong className="text-text-primary">Network:</strong> Aleo Testnet
             {' · '}
@@ -278,15 +278,22 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           Smart Contract
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          The DARA Lend protocol is powered by a single Leo smart contract deployed at{' '}
+          The DARA Lend protocol is powered by two linked Leo smart contracts deployed on Aleo Testnet:{' '}
           <a
-            href="https://testnet.explorer.provable.com/program/dara_lend_v6.aleo"
+            href="https://testnet.explorer.provable.com/program/dara_lend_v7.aleo"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-primary hover:underline"
-          >dara_lend_v6.aleo</a>
-          {' '}on Aleo Testnet. The contract is 812 statements of Leo code with 21 transitions
-          managing multi-collateral lending, interest rate accrual, and emergency controls.
+          >dara_lend_v7.aleo</a>
+          {' '}(21 transitions — lending, oracle, liquidation) and{' '}
+          <a
+            href="https://testnet.explorer.provable.com/program/dara_lend_v7_vault.aleo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-primary hover:underline"
+          >dara_lend_v7_vault.aleo</a>
+          {' '}(10 transitions — yield vault, private transfers). Combined 31 transitions
+          managing multi-collateral lending, yield pools, private transfers, interest rate accrual, and emergency controls.
         </p>
 
         <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
@@ -477,8 +484,8 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
         <div className="space-y-4 mb-6">
           {[
             {
-              title: 'Leo Smart Contract (dara_lend_v6.aleo)',
-              items: ['812 statements, 1.98M variables, 1.5M constraints', '21 transitions, 5 private records, multi-collateral mappings', 'Imports credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo + merkle_tree.aleo', 'Circuit breaker, interest rate model, oracle validation, nonce binding'],
+              title: 'Leo Smart Contracts (dara_lend_v7.aleo + vault)',
+              items: ['Main: 812 statements, 1.98M variables — Vault: 274 statements, 822K variables', '31 total transitions (21 lending + 10 vault), 7 private records', 'Imports credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo + merkle_tree.aleo', 'Yield vault pools, private transfers, auto liquidation bot, circuit breaker'],
             },
             {
               title: 'React Frontend (Vite + TypeScript)',
@@ -486,7 +493,7 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
             },
             {
               title: 'Express Backend — Sentinel (TypeScript)',
-              items: ['5-source oracle price aggregation with outlier rejection', 'Automated on-chain price updates every 2 minutes', 'Analytics API with TVL time-series, interest rates, and borrow history', 'Liquidation monitoring (Sentinel) with circuit breaker awareness'],
+              items: ['5-source oracle price aggregation with outlier rejection', 'Manual on-chain price updates via admin wallet', 'Analytics API with TVL time-series, interest rates, and borrow history', 'Liquidation monitoring (Sentinel) with circuit breaker awareness'],
             },
           ].map((section) => (
             <div key={section.title} className="p-4 rounded-lg glass-panel-sm">
@@ -726,7 +733,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'What network is DARA Lend deployed on?',
-              a: 'Currently on Aleo Testnet. The program ID is dara_lend_v6.aleo (TX: at1awvn7ge79yhscpymgdeuuq025xtghqnrf0yxcjuhgjr55gtz75yslxjfk3). Mainnet deployment will follow after security audits.',
+              a: 'Currently on Aleo Testnet. Main program: dara_lend_v7.aleo (TX: at17alxm45te8xjcuc8n4h6zajjf8ke5s0sa6tvvp4umwrwlmje4q8sjrnesl). Vault program: dara_lend_v7_vault.aleo (TX: at16d0eejg60l3xatmxl6uyrvyajyuy3h6808d225dsac48chgf2yzsaxvdge). Mainnet deployment will follow after security audits.',
             },
             {
               q: 'What is the interest rate model?',

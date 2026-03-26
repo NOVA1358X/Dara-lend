@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getMappingValue, parseAleoU64 } from '../../utils/aleoClient.js';
 import { config } from '../../utils/config.js';
 import { getOracleStatus } from '../../oracle/priceUpdater.js';
-import { getMonitorStatus } from '../../liquidation/monitor.js';
+import { getMonitorStatus } from '../../liquidation/executor.js';
 
 const router = Router();
 
@@ -112,11 +112,115 @@ router.get('/overview', async (_req, res) => {
       borrowHistory: borrowHistory.slice(-24),
       precision: config.precision,
       programId: config.programId,
+      vaultProgramId: config.vaultProgramId,
       timestamp: Date.now(),
     });
   } catch (err) {
     console.error('[analytics] Overview error:', err);
     res.status(500).json({ error: 'Failed to fetch analytics overview' });
+  }
+});
+
+// GET /api/analytics/vault - Vault pool status
+router.get('/vault', async (_req, res) => {
+  try {
+    const [
+      poolTotalUsdcxRaw, poolTotalUsadRaw,
+      poolSharesUsdcxRaw, poolSharesUsadRaw,
+      yieldUsdcxRaw, yieldUsadRaw,
+      depositCountUsdcxRaw, depositCountUsadRaw,
+      transferCountUsdcxRaw, transferCountUsadRaw,
+      volumeUsdcxRaw, volumeUsadRaw,
+    ] = await Promise.all([
+      getMappingValue('supply_pool_total', '0u8', config.vaultProgramId),
+      getMappingValue('supply_pool_total', '1u8', config.vaultProgramId),
+      getMappingValue('supply_pool_shares', '0u8', config.vaultProgramId),
+      getMappingValue('supply_pool_shares', '1u8', config.vaultProgramId),
+      getMappingValue('pool_yield_accumulated', '0u8', config.vaultProgramId),
+      getMappingValue('pool_yield_accumulated', '1u8', config.vaultProgramId),
+      getMappingValue('pool_deposit_count', '0u8', config.vaultProgramId),
+      getMappingValue('pool_deposit_count', '1u8', config.vaultProgramId),
+      getMappingValue('transfer_count', '0u8', config.vaultProgramId),
+      getMappingValue('transfer_count', '1u8', config.vaultProgramId),
+      getMappingValue('total_volume', '0u8', config.vaultProgramId),
+      getMappingValue('total_volume', '1u8', config.vaultProgramId),
+    ]);
+
+    const poolTotalUsdcx = parseAleoU64(poolTotalUsdcxRaw);
+    const poolTotalUsad = parseAleoU64(poolTotalUsadRaw);
+    const poolSharesUsdcx = parseAleoU64(poolSharesUsdcxRaw);
+    const poolSharesUsad = parseAleoU64(poolSharesUsadRaw);
+
+    res.json({
+      pools: {
+        usdcx: {
+          totalDeposits: poolTotalUsdcx,
+          totalShares: poolSharesUsdcx,
+          yieldAccumulated: parseAleoU64(yieldUsdcxRaw),
+          depositCount: parseAleoU64(depositCountUsdcxRaw),
+          sharePrice: poolSharesUsdcx > 0 ? poolTotalUsdcx / poolSharesUsdcx : 1,
+        },
+        usad: {
+          totalDeposits: poolTotalUsad,
+          totalShares: poolSharesUsad,
+          yieldAccumulated: parseAleoU64(yieldUsadRaw),
+          depositCount: parseAleoU64(depositCountUsadRaw),
+          sharePrice: poolSharesUsad > 0 ? poolTotalUsad / poolSharesUsad : 1,
+        },
+      },
+      privateTransfers: {
+        usdcx: {
+          count: parseAleoU64(transferCountUsdcxRaw),
+          volume: parseAleoU64(volumeUsdcxRaw),
+        },
+        usad: {
+          count: parseAleoU64(transferCountUsadRaw),
+          volume: parseAleoU64(volumeUsadRaw),
+        },
+      },
+      precision: config.precision,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    console.error('[analytics] Vault error:', err);
+    res.status(500).json({ error: 'Failed to fetch vault analytics' });
+  }
+});
+
+// GET /api/analytics/multi-price - All oracle prices
+router.get('/multi-price', async (_req, res) => {
+  try {
+    const assetIds = [0, 1, 2];
+    const labels = ['ALEO', 'USDCx', 'USAD'];
+
+    const pricePromises = assetIds.map((id) =>
+      getMappingValue('oracle_price', `${id}u8`),
+    );
+    const roundPromises = assetIds.map((id) =>
+      getMappingValue('price_round', `${id}u8`),
+    );
+
+    const [prices, rounds] = await Promise.all([
+      Promise.all(pricePromises),
+      Promise.all(roundPromises),
+    ]);
+
+    const assets = assetIds.map((id, i) => ({
+      tokenId: id,
+      symbol: labels[i],
+      price: parseAleoU64(prices[i]),
+      priceFormatted: (parseAleoU64(prices[i]) / config.precision).toFixed(4),
+      round: parseAleoU64(rounds[i]),
+    }));
+
+    res.json({
+      assets,
+      precision: config.precision,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    console.error('[analytics] Multi-price error:', err);
+    res.status(500).json({ error: 'Failed to fetch multi-asset prices' });
   }
 });
 

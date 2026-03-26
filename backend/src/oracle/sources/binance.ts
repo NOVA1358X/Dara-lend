@@ -1,6 +1,7 @@
 import type { PriceResult } from './types.js';
 
-const API_URL = 'https://api.binance.com/api/v3/ticker/price?symbol=ALEOUSDT';
+// Binance does not list ALEO/USDT — use Binance.us klines as fallback
+const API_URL = 'https://www.binance.us/api/v3/ticker/price?symbol=ALEOUSD';
 
 export async function fetchFromBinance(): Promise<PriceResult> {
   const controller = new AbortController();

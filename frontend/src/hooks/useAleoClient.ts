@@ -3,9 +3,9 @@ import { ALEO_TESTNET_API, PROGRAM_ID, MAPPING_KEYS } from '@/utils/constants';
 
 export function useAleoClient() {
   const getMappingValue = useCallback(
-    async (mapping: string, key: string = MAPPING_KEYS.GLOBAL): Promise<string | null> => {
+    async (mapping: string, key: string = MAPPING_KEYS.GLOBAL, programId: string = PROGRAM_ID): Promise<string | null> => {
       try {
-        const url = `${ALEO_TESTNET_API}/program/${PROGRAM_ID}/mapping/${mapping}/${key}`;
+        const url = `${ALEO_TESTNET_API}/program/${programId}/mapping/${mapping}/${key}`;
         const response = await fetch(url);
         if (!response.ok) return null;
         const text = await response.text();

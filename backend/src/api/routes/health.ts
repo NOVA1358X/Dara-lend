@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getLatestBlockHeight } from '../../utils/aleoClient.js';
 import { config } from '../../utils/config.js';
 import { getOracleStatus } from '../../oracle/priceUpdater.js';
-import { getMonitorStatus } from '../../liquidation/monitor.js';
+import { getMonitorStatus } from '../../liquidation/executor.js';
 
 const router = Router();
 
@@ -26,10 +26,13 @@ router.get('/', async (_req, res) => {
       },
       protocol: monitor
         ? {
-            totalCollateral: monitor.totalCollateral,
-            totalBorrowed: monitor.totalBorrowed,
+            totalCollateralAleo: monitor.totalCollateralAleo,
+            totalCollateralUsdcx: monitor.totalCollateralUsdcx,
+            totalCollateralUsad: monitor.totalCollateralUsad,
+            totalBorrowedUsdcx: monitor.totalBorrowedUsdcx,
+            totalBorrowedUsad: monitor.totalBorrowedUsad,
             loanCount: monitor.loanCount,
-            oraclePrice: monitor.oraclePrice,
+            oraclePriceAleo: monitor.oraclePriceAleo,
             globalLtv: monitor.globalLtv,
             isHealthy: monitor.isHealthy,
           }

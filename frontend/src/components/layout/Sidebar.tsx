@@ -9,6 +9,8 @@ import { ChartIcon } from '@/components/icons/ChartIcon';
 import { ZapIcon } from '@/components/icons/ZapIcon';
 import { KeyIcon } from '@/components/icons/KeyIcon';
 import { ClockIcon } from '@/components/icons/ClockIcon';
+import { LinkIcon } from '@/components/icons/LinkIcon';
+import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
 
 const navItems = [
   { path: '/app', label: 'Dashboard', icon: ShieldIcon, end: true },
@@ -18,6 +20,8 @@ const navItems = [
   { path: '/app/withdraw', label: 'Withdraw', icon: KeyIcon, end: false },
   { path: '/app/positions', label: 'Positions', icon: LockIcon, end: false },
   { path: '/app/liquidate', label: 'Liquidate', icon: ZapIcon, end: false },
+  { path: '/app/yield', label: 'Yield', icon: LinkIcon, end: false },
+  { path: '/app/transfer', label: 'Transfer', icon: EyeOffIcon, end: false },
   { path: '/app/history', label: 'History', icon: ClockIcon, end: false },
   { path: '/app/analytics', label: 'Analytics', icon: ChartIcon, end: false },
   { path: '/app/stats', label: 'Stats', icon: ShieldIcon, end: false },

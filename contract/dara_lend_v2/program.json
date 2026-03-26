@@ -1,0 +1,33 @@
+{
+  "program": "dara_lend_v7.aleo",
+  "version": "0.2.0",
+  "description": "Privacy-first multi-collateral lending protocol on Aleo — ALEO/USDCx/USAD with private deposits, multi-asset oracle, interest rate model and circuit breaker",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    },
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "path": null,
+      "edition": null
+    }
+  ],
+  "dev_dependencies": []
+}

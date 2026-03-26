@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useProtocolStats } from '@/hooks/useProtocolStats';
 import { useMarketPrice } from '@/hooks/useMarketPrice';
+import { useVaultStats, useMultiAssetPrices } from '@/hooks/useVaultStats';
 import { formatCredits } from '@/utils/formatting';
 import { PRECISION, BACKEND_API, TOKEN_TYPES } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
@@ -23,6 +24,8 @@ interface InterestRates {
 export function Analytics() {
   const { data: stats, isLoading } = useProtocolStats();
   const { price: livePrice } = useMarketPrice();
+  const { data: vaultStats, isLoading: vaultLoading } = useVaultStats();
+  const { data: multiPrices } = useMultiAssetPrices();
   const [tvlHistory, setTvlHistory] = useState<DataPoint[]>([]);
   const [priceHistory, setPriceHistory] = useState<DataPoint[]>([]);
   const [rates, setRates] = useState<InterestRates | null>(null);
@@ -223,6 +226,96 @@ export function Analytics() {
         )}
       </motion.div>
 
+      {/* Multi-Asset Oracle Prices */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, type: 'spring', stiffness: 120, damping: 20 }}
+        className="rounded-xl glass-panel p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">currency_exchange</span>
+            <h3 className="font-headline text-base text-text-primary">Oracle Prices</h3>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { token: 'ALEO', price: multiPrices?.aleo, color: '#C9DDFF' },
+            { token: 'USDCx', price: multiPrices?.usdcx, color: '#D6C5A1' },
+            { token: 'USAD', price: multiPrices?.usad, color: '#34D399' },
+          ].map(({ token, price, color }) => (
+            <div key={token} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                <span className="font-label text-[10px] uppercase tracking-[0.1em] text-text-primary">{token}</span>
+              </div>
+              <p className="font-mono text-lg text-text-primary tabular-nums">
+                {price != null && price > 0 ? `$${price.toFixed(4)}` : '—'}
+              </p>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Yield Vault Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, type: 'spring', stiffness: 120, damping: 20 }}
+        className="rounded-xl glass-panel p-6"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-primary text-lg">savings</span>
+          <h3 className="font-headline text-base text-text-primary">Yield Vault</h3>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">USDCx Pool</p>
+            <p className="font-mono text-lg text-text-primary tabular-nums">
+              ${formatCredits(vaultStats?.poolTotalUsdcx ?? 0)}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">USAD Pool</p>
+            <p className="font-mono text-lg text-text-primary tabular-nums">
+              ${formatCredits(vaultStats?.poolTotalUsad ?? 0)}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">USDCx Share Price</p>
+            <p className="font-mono text-lg text-accent-success tabular-nums">
+              {(vaultStats?.sharePriceUsdcx ?? 1).toFixed(4)}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.03]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">USAD Share Price</p>
+            <p className="font-mono text-lg text-accent-success tabular-nums">
+              {(vaultStats?.sharePriceUsad ?? 1).toFixed(4)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-3 rounded-lg bg-white/[0.02]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">Private Transfers</p>
+            <p className="font-mono text-base text-text-primary">{vaultStats?.transferCount ?? 0}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.02]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">Transfer Volume</p>
+            <p className="font-mono text-base text-text-primary">${formatCredits(vaultStats?.totalVolume ?? 0)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.02]">
+            <p className="font-label text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">Total Deposits</p>
+            <p className="font-mono text-base text-text-primary">
+              {(vaultStats?.depositCountUsdcx ?? 0) + (vaultStats?.depositCountUsad ?? 0)}
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Protocol Security */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -240,6 +333,9 @@ export function Analytics() {
           <SecurityItem icon="gavel" label="Circuit Breaker" description="Emergency pause/resume by admin" />
           <SecurityItem icon="verified" label="5-Source Oracle" description="Median price from 5 exchanges" />
           <SecurityItem icon="shield" label="Privacy Hardened" description="Version-pinned privacy model" />
+          <SecurityItem icon="monitor_heart" label="Liquidation Bot" description="Automated under-collateral detection" />
+          <SecurityItem icon="savings" label="Yield Vault" description="Earn yield on stablecoin deposits" />
+          <SecurityItem icon="visibility_off" label="Private Transfers" description="ZK-shielded token relay" />
         </div>
       </motion.div>
     </div>

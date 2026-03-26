@@ -1,4 +1,5 @@
-export const PROGRAM_ID = 'dara_lend_v6.aleo';
+export const PROGRAM_ID = 'dara_lend_v7.aleo';
+export const VAULT_PROGRAM_ID = 'dara_lend_v7_vault.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 export const USAD_PROGRAM = 'test_usad_stablecoin.aleo';
@@ -26,8 +27,9 @@ export const TOKEN_LABELS: Record<number, string> = {
   2: 'USAD',
 };
 
-// The on-chain address of the deployed program (derived from dara_lend_v6.aleo)
-export const PROTOCOL_ADDRESS = 'aleo14sztdsflcsp4sry92dmd4w88d2chnn592jzwye2d8z0z42v3pgzqezyjpy';
+// The on-chain address of the deployed programs
+export const PROTOCOL_ADDRESS = 'aleo17900g0qun6jqan677l8nhjht3ffyd94fl36w9ys8lwp9w4eklc8sd5ls3g';
+export const VAULT_ADDRESS = 'aleo1mgv9tv2a6vcm6n0m3hq58manlmwcr73yjynluuwq4tk966v8mvzqfvcehz';
 
 export const ADMIN_ADDRESS = 'aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8';
 
@@ -58,6 +60,20 @@ export const MAPPINGS = {
   BORROW_APY_BPS: 'borrow_apy_bps',
 } as const;
 
+// Vault program mappings
+export const VAULT_MAPPINGS = {
+  SUPPLY_POOL_TOTAL: 'supply_pool_total',
+  SUPPLY_POOL_SHARES: 'supply_pool_shares',
+  POOL_YIELD_ACCUMULATED: 'pool_yield_accumulated',
+  VAULT_ADMIN: 'vault_admin',
+  VAULT_PAUSED: 'vault_paused',
+  TRANSFER_COUNT: 'transfer_count',
+  TOTAL_VOLUME: 'total_volume',
+  POOL_DEPOSIT_COUNT: 'pool_deposit_count',
+  POOL_TVL_USDCX: 'pool_tvl_usdcx',
+  POOL_TVL_USAD: 'pool_tvl_usad',
+} as const;
+
 export const TRANSITIONS = {
   UPDATE_ORACLE_PRICE: 'update_oracle_price',
   SET_RATE_PARAMS: 'set_rate_params',
@@ -82,6 +98,20 @@ export const TRANSITIONS = {
   WITHDRAW_USAD_COLLATERAL: 'withdraw_usad_collateral',
 } as const;
 
+// Vault program transitions
+export const VAULT_TRANSITIONS = {
+  PROVIDE_USDCX_CAPITAL: 'provide_usdcx_capital',
+  PROVIDE_USAD_CAPITAL: 'provide_usad_capital',
+  REDEEM_USDCX_CAPITAL: 'redeem_usdcx_capital',
+  REDEEM_USAD_CAPITAL: 'redeem_usad_capital',
+  DISTRIBUTE_YIELD: 'distribute_yield',
+  PRIVATE_TRANSFER_USDCX: 'private_transfer_usdcx',
+  PRIVATE_TRANSFER_USAD: 'private_transfer_usad',
+  SET_VAULT_ADMIN: 'set_vault_admin',
+  PAUSE_VAULT: 'pause_vault',
+  RESUME_VAULT: 'resume_vault',
+} as const;
+
 export const ROUTES = {
   HOME: '/',
   APP: '/app',
@@ -93,6 +123,8 @@ export const ROUTES = {
   LIQUIDATE: '/app/liquidate',
   STATS: '/app/stats',
   ANALYTICS: '/app/analytics',
+  YIELD: '/app/yield',
+  TRANSFER: '/app/transfer',
   DOCS: '/docs',
 } as const;
 

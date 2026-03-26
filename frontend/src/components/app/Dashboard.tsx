@@ -12,6 +12,8 @@ import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { WalletIcon } from '@/components/icons/WalletIcon';
 import { ArrowDownIcon } from '@/components/icons/ArrowDownIcon';
 import { UnlockIcon } from '@/components/icons/UnlockIcon';
+import { LinkIcon } from '@/components/icons/LinkIcon';
+import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
 import { motion } from 'framer-motion';
 
 interface DashboardProps {
@@ -40,6 +42,18 @@ const quickActions = [
     description: 'Return borrowed assets',
     href: '/app/repay',
     icon: UnlockIcon,
+  },
+  {
+    label: 'Yield Vault',
+    description: 'Earn yield on stablecoin deposits',
+    href: '/app/yield',
+    icon: LinkIcon,
+  },
+  {
+    label: 'Private Transfer',
+    description: 'Send tokens with ZK privacy',
+    href: '/app/transfer',
+    icon: EyeOffIcon,
   },
 ];
 
