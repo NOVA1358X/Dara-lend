@@ -6,7 +6,7 @@ import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { useOraclePrice } from '@/hooks/useProtocolStats';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, truncateAddress } from '@/utils/formatting';
-import { PRECISION, ALEO_TESTNET_API, PROGRAM_ID, MAPPINGS, MAPPING_KEYS } from '@/utils/constants';
+import { PRECISION, ALEO_TESTNET_API, PROGRAM_ID, MAPPINGS, MAPPING_KEYS, TOKEN_TYPES } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -220,7 +220,11 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
                 </p>
                 <p className="font-mono text-sm text-text-primary tabular-nums flex items-center gap-1.5">
                   <TokenIcon token={colTokenLabel} size={16} />
-                  {formatCredits(auth.collateralAmount)} {colTokenLabel}
+                  {formatCredits(
+                    auth.collateralToken === TOKEN_TYPES.USDCX || auth.collateralToken === TOKEN_TYPES.USAD
+                      ? auth.collateralAmountU128
+                      : auth.collateralAmount
+                  )} {colTokenLabel}
                 </p>
               </div>
               <div>

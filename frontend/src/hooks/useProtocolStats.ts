@@ -1,11 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAleoClient } from './useAleoClient';
-import { MAPPINGS, REFETCH_INTERVAL } from '@/utils/constants';
+import { MAPPINGS, REFETCH_INTERVAL, PRECISION } from '@/utils/constants';
 import { parseAleoU64 } from '@/utils/formatting';
 
 export interface ProtocolStats {
   totalCollateral: number;
+  totalCollateralAleo: number;
+  totalCollateralUsdcx: number;
+  totalCollateralUsad: number;
   totalBorrowed: number;
+  totalBorrowedUsdcx: number;
+  totalBorrowedUsad: number;
+  totalBorrowedAleo: number;
   loanCount: number;
   oraclePrice: number;
   utilizationRate: number;
@@ -17,25 +23,51 @@ export function useProtocolStats() {
   return useQuery<ProtocolStats>({
     queryKey: ['protocolStats'],
     queryFn: async () => {
-      const [collateralRaw, borrowedRaw, loansRaw, priceRaw] =
-        await Promise.all([
+      const [
+        collateralAleoRaw, collateralUsdcxRaw, collateralUsadRaw,
+        borrowedUsdcxRaw, borrowedUsadRaw, borrowedAleoRaw,
+        loansRaw, priceRaw,
+      ] = await Promise.all([
           getMappingValue(MAPPINGS.VAULT_COLLATERAL_ALEO),
+          getMappingValue(MAPPINGS.VAULT_COLLATERAL_USDCX),
+          getMappingValue(MAPPINGS.VAULT_COLLATERAL_USAD),
           getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '0u8'),
+          getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '1u8'),
+          getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '2u8'),
           getMappingValue(MAPPINGS.LOAN_COUNT),
           getMappingValue(MAPPINGS.ORACLE_PRICE),
         ]);
 
-      const totalCollateral = parseAleoU64(collateralRaw || '0');
-      const totalBorrowed = parseAleoU64(borrowedRaw || '0');
-      const loanCount = parseAleoU64(loansRaw || '0');
+      const totalCollateralAleo = parseAleoU64(collateralAleoRaw || '0');
+      const totalCollateralUsdcx = parseAleoU64(collateralUsdcxRaw || '0');
+      const totalCollateralUsad = parseAleoU64(collateralUsadRaw || '0');
+      const totalBorrowedUsdcx = parseAleoU64(borrowedUsdcxRaw || '0');
+      const totalBorrowedUsad = parseAleoU64(borrowedUsadRaw || '0');
+      const totalBorrowedAleo = parseAleoU64(borrowedAleoRaw || '0');
       const oraclePrice = parseAleoU64(priceRaw || '0');
+      const loanCount = parseAleoU64(loansRaw || '0');
+
+      // Total collateral value in USD (microdollars): ALEO valued at oracle price, stablecoins at $1
+      const aleoPrice = oraclePrice || PRECISION;
+      const totalCollateral = Math.floor((totalCollateralAleo * aleoPrice) / PRECISION)
+        + totalCollateralUsdcx + totalCollateralUsad;
+
+      // Total borrowed value in USD: USDCx/USAD at $1, ALEO at oracle price
+      const totalBorrowed = totalBorrowedUsdcx + totalBorrowedUsad
+        + Math.floor((totalBorrowedAleo * aleoPrice) / PRECISION);
 
       const utilizationRate =
         totalCollateral > 0 ? totalBorrowed / totalCollateral : 0;
 
       return {
         totalCollateral,
+        totalCollateralAleo,
+        totalCollateralUsdcx,
+        totalCollateralUsad,
         totalBorrowed,
+        totalBorrowedUsdcx,
+        totalBorrowedUsad,
+        totalBorrowedAleo,
         loanCount,
         oraclePrice,
         utilizationRate,

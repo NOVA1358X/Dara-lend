@@ -165,12 +165,12 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total Value Locked"
-            value={stats ? `${formatCredits(stats.totalCollateral)} ALEO` : '—'}
+            value={stats ? `$${(stats.totalCollateral / PRECISION).toFixed(2)}` : '—'}
             loading={isLoading}
           />
           <StatCard
             label="Total Borrowed"
-            value={stats ? `${formatCredits(stats.totalBorrowed)} USDCx` : '—'}
+            value={stats ? `$${(stats.totalBorrowed / PRECISION).toFixed(2)}` : '—'}
             loading={isLoading}
           />
           <StatCard
@@ -210,7 +210,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
             label="Available Liquidity"
             value={
               stats
-                ? `${formatCredits(Math.max(0, stats.totalCollateral - stats.totalBorrowed))} ALEO`
+                ? `$${(Math.max(0, stats.totalCollateral - stats.totalBorrowed) / PRECISION).toFixed(2)}`
                 : '—'
             }
             loading={isLoading}
@@ -256,7 +256,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               Total Collateral
             </p>
             <p className="font-mono text-sm text-text-primary tabular-nums">
-              {stats ? `${formatCredits(stats.totalCollateral)} ALEO` : '—'}
+              {stats ? `$${(stats.totalCollateral / PRECISION).toFixed(2)}` : '—'}
             </p>
           </div>
           <div className="p-4 rounded-lg bg-white/[0.03]">
@@ -264,7 +264,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               Total Debt
             </p>
             <p className="font-mono text-sm text-text-primary tabular-nums">
-              {stats ? `${formatCredits(stats.totalBorrowed)} USDCx` : '—'}
+              {stats ? `$${(stats.totalBorrowed / PRECISION).toFixed(2)}` : '—'}
             </p>
           </div>
         </div>

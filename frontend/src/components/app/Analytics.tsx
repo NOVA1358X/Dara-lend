@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useProtocolStats } from '@/hooks/useProtocolStats';
 import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { formatCredits } from '@/utils/formatting';
-import { PRECISION, BACKEND_API } from '@/utils/constants';
+import { PRECISION, BACKEND_API, TOKEN_TYPES } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { ChartIcon } from '@/components/icons/ChartIcon';
@@ -48,7 +48,7 @@ export function Analytics() {
   }, []);
 
   const collateralValueUsd =
-    stats && livePrice ? (stats.totalCollateral / PRECISION) * livePrice : 0;
+    stats ? stats.totalCollateral / PRECISION : 0;
 
   return (
     <div className="space-y-8">
@@ -77,7 +77,7 @@ export function Analytics() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="TVL (ALEO)"
-            value={stats ? `${formatCredits(stats.totalCollateral)}` : '—'}
+            value={stats ? `${formatCredits(stats.totalCollateralAleo)}` : '—'}
             loading={isLoading}
           />
           <StatCard
@@ -87,7 +87,7 @@ export function Analytics() {
           />
           <StatCard
             label="Total Borrowed"
-            value={stats ? `${formatCredits(stats.totalBorrowed)}` : '—'}
+            value={stats ? `$${(stats.totalBorrowed / PRECISION).toFixed(2)}` : '—'}
             loading={isLoading}
           />
           <StatCard
@@ -164,18 +164,21 @@ export function Analytics() {
             label="Aleo Credits"
             color="#C9DDFF"
             description="Native privacy-preserving collateral"
+            amount={stats ? formatCredits(stats.totalCollateralAleo) : '0.00'}
           />
           <CompositionCard
             token="USDCx"
             label="USDCx Stablecoin"
             color="#D6C5A1"
             description="Privacy-wrapped USDC"
+            amount={stats ? formatCredits(stats.totalCollateralUsdcx) : '0.00'}
           />
           <CompositionCard
             token="USAD"
             label="USAD Stablecoin"
             color="#34D399"
             description="Aleo-native stablecoin"
+            amount={stats ? formatCredits(stats.totalCollateralUsad) : '0.00'}
           />
         </div>
       </motion.div>
@@ -248,11 +251,13 @@ function CompositionCard({
   label,
   color,
   description,
+  amount,
 }: {
   token: string;
   label: string;
   color: string;
   description: string;
+  amount: string;
 }) {
   return (
     <div className="p-4 rounded-lg bg-white/[0.03] border border-white/[0.06]">
@@ -262,6 +267,7 @@ function CompositionCard({
           {token}
         </span>
       </div>
+      <p className="font-mono text-lg text-text-primary tabular-nums mb-1">{amount}</p>
       <p className="text-sm text-text-secondary mb-1">{label}</p>
       <p className="text-[11px] text-text-muted">{description}</p>
     </div>
