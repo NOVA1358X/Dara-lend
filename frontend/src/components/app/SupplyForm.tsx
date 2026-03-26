@@ -8,7 +8,7 @@ import { LockIcon } from '@/components/icons/LockIcon';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { formatCredits } from '@/utils/formatting';
-import { ALEO_TESTNET_API, TOKEN_TYPES } from '@/utils/constants';
+import { ALEO_TESTNET_API, USDCX_PROGRAM, USAD_PROGRAM, TOKEN_TYPES } from '@/utils/constants';
 import toast from 'react-hot-toast';
 
 type TokenType = 'ALEO' | 'USDCx' | 'USAD';
@@ -24,64 +24,88 @@ interface SupplyFormProps {
   };
 }
 
-interface ParsedCreditsRecord {
-  microcredits: number;
+interface ParsedTokenRecord {
+  amount: number;
   plaintext: string;
   raw: Record<string, unknown>;
 }
 
-function parseCreditsRecord(raw: Record<string, unknown>): ParsedCreditsRecord | null {
-  // Try to get plaintext from various formats Shield Wallet may return
+/** Parse a credits.aleo record (microcredits: u64) */
+function parseCreditsRecord(raw: Record<string, unknown>): ParsedTokenRecord | null {
   const plaintext = (raw.recordPlaintext ?? raw.plaintext ?? raw.data ?? '') as string;
   if (!plaintext) return null;
-
   const str = typeof plaintext === 'string' ? plaintext : JSON.stringify(plaintext);
-
-  // Extract microcredits from the plaintext
   const match = str.match(/microcredits\s*:\s*(\d+)u64/);
   if (!match) return null;
+  const amount = parseInt(match[1], 10);
+  if (isNaN(amount) || amount <= 0) return null;
+  return { amount, plaintext: str, raw };
+}
 
-  const microcredits = parseInt(match[1], 10);
-  if (isNaN(microcredits) || microcredits <= 0) return null;
-
-  return { microcredits, plaintext: str, raw };
+/** Parse a stablecoin token record (amount: u128) */
+function parseStablecoinRecord(raw: Record<string, unknown>): ParsedTokenRecord | null {
+  const plaintext = (raw.recordPlaintext ?? raw.plaintext ?? raw.data ?? '') as string;
+  if (!plaintext) return null;
+  const str = typeof plaintext === 'string' ? plaintext : JSON.stringify(plaintext);
+  const match = str.match(/amount\s*:\s*(\d+)u128/);
+  if (!match) return null;
+  const amount = parseInt(match[1], 10);
+  if (isNaN(amount) || amount <= 0) return null;
+  return { amount, plaintext: str, raw };
 }
 
 export function SupplyForm({ wallet }: SupplyFormProps) {
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<TokenType>('ALEO');
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [privateRecords, setPrivateRecords] = useState<ParsedCreditsRecord[]>([]);
+  const [privateRecords, setPrivateRecords] = useState<ParsedTokenRecord[]>([]);
   const [selectedRecordIdx, setSelectedRecordIdx] = useState(0);
   const [convertStep, setConvertStep] = useState(false);
 
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { supplyCollateral, supplyUsdcxCollateral, supplyUsadCollateral, convertCreditsToPrivate, resetTransaction } = useTransaction(wallet);
-  const { creditsRecords, refetch } = useWalletRecords(wallet);
+  const { creditsRecords, usdcxRecords, usadRecords, refetch } = useWalletRecords(wallet);
 
-  // Parse private credits records from wallet
+  // Parse private records based on selected token
   useEffect(() => {
-    if (!creditsRecords || creditsRecords.length === 0) {
-      setPrivateRecords([]);
-      return;
+    let rawRecords: unknown[] = [];
+    let parseFn: (raw: Record<string, unknown>) => ParsedTokenRecord | null;
+
+    if (selectedToken === 'ALEO') {
+      rawRecords = creditsRecords || [];
+      parseFn = parseCreditsRecord;
+    } else if (selectedToken === 'USDCx') {
+      rawRecords = usdcxRecords || [];
+      parseFn = parseStablecoinRecord;
+    } else {
+      rawRecords = usadRecords || [];
+      parseFn = parseStablecoinRecord;
     }
-    const parsed: ParsedCreditsRecord[] = [];
-    for (const r of creditsRecords) {
+
+    const parsed: ParsedTokenRecord[] = [];
+    for (const r of rawRecords) {
       const raw = r as Record<string, unknown>;
-      // Skip spent records
       if (raw.spent === true) continue;
-      const record = parseCreditsRecord(raw);
+      const record = parseFn(raw);
       if (record) parsed.push(record);
     }
-    // Sort by balance descending
-    parsed.sort((a, b) => b.microcredits - a.microcredits);
+    parsed.sort((a, b) => b.amount - a.amount);
     setPrivateRecords(parsed);
-  }, [creditsRecords]);
+    setSelectedRecordIdx(0);
+  }, [creditsRecords, usdcxRecords, usadRecords, selectedToken]);
 
+  // Fetch public balance for the selected token
   const fetchPublicBalance = useCallback(async () => {
     if (!wallet.connected || !wallet.address) return;
     try {
-      const url = `${ALEO_TESTNET_API}/program/credits.aleo/mapping/account/${wallet.address}`;
+      let url: string;
+      if (selectedToken === 'ALEO') {
+        url = `${ALEO_TESTNET_API}/program/credits.aleo/mapping/account/${wallet.address}`;
+      } else if (selectedToken === 'USDCx') {
+        url = `${ALEO_TESTNET_API}/program/${USDCX_PROGRAM}/mapping/balances/${wallet.address}`;
+      } else {
+        url = `${ALEO_TESTNET_API}/program/${USAD_PROGRAM}/mapping/balances/${wallet.address}`;
+      }
       const response = await fetch(url);
       if (!response.ok) {
         setWalletBalance(0);
@@ -92,28 +116,28 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
         setWalletBalance(0);
         return;
       }
-      const cleaned = text.replace(/"/g, '').replace('u64', '').trim();
+      const cleaned = text.replace(/"/g, '').replace(/u(64|128)/, '').trim();
       const val = parseInt(cleaned, 10);
       setWalletBalance(isNaN(val) ? 0 : val);
     } catch {
       setWalletBalance(null);
     }
-  }, [wallet.connected, wallet.address]);
+  }, [wallet.connected, wallet.address, selectedToken]);
 
   useEffect(() => {
     fetchPublicBalance();
   }, [fetchPublicBalance]);
 
   const selectedRecord = privateRecords[selectedRecordIdx];
-  const totalPrivateBalance = privateRecords.reduce((sum, r) => sum + r.microcredits, 0);
+  const totalPrivateBalance = privateRecords.reduce((sum, r) => sum + r.amount, 0);
   const amountInMicrocredits = Math.floor(parseFloat(amount || '0') * 1_000_000);
   const isValidAmount = amountInMicrocredits >= 100_000;
   const hasPrivateRecords = privateRecords.length > 0;
-  const selectedRecordHasEnough = selectedRecord && selectedRecord.microcredits >= amountInMicrocredits;
+  const selectedRecordHasEnough = selectedRecord && selectedRecord.amount >= amountInMicrocredits;
 
   const handleMax = () => {
     if (selectedRecord) {
-      setAmount((selectedRecord.microcredits / 1_000_000).toFixed(6));
+      setAmount((selectedRecord.amount / 1_000_000).toFixed(6));
     } else if (walletBalance) {
       setAmount((walletBalance / 1_000_000).toFixed(6));
     }
@@ -142,11 +166,11 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
 
   const handleSubmit = async () => {
     if (!isValidAmount) {
-      toast.error('Minimum supply is 0.1 ALEO');
+      toast.error(`Minimum supply is 0.1 ${selectedToken}`);
       return;
     }
     if (!hasPrivateRecords || !selectedRecord) {
-      toast.error('You need private credits records. Convert your public credits first.');
+      toast.error(`You need private ${selectedToken} token records.`);
       return;
     }
     if (!selectedRecordHasEnough) {
@@ -237,15 +261,15 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
             >
               {privateRecords.map((r, i) => (
                 <option key={i} value={i}>
-                  Record #{i + 1} — {formatCredits(r.microcredits)} ALEO
+                  Record #{i + 1} — {formatCredits(r.amount)} {selectedToken}
                 </option>
               ))}
             </select>
           </div>
         )}
 
-        {/* Convert to Private — shown when no private records */}
-        {!hasPrivateRecords && (walletBalance ?? 0) > 0 && (
+        {/* Convert to Private — shown for ALEO when no private records */}
+        {selectedToken === 'ALEO' && !hasPrivateRecords && (walletBalance ?? 0) > 0 && (
           <div className="mb-4 p-3 rounded-lg bg-accent-warning/5 border border-accent-warning/20">
             <p className="text-xs text-text-secondary mb-2">
               Your credits are in public balance. Convert to private records first for privacy-preserving supply.
@@ -332,7 +356,7 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
             : !wallet.connected
             ? 'Connect Wallet'
             : !hasPrivateRecords
-            ? 'Convert Credits to Private First'
+            ? `No Private ${selectedToken} Records`
             : !selectedRecordHasEnough
             ? 'Insufficient Record Balance'
             : 'Supply Collateral (Private)'}

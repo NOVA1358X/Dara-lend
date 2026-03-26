@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { PROGRAM_ID, CREDITS_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, CREDITS_PROGRAM, USDCX_PROGRAM, USAD_PROGRAM } from '@/utils/constants';
 import { parseRecord, DaraRecord, filterRecordsByType, getConsumedSet, CollateralReceiptRecord, DebtPositionRecord, RepaymentReceiptRecord, LiquidationAuthRecord, LiquidationReceiptRecord } from '@/utils/records';
 
 interface WalletHook {
@@ -111,6 +111,40 @@ export function useWalletRecords(wallet: WalletHook) {
     refetchOnWindowFocus: false,
   });
 
+  const usdcxQuery = useQuery<unknown[]>({
+    queryKey: ['usdcxRecords', wallet.connected],
+    queryFn: async () => {
+      if (!wallet.connected || !wallet.requestRecords) return [];
+      try {
+        return await wallet.requestRecords(USDCX_PROGRAM, true);
+      } catch {
+        return [];
+      }
+    },
+    enabled: wallet.connected,
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const usadQuery = useQuery<unknown[]>({
+    queryKey: ['usadRecords', wallet.connected],
+    queryFn: async () => {
+      if (!wallet.connected || !wallet.requestRecords) return [];
+      try {
+        return await wallet.requestRecords(USAD_PROGRAM, true);
+      } catch {
+        return [];
+      }
+    },
+    enabled: wallet.connected,
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const allRecords = daraRecordsQuery.data || [];
 
   const collateralReceipts = filterRecordsByType<CollateralReceiptRecord>(
@@ -146,10 +180,14 @@ export function useWalletRecords(wallet: WalletHook) {
     liquidationAuths,
     liquidationReceipts,
     creditsRecords: creditsQuery.data || [],
+    usdcxRecords: usdcxQuery.data || [],
+    usadRecords: usadQuery.data || [],
     isLoading: daraRecordsQuery.isLoading || creditsQuery.isLoading,
     refetch: () => {
       daraRecordsQuery.refetch();
       creditsQuery.refetch();
+      usdcxQuery.refetch();
+      usadQuery.refetch();
     },
   };
 }
