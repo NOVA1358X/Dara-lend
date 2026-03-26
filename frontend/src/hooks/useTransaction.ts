@@ -5,6 +5,10 @@ import { useAppStore } from '@/stores/appStore';
 import { saveTxToHistory } from '@/components/app/TransactionHistory';
 import toast from 'react-hot-toast';
 
+// Non-inclusion proof for the 1-entry freeze list (zero address at index 0).
+// leaf_index: 1u32 triggers the "address > last entry" path which passes for any real address.
+const FREEZE_LIST_PROOF = `[{siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}, {siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}]`;
+
 interface WalletExecute {
   requestTransaction?: (transaction: unknown) => Promise<{ transactionId: string } | undefined>;
   transactionStatus?: (txId: string) => Promise<{ status: string }>;
@@ -245,7 +249,7 @@ export function useTransaction(wallet: WalletExecute) {
       // handles the proof serialization from the token record itself
       return executeTransaction(TRANSITIONS.SUPPLY_USDCX_COLLATERAL, [
         tokenRecord,
-        `[{siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 0u32}, {siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 0u32}]`,
+        FREEZE_LIST_PROOF,
         microCreditsToU128Input(amount),
         fieldToInput(nonce),
       ], TX_FEE_HIGH);
@@ -257,7 +261,7 @@ export function useTransaction(wallet: WalletExecute) {
     async (tokenRecord: string, amount: number, nonce: number) => {
       return executeTransaction(TRANSITIONS.SUPPLY_USAD_COLLATERAL, [
         tokenRecord,
-        `[{siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 0u32}, {siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 0u32}]`,
+        FREEZE_LIST_PROOF,
         microCreditsToU128Input(amount),
         fieldToInput(nonce),
       ], TX_FEE_HIGH);
