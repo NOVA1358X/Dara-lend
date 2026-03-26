@@ -764,6 +764,32 @@ export function useTransaction(wallet: WalletExecute) {
     [executeVaultTransaction],
   );
 
+  // ── Vault Admin Operations ──
+
+  const distributeYield = useCallback(
+    async (tokenType: number, amount: number) => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.DISTRIBUTE_YIELD, [
+        `${tokenType}u8`,
+        microCreditsToU128Input(amount),
+      ], TX_FEE_HIGH);
+    },
+    [executeVaultTransaction],
+  );
+
+  const pauseVault = useCallback(
+    async () => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.PAUSE_VAULT, [], TX_FEE);
+    },
+    [executeVaultTransaction],
+  );
+
+  const resumeVault = useCallback(
+    async () => {
+      return executeVaultTransaction(VAULT_TRANSITIONS.RESUME_VAULT, [], TX_FEE);
+    },
+    [executeVaultTransaction],
+  );
+
   return {
     executeTransaction,
     executeVaultTransaction,
@@ -801,6 +827,9 @@ export function useTransaction(wallet: WalletExecute) {
     redeemUsadCapital,
     privateTransferUsdcx,
     privateTransferUsad,
+    distributeYield,
+    pauseVault,
+    resumeVault,
     resetTransaction,
   };
 }

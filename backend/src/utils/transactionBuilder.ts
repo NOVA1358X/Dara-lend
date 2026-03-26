@@ -20,7 +20,7 @@ export async function buildAndBroadcastTransaction(
     const sdk = await import('@provablehq/sdk');
     const account = new sdk.Account({ privateKey: config.privateKey });
     const pm = new sdk.ProgramManager(
-      config.aleoApiUrl,
+      config.aleoRpcUrl,
       undefined,
       undefined,
     );

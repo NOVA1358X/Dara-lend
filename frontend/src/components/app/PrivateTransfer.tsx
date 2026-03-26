@@ -89,11 +89,15 @@ export function PrivateTransfer({ wallet }: PrivateTransferProps) {
       toast.error('Enter a valid amount');
       return;
     }
+    if (amountMicro < 10_000) {
+      toast.error('Minimum transfer is 0.01 token');
+      return;
+    }
     if (amountMicro > selectedRecord.amount) {
       toast.error('Amount exceeds selected record balance');
       return;
     }
-    const randomBytes = new Uint8Array(8);
+    const randomBytes = new Uint8Array(6);
     crypto.getRandomValues(randomBytes);
     const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
     if (selectedToken === 'USDCx') {
@@ -260,7 +264,7 @@ export function PrivateTransfer({ wallet }: PrivateTransferProps) {
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
+                placeholder="Min 0.01"
                 className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary font-mono text-lg placeholder-text-muted focus:border-primary/40 focus:outline-none transition-colors"
               />
               {selectedRecord && (

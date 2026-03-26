@@ -25,6 +25,7 @@ const navItems = [
   { path: '/app/history', label: 'History', icon: ClockIcon, end: false },
   { path: '/app/analytics', label: 'Analytics', icon: ChartIcon, end: false },
   { path: '/app/stats', label: 'Stats', icon: ShieldIcon, end: false },
+  { path: '/app/admin', label: 'Admin', icon: KeyIcon, end: false },
 ];
 
 export function Sidebar() {

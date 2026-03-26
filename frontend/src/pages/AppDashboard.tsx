@@ -16,6 +16,7 @@ import { TransactionHistory } from '@/components/app/TransactionHistory';
 import { Analytics } from '@/components/app/Analytics';
 import { YieldVault } from '@/components/app/YieldVault';
 import { PrivateTransfer } from '@/components/app/PrivateTransfer';
+import { AdminPanel } from '@/components/app/AdminPanel';
 
 export default function AppDashboard() {
   const {
@@ -70,6 +71,7 @@ export default function AppDashboard() {
         <Route path="history" element={<TransactionHistory />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="stats" element={<ProtocolStats wallet={walletProps} />} />
+        <Route path="admin" element={<AdminPanel wallet={walletProps} />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </AppLayout>
