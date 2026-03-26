@@ -30,7 +30,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
   const [selectedLoanIdx, setSelectedLoanIdx] = useState<number | null>(null);
   const [repayStep, setRepayStep] = useState<'idle' | 'approving' | 'repaying'>('idle');
   const { transactionStep, transactionId, transactionPending } = useAppStore();
-  const { repay, repayUsad, repayCreditsUsdcx, repayCreditsUsad, approveUSDCx, resetTransaction } = useTransaction(wallet);
+  const { repay, repayUsad, repayCreditsUsdcx, repayCreditsUsad, approveUSDCx, approveUSAD, resetTransaction } = useTransaction(wallet);
   const { debtPositions, creditsRecords, isLoading, refetch } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
@@ -103,9 +103,11 @@ export function RepayForm({ wallet }: RepayFormProps) {
         }
       } else {
         // Repaying stablecoin debt (USDCx or USAD)
-        // Step 1: Approve spending
+        // Step 1: Approve spending on the correct token contract
         setRepayStep('approving');
-        const approveTxId = await approveUSDCx(debt.debtAmount);
+        const approveTxId = debtToken === 2
+          ? await approveUSAD(debt.debtAmount)
+          : await approveUSDCx(debt.debtAmount);
         if (!approveTxId) {
           setRepayStep('idle');
           return;

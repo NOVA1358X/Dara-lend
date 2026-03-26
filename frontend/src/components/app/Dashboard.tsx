@@ -152,7 +152,7 @@ export function Dashboard({ wallet }: DashboardProps) {
                 ? '—'
                 : isLoading
                 ? ''
-                : `${formatCredits(Math.max(0, maxBorrow))} USDCx`
+                : `${formatCredits(Math.max(0, maxBorrow))} Stablecoin`
             }
             loading={isLoading}
           />
@@ -172,7 +172,7 @@ export function Dashboard({ wallet }: DashboardProps) {
           />
           <StatCard
             label="Total Borrowed"
-            value={stats ? `${formatCredits(stats.totalBorrowed)} USDCx` : '—'}
+            value={stats ? `${formatCredits(stats.totalBorrowed)} Stablecoins` : '—'}
             loading={statsLoading}
           />
           <StatCard

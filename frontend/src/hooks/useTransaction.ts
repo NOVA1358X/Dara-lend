@@ -182,6 +182,58 @@ export function useTransaction(wallet: WalletExecute) {
     [wallet, setTransactionPending, setTransactionStep, setTransactionId],
   );
 
+  /** Approve the lending protocol to spend USAD (required before repay) */
+  const approveUSAD = useCallback(
+    async (amount: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+
+        const tx = createAleoTransaction(
+          USAD_PROGRAM,
+          'approve_public',
+          [PROTOCOL_ADDRESS, `${amount}u128`],
+          TX_FEE,
+        );
+
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('USAD approval transaction submitted');
+
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('USAD spending approved!');
+        } else if (pollResult.confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Approval rejected on-chain.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Approval broadcast. Check explorer: ${txId}`);
+        }
+
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        const message = error instanceof Error ? error.message : 'Approval failed';
+        toast.error(message);
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
   const liquidate = useCallback(
     async (authRecord: string, oraclePrice: number) => {
       return executeTransaction(TRANSITIONS.LIQUIDATE, [
@@ -597,6 +649,7 @@ export function useTransaction(wallet: WalletExecute) {
     repayCreditsUsdcx,
     repayCreditsUsad,
     approveUSDCx,
+    approveUSAD,
     liquidate,
     liquidateUsdcx,
     liquidateUsad,
