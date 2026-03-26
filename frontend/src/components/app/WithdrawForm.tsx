@@ -6,6 +6,7 @@ import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, truncateAddress } from '@/utils/formatting';
 import { markRecordConsumed } from '@/utils/records';
+import { TOKEN_TYPES } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -130,6 +131,8 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
 
       {collateralReceipts.map((receipt, idx) => {
         const tokenLabel = receipt.tokenType === 1 ? 'USDCx' : receipt.tokenType === 2 ? 'USAD' : 'ALEO';
+        const isStable = receipt.tokenType === TOKEN_TYPES.USDCX || receipt.tokenType === TOKEN_TYPES.USAD;
+        const effectiveAmount = isStable ? receipt.collateralAmountU128 : receipt.collateralAmount;
         return (
           <motion.div
           key={idx}
@@ -157,7 +160,7 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
               </p>
               <p className="font-mono text-lg font-semibold text-text-primary tabular-nums flex items-center gap-1.5">
                 <TokenIcon token={tokenLabel} size={18} />
-                {formatCredits(receipt.collateralAmount)} {tokenLabel}
+                {formatCredits(effectiveAmount)} {tokenLabel}
               </p>
             </div>
             <div>

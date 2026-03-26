@@ -46,30 +46,44 @@ export function PositionCard({ record }: PositionCardProps) {
           </div>
         );
       }
-      case 'RepaymentReceipt':
+      case 'RepaymentReceipt': {
+        const repayDebtLabel = (TOKEN_LABELS[record.collateralToken] || 'USDCx') as TokenIconLabel;
+        const repayColIsStable = record.collateralToken === TOKEN_TYPES.USDCX || record.collateralToken === TOKEN_TYPES.USAD;
+        const repayColAmt = repayColIsStable ? record.collateralReturnedU128 : record.collateralReturned;
+        const repayColLabel = (TOKEN_LABELS[record.collateralToken] || 'ALEO') as TokenIconLabel;
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Amount Repaid" value={`${formatCredits(record.amountRepaid)} USDCx`} icon="USDCx" />
-            <Field label="Collateral Returned" value={`${formatCredits(record.collateralReturned)} ALEO`} icon="ALEO" />
+            <Field label="Amount Repaid" value={`${formatCredits(record.amountRepaid)}`} icon={repayDebtLabel} />
+            <Field label="Collateral Returned" value={`${formatCredits(repayColAmt)} ${repayColLabel}`} icon={repayColLabel} />
             <Field label="Loan ID" value={truncateAddress(record.loanId, 8, 4)} mono copyValue={record.loanId} />
           </div>
         );
-      case 'LiquidationReceipt':
+      }
+      case 'LiquidationReceipt': {
+        const liqColIsStable = record.collateralToken === TOKEN_TYPES.USDCX || record.collateralToken === TOKEN_TYPES.USAD;
+        const liqColAmt = liqColIsStable ? record.collateralSeizedU128 : record.collateralSeized;
+        const liqColLabel = (TOKEN_LABELS[record.collateralToken] || 'ALEO') as TokenIconLabel;
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Collateral Seized" value={`${formatCredits(record.collateralSeized)} ALEO`} icon="ALEO" />
-            <Field label="Debt Covered" value={`${formatCredits(record.debtCovered)} USDCx`} icon="USDCx" />
+            <Field label="Collateral Seized" value={`${formatCredits(liqColAmt)} ${liqColLabel}`} icon={liqColLabel} />
+            <Field label="Debt Covered" value={`${formatCredits(record.debtCovered)}`} />
             <Field label="Loan ID" value={truncateAddress(record.loanId, 8, 4)} mono copyValue={record.loanId} />
           </div>
         );
-      case 'LiquidationAuth':
+      }
+      case 'LiquidationAuth': {
+        const authColIsStable = record.collateralToken === TOKEN_TYPES.USDCX || record.collateralToken === TOKEN_TYPES.USAD;
+        const authColAmt = authColIsStable ? record.collateralAmountU128 : record.collateralAmount;
+        const authColLabel = (TOKEN_LABELS[record.collateralToken] || 'ALEO') as TokenIconLabel;
+        const authDebtLabel = (TOKEN_LABELS[record.debtToken] || 'USDCx') as TokenIconLabel;
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} icon="ALEO" />
-            <Field label="Debt" value={`${formatCredits(record.debtAmount)} USDCx`} icon="USDCx" />
+            <Field label="Collateral" value={`${formatCredits(authColAmt)} ${authColLabel}`} icon={authColLabel} />
+            <Field label="Debt" value={`${formatCredits(record.debtAmount)} ${authDebtLabel}`} icon={authDebtLabel} />
             <Field label="Borrower (hash)" value={truncateAddress(record.borrowerHash, 8, 4)} mono copyValue={record.borrowerHash} />
           </div>
         );
+      }
       default:
         return null;
     }

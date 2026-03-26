@@ -6,7 +6,7 @@ import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, truncateAddress, calculateHealthFactor } from '@/utils/formatting';
 import { markRecordConsumed } from '@/utils/records';
-import { PRECISION, TOKEN_TYPES } from '@/utils/constants';
+import { PRECISION, TOKEN_TYPES, TOKEN_LABELS } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -147,8 +147,10 @@ export function RepayForm({ wallet }: RepayFormProps) {
       {debtPositions.map((debt, idx) => {
         const debtTokenLabel = debt.debtToken === 0 ? 'ALEO' : debt.debtToken === 2 ? 'USAD' : 'USDCx';
         const colTokenLabel = debt.collateralToken === 1 ? 'USDCx' : debt.collateralToken === 2 ? 'USAD' : 'ALEO';
+        const colIsStable = debt.collateralToken === TOKEN_TYPES.USDCX || debt.collateralToken === TOKEN_TYPES.USAD;
+        const effectiveCollateral = colIsStable ? debt.collateralAmountU128 : debt.collateralAmount;
         const health = calculateHealthFactor(
-          debt.collateralAmount,
+          effectiveCollateral,
           debt.debtAmount,
           PRECISION,
         );
@@ -189,7 +191,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
                 </p>
                 <p className="font-mono text-sm text-text-primary tabular-nums flex items-center gap-1.5">
                   <TokenIcon token={colTokenLabel} size={16} />
-                  {formatCredits(debt.collateralAmount)} {colTokenLabel}
+                  {formatCredits(effectiveCollateral)} {colTokenLabel}
                 </p>
               </div>
               <div>
@@ -225,7 +227,7 @@ export function RepayForm({ wallet }: RepayFormProps) {
             >
               {transactionPending && selectedLoanIdx === idx
                 ? repayStep === 'approving'
-                  ? 'Step 1/2: Approving USDCx...'
+                  ? `Step 1/2: Approving ${debtTokenLabel}...`
                   : 'Step 2/2: Repaying...'
                 : 'Repay Full Amount'}
             </button>
