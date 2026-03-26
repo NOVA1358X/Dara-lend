@@ -1,6 +1,7 @@
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { formatCredits, truncateAddress } from '@/utils/formatting';
+import { TOKEN_LABELS, TOKEN_TYPES } from '@/utils/constants';
 import type { DaraRecord } from '@/utils/records';
 import toast from 'react-hot-toast';
 
@@ -15,25 +16,36 @@ function copyToClipboard(value: string) {
   );
 }
 
+type TokenIconLabel = 'ALEO' | 'USDCx' | 'USAD';
+
 export function PositionCard({ record }: PositionCardProps) {
   const renderFields = () => {
     switch (record.type) {
-      case 'CollateralReceipt':
+      case 'CollateralReceipt': {
+        const isStable = record.tokenType === TOKEN_TYPES.USDCX || record.tokenType === TOKEN_TYPES.USAD;
+        const amt = isStable ? record.collateralAmountU128 : record.collateralAmount;
+        const label = (TOKEN_LABELS[record.tokenType] || 'ALEO') as TokenIconLabel;
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} icon="ALEO" />
+            <Field label="Collateral" value={`${formatCredits(amt)} ${label}`} icon={label} />
             <Field label="Nonce Hash" value={truncateAddress(record.nonceHash, 8, 4)} mono copyValue={record.nonceHash} />
           </div>
         );
-      case 'DebtPosition':
+      }
+      case 'DebtPosition': {
+        const debtLabel = (TOKEN_LABELS[record.debtToken] || 'USDCx') as TokenIconLabel;
+        const colIsStable = record.collateralToken === TOKEN_TYPES.USDCX || record.collateralToken === TOKEN_TYPES.USAD;
+        const colAmt = colIsStable ? record.collateralAmountU128 : record.collateralAmount;
+        const colLabel = (TOKEN_LABELS[record.collateralToken] || 'ALEO') as TokenIconLabel;
         return (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Debt" value={`${formatCredits(record.debtAmount)} USDCx`} icon="USDCx" />
-            <Field label="Collateral" value={`${formatCredits(record.collateralAmount)} ALEO`} icon="ALEO" />
+            <Field label="Debt" value={`${formatCredits(record.debtAmount)} ${debtLabel}`} icon={debtLabel} />
+            <Field label="Collateral" value={`${formatCredits(colAmt)} ${colLabel}`} icon={colLabel} />
             <Field label="Liquidation Price" value={`${(record.liquidationPrice / 1_000_000).toFixed(4)}`} />
             <Field label="Loan ID" value={truncateAddress(record.loanId, 8, 4)} mono copyValue={record.loanId} />
           </div>
         );
+      }
       case 'RepaymentReceipt':
         return (
           <div className="grid grid-cols-2 gap-3">
@@ -95,7 +107,7 @@ function Field({
   value: string;
   mono?: boolean;
   copyValue?: string;
-  icon?: 'ALEO' | 'USDCx';
+  icon?: 'ALEO' | 'USDCx' | 'USAD';
 }) {
   return (
     <div>

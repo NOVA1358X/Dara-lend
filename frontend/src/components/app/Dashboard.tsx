@@ -3,7 +3,7 @@ import { useProtocolStats } from '@/hooks/useProtocolStats';
 import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { formatCredits, calculateHealthFactor, calculateMaxBorrow } from '@/utils/formatting';
-import { PRECISION } from '@/utils/constants';
+import { PRECISION, TOKEN_TYPES } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { HealthFactorGauge } from '@/components/shared/HealthFactorGauge';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -49,17 +49,26 @@ export function Dashboard({ wallet }: DashboardProps) {
   const { collateralReceipts, debtPositions, isLoading: recordsLoading } =
     useWalletRecords(wallet);
 
-  const totalCollateral = collateralReceipts.reduce(
-    (sum, r) => sum + r.collateralAmount, 0,
-  );
+  // Separate ALEO and stablecoin collateral for correct USD value computation
+  const totalCollateralAleo = collateralReceipts
+    .filter(r => r.tokenType === TOKEN_TYPES.ALEO)
+    .reduce((sum, r) => sum + r.collateralAmount, 0);
+  const totalCollateralStable = collateralReceipts
+    .filter(r => r.tokenType === TOKEN_TYPES.USDCX || r.tokenType === TOKEN_TYPES.USAD)
+    .reduce((sum, r) => sum + r.collateralAmountU128, 0);
   const totalDebt = debtPositions.reduce(
     (sum, r) => sum + r.debtAmount, 0,
   );
   const oraclePrice = stats?.oraclePrice || 0;
+  const aleoPrice = oraclePrice || PRECISION;
+
+  // Total collateral value in USD (microdollars)
+  const totalCollateralValueUsd = Math.floor((totalCollateralAleo * aleoPrice) / PRECISION) + totalCollateralStable;
+
   const healthFactor = totalDebt > 0
-    ? calculateHealthFactor(totalCollateral, totalDebt, oraclePrice || PRECISION)
+    ? ((totalCollateralValueUsd * 800_000) / PRECISION) / totalDebt
     : Infinity;
-  const maxBorrow = calculateMaxBorrow(totalCollateral, oraclePrice || PRECISION) - totalDebt;
+  const maxBorrow = Math.floor((totalCollateralValueUsd * 7_000) / 10_000) - totalDebt;
 
   const isLoading = recordsLoading && wallet.connected;
 
@@ -110,14 +119,14 @@ export function Dashboard({ wallet }: DashboardProps) {
           <StatCard
             label="Your Collateral"
             value={
-              !wallet.connected ? '—' : isLoading ? '' : `${formatCredits(totalCollateral)} ALEO`
+              !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalCollateralValueUsd)}`
             }
             loading={isLoading}
           />
           <StatCard
             label="Your Debt"
             value={
-              !wallet.connected ? '—' : isLoading ? '' : `${formatCredits(totalDebt)} USDCx`
+              !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalDebt)}`
             }
             loading={isLoading}
           />

@@ -8,7 +8,7 @@ import { useAleoClient } from '@/hooks/useAleoClient';
 import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, calculateHealthFactor, calculateLiquidationPrice, calculateMaxBorrow } from '@/utils/formatting';
-import { PRECISION, MAPPINGS } from '@/utils/constants';
+import { PRECISION, MAPPINGS, TOKEN_LABELS, TOKEN_TYPES } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { HealthFactorGauge } from '@/components/shared/HealthFactorGauge';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -46,18 +46,56 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
   const { price: livePrice } = useMarketPrice();
 
   const selectedCollateral = collateralReceipts[selectedCollateralIdx];
-  const collateralAmount = selectedCollateral?.collateralAmount || 0;
+  const tokenType = selectedCollateral?.tokenType ?? TOKEN_TYPES.ALEO;
+  const isStablecoinCollateral = tokenType === TOKEN_TYPES.USDCX || tokenType === TOKEN_TYPES.USAD;
+  const collateralTokenLabel = TOKEN_LABELS[tokenType] || 'ALEO';
+
+  // Use the correct amount field based on token type
+  const effectiveCollateral = isStablecoinCollateral
+    ? (selectedCollateral?.collateralAmountU128 || 0)
+    : (selectedCollateral?.collateralAmount || 0);
+
   const currentOraclePrice = oraclePrice || PRECISION;
-  const maxBorrowAmount = calculateMaxBorrow(collateralAmount, currentOraclePrice);
+  // Stablecoin price is pegged at $1 = PRECISION
+  const stablecoinPrice = PRECISION;
+
+  // For ALEO collateral → stablecoin borrow: maxBorrow = col * aleoPrice * LTV / (PRECISION * BPS)
+  // For stablecoin collateral → ALEO borrow: maxBorrow = col * stablePrice * LTV / (aleoPrice * BPS)
+  const maxBorrowAmount = isStablecoinCollateral
+    ? (currentOraclePrice > 0
+        ? Math.floor((effectiveCollateral * stablecoinPrice * 7_000) / (currentOraclePrice * 10_000))
+        : 0)
+    : calculateMaxBorrow(effectiveCollateral, currentOraclePrice);
+
   const borrowAmount = Math.floor(parseFloat(amount || '0') * 1_000_000);
-  const colValue = (collateralAmount * currentOraclePrice) / PRECISION;
-  const ltvRatio = colValue > 0 ? (borrowAmount / colValue) * 100 : 0;
+
+  // For LTV: compute collateral value and borrow value in the same unit ($)
+  const colValueUsd = isStablecoinCollateral
+    ? (effectiveCollateral * stablecoinPrice) / PRECISION
+    : (effectiveCollateral * currentOraclePrice) / PRECISION;
+  const borrowValueUsd = isStablecoinCollateral
+    ? (borrowAmount * currentOraclePrice) / PRECISION   // borrowing ALEO, convert to $
+    : borrowAmount;                                      // borrowing stablecoins, already $
+  const ltvRatio = colValueUsd > 0 ? (borrowValueUsd / colValueUsd) * 100 : 0;
+
   const projectedHealth = borrowAmount > 0
-    ? calculateHealthFactor(collateralAmount, borrowAmount, oraclePrice || PRECISION)
+    ? (isStablecoinCollateral
+        ? (colValueUsd * 800_000) / (PRECISION * borrowValueUsd) || Infinity
+        : calculateHealthFactor(effectiveCollateral, borrowAmount, oraclePrice || PRECISION))
     : Infinity;
   const liquidationPrice = borrowAmount > 0
-    ? calculateLiquidationPrice(borrowAmount, collateralAmount)
+    ? calculateLiquidationPrice(borrowValueUsd, colValueUsd)
     : 0;
+
+  // Constrain borrow assets based on collateral type
+  const availableBorrowAssets: BorrowAsset[] = isStablecoinCollateral
+    ? ['ALEO']
+    : ['USDCx', 'USAD'];
+
+  // Auto-correct borrow asset if not available for current collateral
+  const validBorrowAsset = availableBorrowAssets.includes(borrowAsset)
+    ? borrowAsset
+    : availableBorrowAssets[0];
 
   const sliderPercent = useMemo(() => {
     if (maxBorrowAmount <= 0) return 0;
@@ -114,13 +152,13 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
     try {
       let txId: string | null = null;
-      if (borrowAsset === 'USDCx') {
+      if (validBorrowAsset === 'USDCx') {
         txId = await borrow(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
-      } else if (borrowAsset === 'USAD') {
+      } else if (validBorrowAsset === 'USAD') {
         txId = await borrowUsad(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
       } else {
         // Borrow ALEO credits against stablecoin collateral
-        txId = await borrowCredits(collateralRecord, borrowAmount, oraclePrice, oraclePrice, orchestratorAddress);
+        txId = await borrowCredits(collateralRecord, borrowAmount, stablecoinPrice, currentOraclePrice, orchestratorAddress);
       }
       if (txId) {
         setTimeout(() => refetch(), 3000);
@@ -171,13 +209,13 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
           <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
             Borrow Asset
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['USDCx', 'USAD', 'ALEO'] as BorrowAsset[]).map((asset) => (
+          <div className={`grid gap-2 ${availableBorrowAssets.length >= 3 ? 'grid-cols-3' : availableBorrowAssets.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {availableBorrowAssets.map((asset) => (
               <button
                 key={asset}
                 onClick={() => setBorrowAsset(asset)}
                 className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                  borrowAsset === asset
+                  validBorrowAsset === asset
                     ? 'bg-primary/10 border-primary/40 text-primary'
                     : 'bg-white/[0.03] border-white/[0.06] text-text-secondary hover:text-text-primary'
                 }`}
@@ -197,15 +235,20 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
             </label>
             <select
               value={selectedCollateralIdx}
-              onChange={(e) => setSelectedCollateralIdx(Number(e.target.value))}
+              onChange={(e) => { setSelectedCollateralIdx(Number(e.target.value)); setAmount(''); }}
               className="w-full px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary text-sm focus:outline-none focus:border-primary/30"
               aria-label="Select collateral receipt"
             >
-              {collateralReceipts.map((r, idx) => (
-                <option key={idx} value={idx}>
-                  {formatCredits(r.collateralAmount)} ALEO
-                </option>
-              ))}
+              {collateralReceipts.map((r, idx) => {
+                const isStable = r.tokenType === TOKEN_TYPES.USDCX || r.tokenType === TOKEN_TYPES.USAD;
+                const amt = isStable ? r.collateralAmountU128 : r.collateralAmount;
+                const label = TOKEN_LABELS[r.tokenType] || 'ALEO';
+                return (
+                  <option key={idx} value={idx}>
+                    {formatCredits(amt)} {label}
+                  </option>
+                );
+              })}
             </select>
           </div>
         )}
@@ -217,7 +260,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               Collateral
             </p>
             <p className="font-mono text-sm text-text-primary tabular-nums">
-              {formatCredits(collateralAmount)} ALEO
+              {formatCredits(effectiveCollateral)} {collateralTokenLabel}
             </p>
           </div>
           <div className="p-3 rounded-lg bg-white/[0.03]">
@@ -225,7 +268,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               Max Borrow
             </p>
             <p className="font-mono text-sm text-text-primary tabular-nums">
-              {formatCredits(maxBorrowAmount)} {borrowAsset}
+              {formatCredits(maxBorrowAmount)} {validBorrowAsset}
             </p>
           </div>
         </div>
@@ -308,7 +351,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
 
         <button
           onClick={handleSubmit}
-          disabled={borrowAmount <= 0 || borrowAmount > maxBorrowAmount || transactionPending}
+          disabled={borrowAmount <= 0 || borrowAmount > maxBorrowAmount || transactionPending || !selectedCollateral}
           className="w-full py-4 rounded-lg btn-signature text-[15px] font-label uppercase tracking-[0.1em] disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
         >
           {transactionPending ? 'Processing...' : 'Borrow'}
