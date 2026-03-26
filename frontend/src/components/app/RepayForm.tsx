@@ -75,9 +75,14 @@ export function RepayForm({ wallet }: RepayFormProps) {
     try {
       if (debtToken === 0) {
         // Repaying ALEO credits debt — need a private credits record
-        const creditsRecord = creditsRecords?.[0];
+        // Filter to unspent records only
+        const unspentCredits = (creditsRecords || []).filter((r: unknown) => {
+          const rec = r as Record<string, unknown>;
+          return rec.spent !== true;
+        });
+        const creditsRecord = unspentCredits[0];
         if (!creditsRecord) {
-          toast.error('No private credits record found. Convert credits to private first.');
+          toast.error('No unspent private credits record found. You may need to receive or convert credits first.');
           setRepayStep('idle');
           return;
         }

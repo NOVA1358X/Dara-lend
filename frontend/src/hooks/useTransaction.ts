@@ -71,8 +71,10 @@ export function useTransaction(wallet: WalletExecute) {
           saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'confirmed' });
         } else if (pollResult.confirmed === false) {
           setTransactionStep('failed');
-          toast.error('Transaction rejected on-chain. Check if the protocol has sufficient USDCx liquidity.');
+          toast.error('Transaction rejected on-chain. Check if the protocol has sufficient liquidity.');
           saveTxToHistory({ type: functionName, txId: historyTxId, timestamp: Date.now(), status: 'failed' });
+          setTransactionPending(false);
+          return null;
         } else {
           // null = polling timed out, transaction may still be processing
           setTransactionStep('confirmed');
