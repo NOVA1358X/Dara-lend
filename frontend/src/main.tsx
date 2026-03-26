@@ -33,7 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         wallets={wallets}
         decryptPermission={DecryptPermission.AutoDecrypt}
         network={Network.TESTNET}
-        programs={['dara_lend_v5.aleo', 'credits.aleo', 'test_usdcx_stablecoin.aleo']}
+        programs={['dara_lend_v6.aleo', 'credits.aleo', 'test_usdcx_stablecoin.aleo', 'test_usad_stablecoin.aleo']}
       >
         <WalletModalProvider>
           <App />
@@ -41,7 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             position="bottom-right"
             toastOptions={{
               style: {
-                background: '#0D0F1A',
+                background: '#131313',
                 color: '#F0F0F0',
                 border: '1px solid rgba(255,255,255,0.06)',
                 borderRadius: '12px',

@@ -30,7 +30,7 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
   const navigate = useNavigate();
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
-  const { withdrawCollateral, resetTransaction } = useTransaction(wallet);
+  const { withdrawCollateral, withdrawUsdcxCollateral, withdrawUsadCollateral, resetTransaction } = useTransaction(wallet);
   const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
 
   const handleDismiss = (idx: number) => {
@@ -79,11 +79,18 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
 
     setSelectedIdx(idx);
     const recordPlaintext = receipt.plaintext || '';
+    const tokenType = receipt.tokenType ?? 0;
 
     try {
-      const txId = await withdrawCollateral(recordPlaintext);
+      let txId: string | null = null;
+      if (tokenType === 1) {
+        txId = await withdrawUsdcxCollateral(recordPlaintext);
+      } else if (tokenType === 2) {
+        txId = await withdrawUsadCollateral(recordPlaintext);
+      } else {
+        txId = await withdrawCollateral(recordPlaintext);
+      }
       if (txId) {
-        // Mark record as consumed so it stays hidden even across navigation
         const commitment = (receipt.raw.commitment as string) || (receipt.raw.tag as string) || '';
         if (commitment) markRecordConsumed(commitment);
         refetch();
@@ -105,7 +112,7 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
             Withdraw Collateral
           </h2>
           <p className="text-xs text-text-secondary">
-            Reclaim your encrypted ALEO collateral from the protocol
+            Reclaim your encrypted collateral from the protocol
           </p>
         </div>
       </div>
@@ -121,8 +128,10 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
         </div>
       </div>
 
-      {collateralReceipts.map((receipt, idx) => (
-        <motion.div
+      {collateralReceipts.map((receipt, idx) => {
+        const tokenLabel = receipt.tokenType === 1 ? 'USDCx' : receipt.tokenType === 2 ? 'USAD' : 'ALEO';
+        return (
+          <motion.div
           key={idx}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -147,8 +156,8 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
                 Collateral Amount
               </p>
               <p className="font-mono text-lg font-semibold text-text-primary tabular-nums flex items-center gap-1.5">
-                <TokenIcon token="ALEO" size={18} />
-                {formatCredits(receipt.collateralAmount)} ALEO
+                <TokenIcon token={tokenLabel} size={18} />
+                {formatCredits(receipt.collateralAmount)} {tokenLabel}
               </p>
             </div>
             <div>
@@ -181,7 +190,8 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
             Already withdrawn? Hide this record
           </button>
         </motion.div>
-      ))}
+        );
+      })}
 
       {transactionStep === 'confirmed' && (
         <button

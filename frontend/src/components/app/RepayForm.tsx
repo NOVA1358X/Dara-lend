@@ -6,7 +6,7 @@ import { useWalletRecords } from '@/hooks/useWalletRecords';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, truncateAddress, calculateHealthFactor } from '@/utils/formatting';
 import { markRecordConsumed } from '@/utils/records';
-import { PRECISION } from '@/utils/constants';
+import { PRECISION, TOKEN_TYPES } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -30,8 +30,8 @@ export function RepayForm({ wallet }: RepayFormProps) {
   const [selectedLoanIdx, setSelectedLoanIdx] = useState<number | null>(null);
   const [repayStep, setRepayStep] = useState<'idle' | 'approving' | 'repaying'>('idle');
   const { transactionStep, transactionId, transactionPending } = useAppStore();
-  const { repay, approveUSDCx, resetTransaction } = useTransaction(wallet);
-  const { debtPositions, isLoading, refetch } = useWalletRecords(wallet);
+  const { repay, repayUsad, repayCreditsUsdcx, repayCreditsUsad, approveUSDCx, resetTransaction } = useTransaction(wallet);
+  const { debtPositions, creditsRecords, isLoading, refetch } = useWalletRecords(wallet);
 
   if (!wallet.connected) {
     return (
@@ -69,25 +69,57 @@ export function RepayForm({ wallet }: RepayFormProps) {
 
     setSelectedLoanIdx(idx);
     const debtRecord = debt.plaintext || '';
+    const debtToken = debt.debtToken ?? 1; // 0=ALEO,1=USDCx,2=USAD
+    const collateralToken = debt.collateralToken ?? 0;
 
     try {
-      // Step 1: Approve USDCx spending
-      setRepayStep('approving');
-      const approveTxId = await approveUSDCx(debt.debtAmount);
-      if (!approveTxId) {
+      if (debtToken === 0) {
+        // Repaying ALEO credits debt — need a private credits record
+        const creditsRecord = creditsRecords?.[0];
+        if (!creditsRecord) {
+          toast.error('No private credits record found. Convert credits to private first.');
+          setRepayStep('idle');
+          return;
+        }
+        const creditsPlaintext = (creditsRecord as Record<string, unknown>).recordPlaintext as string
+          || (creditsRecord as Record<string, unknown>).plaintext as string || '';
+        setRepayStep('repaying');
+        let repayTxId: string | null = null;
+        if (collateralToken === 1) {
+          repayTxId = await repayCreditsUsdcx(debtRecord, creditsPlaintext);
+        } else {
+          repayTxId = await repayCreditsUsad(debtRecord, creditsPlaintext);
+        }
         setRepayStep('idle');
-        return;
-      }
+        if (repayTxId) {
+          const commitment = (debt.raw.commitment as string) || (debt.raw.tag as string) || '';
+          if (commitment) markRecordConsumed(commitment);
+          refetch();
+        }
+      } else {
+        // Repaying stablecoin debt (USDCx or USAD)
+        // Step 1: Approve spending
+        setRepayStep('approving');
+        const approveTxId = await approveUSDCx(debt.debtAmount);
+        if (!approveTxId) {
+          setRepayStep('idle');
+          return;
+        }
 
-      // Step 2: Execute repay
-      setRepayStep('repaying');
-      const repayTxId = await repay(debtRecord);
-      setRepayStep('idle');
-      if (repayTxId) {
-        // Mark record as consumed so it stays hidden even across navigation
-        const commitment = (debt.raw.commitment as string) || (debt.raw.tag as string) || '';
-        if (commitment) markRecordConsumed(commitment);
-        refetch();
+        // Step 2: Execute repay
+        setRepayStep('repaying');
+        let repayTxId: string | null = null;
+        if (debtToken === 2) {
+          repayTxId = await repayUsad(debtRecord);
+        } else {
+          repayTxId = await repay(debtRecord);
+        }
+        setRepayStep('idle');
+        if (repayTxId) {
+          const commitment = (debt.raw.commitment as string) || (debt.raw.tag as string) || '';
+          if (commitment) markRecordConsumed(commitment);
+          refetch();
+        }
       }
     } catch (err) {
       setRepayStep('idle');
@@ -107,12 +139,14 @@ export function RepayForm({ wallet }: RepayFormProps) {
             Repay Loans
           </h2>
           <p className="text-xs text-text-secondary">
-            Repay USDCx debt and reclaim collateral as a private record
+            Repay debt and reclaim collateral as a private record
           </p>
         </div>
       </div>
 
       {debtPositions.map((debt, idx) => {
+        const debtTokenLabel = debt.debtToken === 0 ? 'ALEO' : debt.debtToken === 2 ? 'USAD' : 'USDCx';
+        const colTokenLabel = debt.collateralToken === 1 ? 'USDCx' : debt.collateralToken === 2 ? 'USAD' : 'ALEO';
         const health = calculateHealthFactor(
           debt.collateralAmount,
           debt.debtAmount,
@@ -145,8 +179,8 @@ export function RepayForm({ wallet }: RepayFormProps) {
                   Debt
                 </p>
                 <p className="font-mono text-lg font-semibold text-text-primary tabular-nums flex items-center gap-1.5">
-                  <TokenIcon token="USDCx" size={18} />
-                  {formatCredits(debt.debtAmount)} USDCx
+                  <TokenIcon token={debtTokenLabel} size={18} />
+                  {formatCredits(debt.debtAmount)} {debtTokenLabel}
                 </p>
               </div>
               <div>
@@ -154,8 +188,8 @@ export function RepayForm({ wallet }: RepayFormProps) {
                   Collateral Locked
                 </p>
                 <p className="font-mono text-sm text-text-primary tabular-nums flex items-center gap-1.5">
-                  <TokenIcon token="ALEO" size={16} />
-                  {formatCredits(debt.collateralAmount)} ALEO
+                  <TokenIcon token={colTokenLabel} size={16} />
+                  {formatCredits(debt.collateralAmount)} {colTokenLabel}
                 </p>
               </div>
               <div>

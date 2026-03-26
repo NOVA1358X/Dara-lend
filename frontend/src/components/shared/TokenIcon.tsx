@@ -1,5 +1,5 @@
 interface TokenIconProps {
-  token: 'ALEO' | 'USDCx';
+  token: 'ALEO' | 'USDCx' | 'USAD';
   size?: number;
   className?: string;
 }
@@ -14,6 +14,17 @@ export function TokenIcon({ token, size = 20, className = '' }: TokenIconProps) 
         height={size}
         className={`inline-block rounded-full ${className}`}
       />
+    );
+  }
+
+  if (token === 'USAD') {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className={`inline-flex items-center justify-center rounded-full bg-secondary/20 text-secondary font-mono text-[9px] font-bold ${className}`}
+      >
+        U
+      </div>
     );
   }
 

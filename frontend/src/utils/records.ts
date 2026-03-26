@@ -5,6 +5,8 @@ export interface CollateralReceiptRecord {
   type: typeof RECORD_TYPES.COLLATERAL_RECEIPT;
   owner: string;
   collateralAmount: number;
+  collateralAmountU128: number;
+  tokenType: number;
   depositBlock: number;
   nonceHash: string;
   plaintext: string;
@@ -16,7 +18,10 @@ export interface DebtPositionRecord {
   type: typeof RECORD_TYPES.DEBT_POSITION;
   owner: string;
   collateralAmount: number;
+  collateralAmountU128: number;
+  collateralToken: number;
   debtAmount: number;
+  debtToken: number;
   liquidationPrice: number;
   loanId: string;
   plaintext: string;
@@ -29,7 +34,10 @@ export interface LiquidationAuthRecord {
   owner: string;
   loanId: string;
   collateralAmount: number;
+  collateralAmountU128: number;
+  collateralToken: number;
   debtAmount: number;
+  debtToken: number;
   liquidationPrice: number;
   borrowerHash: string;
   plaintext: string;
@@ -42,6 +50,8 @@ export interface RepaymentReceiptRecord {
   owner: string;
   amountRepaid: number;
   collateralReturned: number;
+  collateralReturnedU128: number;
+  collateralToken: number;
   loanId: string;
   plaintext: string;
   raw: Record<string, unknown>;
@@ -53,6 +63,8 @@ export interface LiquidationReceiptRecord {
   owner: string;
   loanId: string;
   collateralSeized: number;
+  collateralSeizedU128: number;
+  collateralToken: number;
   debtCovered: number;
   plaintext: string;
   raw: Record<string, unknown>;
@@ -144,9 +156,12 @@ function extractFields(record: RawAleoRecord): Record<string, string> {
 
   // 3. Try top-level fields (some adapters put fields directly on the record)
   const knownFields = [
-    'owner', 'collateral_amount', 'deposit_block', 'nonce_hash',
-    'debt_amount', 'liquidation_price', 'loan_id', 'borrower_hash',
-    'amount_repaid', 'collateral_returned', 'collateral_seized', 'debt_covered',
+    'owner', 'collateral_amount', 'collateral_amount_u128', 'token_type',
+    'deposit_block', 'nonce_hash',
+    'collateral_token', 'debt_amount', 'debt_token',
+    'liquidation_price', 'loan_id', 'borrower_hash',
+    'amount_repaid', 'collateral_returned', 'collateral_returned_u128',
+    'collateral_seized', 'collateral_seized_u128', 'debt_covered',
   ];
   const fields: Record<string, string> = {};
   for (const key of knownFields) {
@@ -167,6 +182,9 @@ function detectRecordType(fields: Record<string, string>, record: RawAleoRecord)
   const keys = Object.keys(fields).filter(k => k !== 'owner' && k !== '_nonce');
 
   if (keys.includes('collateral_amount') && keys.includes('deposit_block') && keys.includes('nonce_hash') && !keys.includes('debt_amount')) {
+    return RECORD_TYPES.COLLATERAL_RECEIPT;
+  }
+  if (keys.includes('collateral_amount') && keys.includes('token_type') && keys.includes('nonce_hash') && !keys.includes('debt_amount')) {
     return RECORD_TYPES.COLLATERAL_RECEIPT;
   }
   if (keys.includes('debt_amount') && keys.includes('liquidation_price') && keys.includes('loan_id') && !keys.includes('borrower')) {
@@ -208,6 +226,8 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
         type: RECORD_TYPES.COLLATERAL_RECEIPT,
         owner,
         collateralAmount: parseAleoU64(fields['collateral_amount']),
+        collateralAmountU128: parseAleoU64(fields['collateral_amount_u128']),
+        tokenType: parseAleoU64(fields['token_type']),
         depositBlock: parseAleoU64(fields['deposit_block']),
         nonceHash: parseAleoField(fields['nonce_hash']),
         plaintext,
@@ -220,7 +240,10 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
         type: RECORD_TYPES.DEBT_POSITION,
         owner,
         collateralAmount: parseAleoU64(fields['collateral_amount']),
+        collateralAmountU128: parseAleoU64(fields['collateral_amount_u128']),
+        collateralToken: parseAleoU64(fields['collateral_token']),
         debtAmount: parseAleoU64(fields['debt_amount']),
+        debtToken: parseAleoU64(fields['debt_token']),
         liquidationPrice: parseAleoU64(fields['liquidation_price']),
         loanId: parseAleoField(fields['loan_id']),
         plaintext,
@@ -234,7 +257,10 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
         owner,
         loanId: parseAleoField(fields['loan_id']),
         collateralAmount: parseAleoU64(fields['collateral_amount']),
+        collateralAmountU128: parseAleoU64(fields['collateral_amount_u128']),
+        collateralToken: parseAleoU64(fields['collateral_token']),
         debtAmount: parseAleoU64(fields['debt_amount']),
+        debtToken: parseAleoU64(fields['debt_token']),
         liquidationPrice: parseAleoU64(fields['liquidation_price']),
         borrowerHash: parseAleoField(fields['borrower_hash'] || fields['borrower'] || ''),
         plaintext,
@@ -248,6 +274,8 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
         owner,
         amountRepaid: parseAleoU64(fields['amount_repaid']),
         collateralReturned: parseAleoU64(fields['collateral_returned']),
+        collateralReturnedU128: parseAleoU64(fields['collateral_returned_u128']),
+        collateralToken: parseAleoU64(fields['collateral_token']),
         loanId: parseAleoField(fields['loan_id']),
         plaintext,
         raw: rawRecord,
@@ -260,6 +288,8 @@ export function parseRecord(rawRecord: Record<string, unknown>, decryptedPlainte
         owner,
         loanId: parseAleoField(fields['loan_id']),
         collateralSeized: parseAleoU64(fields['collateral_seized']),
+        collateralSeizedU128: parseAleoU64(fields['collateral_seized_u128']),
+        collateralToken: parseAleoU64(fields['collateral_token']),
         debtCovered: parseAleoU64(fields['debt_covered']),
         plaintext,
         raw: rawRecord,

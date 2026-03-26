@@ -19,6 +19,8 @@ import { LockIcon } from '@/components/icons/LockIcon';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import toast from 'react-hot-toast';
 
+type BorrowAsset = 'USDCx' | 'USAD' | 'ALEO';
+
 interface BorrowFormProps {
   wallet: {
     requestRecords?: (program: string) => Promise<unknown[]>;
@@ -34,9 +36,10 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
   const navigate = useNavigate();
   const [amount, setAmount] = useState('');
   const [selectedCollateralIdx, setSelectedCollateralIdx] = useState(0);
+  const [borrowAsset, setBorrowAsset] = useState<BorrowAsset>('USDCx');
 
   const { transactionStep, transactionId, transactionPending } = useAppStore();
-  const { borrow, updateOraclePrice, resetTransaction } = useTransaction(wallet);
+  const { borrow, borrowUsad, borrowCredits, updateOraclePrice, resetTransaction } = useTransaction(wallet);
   const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
   const { data: oraclePrice } = useOraclePrice();
   const { getMappingValue } = useAleoClient();
@@ -110,7 +113,15 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
     const collateralRecord = selectedCollateral?.plaintext || '';
 
     try {
-      const txId = await borrow(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
+      let txId: string | null = null;
+      if (borrowAsset === 'USDCx') {
+        txId = await borrow(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
+      } else if (borrowAsset === 'USAD') {
+        txId = await borrowUsad(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
+      } else {
+        // Borrow ALEO credits against stablecoin collateral
+        txId = await borrowCredits(collateralRecord, borrowAmount, oraclePrice, oraclePrice, orchestratorAddress);
+      }
       if (txId) {
         setTimeout(() => refetch(), 3000);
       }
@@ -127,7 +138,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
       const currentRound = parseInt(roundRaw?.replace(/u64|"/g, '') || '0', 10);
       const priceMicro = Math.round(livePrice * PRECISION);
       toast('Updating oracle price via wallet...', { icon: '🔄' });
-      await updateOraclePrice(priceMicro, currentRound + 1);
+      await updateOraclePrice(priceMicro, currentRound + 1, 0);
     } catch (err) {
       toast.error('Oracle update failed');
     }
@@ -150,19 +161,31 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               Borrow
             </h2>
             <p className="text-xs text-text-secondary">
-              Borrow USDCx against your encrypted ALEO collateral
+              Borrow against your encrypted collateral
             </p>
           </div>
         </div>
 
-        {/* Asset */}
+        {/* Borrow Asset Selector */}
         <div className="mb-4">
           <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
             Borrow Asset
           </label>
-          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-            <TokenIcon token="USDCx" size={24} />
-            <span className="text-sm font-medium text-text-primary">USDCx Stablecoin</span>
+          <div className="grid grid-cols-3 gap-2">
+            {(['USDCx', 'USAD', 'ALEO'] as BorrowAsset[]).map((asset) => (
+              <button
+                key={asset}
+                onClick={() => setBorrowAsset(asset)}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  borrowAsset === asset
+                    ? 'bg-primary/10 border-primary/40 text-primary'
+                    : 'bg-white/[0.03] border-white/[0.06] text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <TokenIcon token={asset} size={18} />
+                {asset}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -202,7 +225,7 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
               Max Borrow
             </p>
             <p className="font-mono text-sm text-text-primary tabular-nums">
-              {formatCredits(maxBorrowAmount)} USDCx
+              {formatCredits(maxBorrowAmount)} {borrowAsset}
             </p>
           </div>
         </div>

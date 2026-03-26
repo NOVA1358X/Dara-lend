@@ -32,7 +32,7 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [currentOraclePrice, setCurrentOraclePrice] = useState<number | null>(null);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
-  const { liquidate, resetTransaction } = useTransaction(wallet);
+  const { liquidate, liquidateUsdcx, liquidateUsad, resetTransaction } = useTransaction(wallet);
   const { liquidationAuths, isLoading, refetch } = useWalletRecords(wallet);
   const { data: oraclePrice } = useOraclePrice();
 
@@ -110,9 +110,17 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
 
     setSelectedIdx(idx);
     const recordPlaintext = auth.plaintext || '';
+    const collateralToken = auth.collateralToken ?? 0;
 
     try {
-      const txId = await liquidate(recordPlaintext, currentOraclePrice);
+      let txId: string | null = null;
+      if (collateralToken === 1) {
+        txId = await liquidateUsdcx(recordPlaintext, currentOraclePrice);
+      } else if (collateralToken === 2) {
+        txId = await liquidateUsad(recordPlaintext, currentOraclePrice);
+      } else {
+        txId = await liquidate(recordPlaintext, currentOraclePrice);
+      }
       if (txId) {
         setTimeout(() => refetch(), 3000);
       }
@@ -168,6 +176,8 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
       </div>
 
       {liquidationAuths.map((auth, idx) => {
+        const colTokenLabel = auth.collateralToken === 1 ? 'USDCx' : auth.collateralToken === 2 ? 'USAD' : 'ALEO';
+        const debtTokenLabel = auth.debtToken === 0 ? 'ALEO' : auth.debtToken === 2 ? 'USAD' : 'USDCx';
         const isUnderwater = currentOraclePrice
           ? currentOraclePrice <= auth.liquidationPrice
           : false;
@@ -209,8 +219,8 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
                   Collateral
                 </p>
                 <p className="font-mono text-sm text-text-primary tabular-nums flex items-center gap-1.5">
-                  <TokenIcon token="ALEO" size={16} />
-                  {formatCredits(auth.collateralAmount)} ALEO
+                  <TokenIcon token={colTokenLabel} size={16} />
+                  {formatCredits(auth.collateralAmount)} {colTokenLabel}
                 </p>
               </div>
               <div>
@@ -218,8 +228,8 @@ export function LiquidateForm({ wallet }: LiquidateFormProps) {
                   Debt
                 </p>
                 <p className="font-mono text-sm text-text-primary tabular-nums flex items-center gap-1.5">
-                  <TokenIcon token="USDCx" size={16} />
-                  {formatCredits(auth.debtAmount)} USDCx
+                  <TokenIcon token={debtTokenLabel} size={16} />
+                  {formatCredits(auth.debtAmount)} {debtTokenLabel}
                 </p>
               </div>
               <div>

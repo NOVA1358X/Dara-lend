@@ -31,7 +31,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
 
   const { price: livePrice, loading: priceLoading, refresh: refreshPrice } = useMarketPrice();
   const walletForTx = wallet || { connected: false };
-  const { fundProtocol, updateOraclePrice, resetTransaction } = useTransaction(walletForTx);
+  const { fundProtocol, updateOraclePrice, setRateParams, emergencyPause, resumeProtocol, accrueInterest, resetTransaction } = useTransaction(walletForTx);
 
   // Oracle health state
   const [oracleHealth, setOracleHealth] = useState<{
@@ -45,6 +45,8 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
   } | null>(null);
 
   const [autoUpdate, setAutoUpdate] = useState(false);
+  const [baseRate, setBaseRate] = useState('200');
+  const [slopeRate, setSlopeRate] = useState('400');
 
   const fetchOracleHealth = async () => {
     try {
@@ -106,7 +108,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
       const currentRound = oracleHealth?.onChainRound ?? 0;
       const nextRound = currentRound + 1;
       toast('Auto-updating oracle price...', { icon: '🔄' });
-      await updateOraclePrice(medianMicro, nextRound);
+      await updateOraclePrice(medianMicro, nextRound, 0);
     }, 120_000); // Check every 2 minutes
 
     return () => clearInterval(interval);
@@ -347,7 +349,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                 const currentRound = oracleHealth?.onChainRound || oracleHealth?.currentRound || 0;
                 const nextRound = currentRound + 1;
                 const priceMicro = Math.round(priceToUse * PRECISION);
-                await updateOraclePrice(priceMicro, nextRound);
+                await updateOraclePrice(priceMicro, nextRound, 0);
               }}
               disabled={transactionPending || (!livePrice && !oracleHealth?.medianPrice)}
               className="flex-1 py-3 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-sm disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
@@ -369,6 +371,104 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
 
       {/* Fund Protocol with USDCx — Admin Only */}
       {wallet?.connected && wallet?.address === ADMIN_ADDRESS && (
+        <>
+        {/* Admin Controls — set_rate_params, emergency_pause, resume_protocol, accrue_interest */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, type: 'spring', stiffness: 120, damping: 20 }}
+          className="rounded-xl glass-panel p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldIcon size={20} className="text-primary" />
+            <h3 className="font-headline text-lg text-text-primary">
+              Admin Controls
+            </h3>
+          </div>
+
+          <p className="text-sm text-text-secondary leading-relaxed mb-4">
+            Protocol governance transitions: configure interest rates, manage circuit breaker, and trigger interest accrual.
+          </p>
+
+          {/* Interest Rate Configuration */}
+          <div className="mb-4">
+            <label className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] block mb-2">
+              Interest Rate Model (BPS)
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-text-muted block mb-1">Base Rate</label>
+                <input
+                  type="number"
+                  value={baseRate}
+                  onChange={(e) => setBaseRate(e.target.value)}
+                  placeholder="200"
+                  className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary font-mono text-sm tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary/30"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-text-muted block mb-1">Slope</label>
+                <input
+                  type="number"
+                  value={slopeRate}
+                  onChange={(e) => setSlopeRate(e.target.value)}
+                  placeholder="400"
+                  className="w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary font-mono text-sm tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary/30"
+                />
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                const base = parseInt(baseRate, 10);
+                const slope = parseInt(slopeRate, 10);
+                if (isNaN(base) || isNaN(slope) || base < 0 || slope < 0) {
+                  toast.error('Enter valid BPS values');
+                  return;
+                }
+                await setRateParams(base, slope);
+              }}
+              disabled={transactionPending}
+              className="w-full mt-3 py-2.5 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-xs disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
+            >
+              {transactionPending ? 'Processing...' : 'Set Rate Params'}
+            </button>
+          </div>
+
+          {/* Circuit Breaker & Interest Accrual */}
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={() => emergencyPause()}
+              disabled={transactionPending}
+              className="py-3 rounded-lg bg-accent-danger/10 border border-accent-danger/20 text-accent-danger text-xs font-label uppercase tracking-[0.1em] hover:bg-accent-danger/20 transition-colors disabled:opacity-40"
+            >
+              Emergency Pause
+            </button>
+            <button
+              onClick={() => resumeProtocol()}
+              disabled={transactionPending}
+              className="py-3 rounded-lg bg-accent-success/10 border border-accent-success/20 text-accent-success text-xs font-label uppercase tracking-[0.1em] hover:bg-accent-success/20 transition-colors disabled:opacity-40"
+            >
+              Resume Protocol
+            </button>
+            <button
+              onClick={() => accrueInterest()}
+              disabled={transactionPending}
+              className="py-3 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-label uppercase tracking-[0.1em] hover:bg-primary/20 transition-colors disabled:opacity-40"
+            >
+              Accrue Interest
+            </button>
+          </div>
+
+          {transactionStep === 'confirmed' && (
+            <button
+              onClick={resetTransaction}
+              className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Done
+            </button>
+          )}
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -456,6 +556,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
             </button>
           )}
         </motion.div>
+        </>
       )}
     </div>
   );
