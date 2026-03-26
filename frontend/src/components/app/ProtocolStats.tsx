@@ -5,7 +5,7 @@ import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useTransaction } from '@/hooks/useTransaction';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits } from '@/utils/formatting';
-import { PRECISION, USDCX_PROGRAM, ALEO_TESTNET_API, PROTOCOL_ADDRESS, ADMIN_ADDRESS, BACKEND_API } from '@/utils/constants';
+import { PRECISION, USDCX_PROGRAM, USAD_PROGRAM, CREDITS_PROGRAM, ALEO_TESTNET_API, PROTOCOL_ADDRESS, ADMIN_ADDRESS, BACKEND_API } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
@@ -26,12 +26,15 @@ interface ProtocolStatsProps {
 export function ProtocolStats({ wallet }: ProtocolStatsProps) {
   const { data: stats, isLoading } = useProtocolStats();
   const [fundAmount, setFundAmount] = useState('10');
+  const [fundToken, setFundToken] = useState<'USDCx' | 'USAD' | 'ALEO'>('USDCx');
   const [usdcxLiquidity, setUsdcxLiquidity] = useState<number | null>(null);
+  const [usadLiquidity, setUsadLiquidity] = useState<number | null>(null);
+  const [aleoLiquidity, setAleoLiquidity] = useState<number | null>(null);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
 
   const { price: livePrice, loading: priceLoading, refresh: refreshPrice } = useMarketPrice();
   const walletForTx = wallet || { connected: false };
-  const { fundProtocol, updateOraclePrice, setRateParams, emergencyPause, resumeProtocol, accrueInterest, resetTransaction } = useTransaction(walletForTx);
+  const { fundProtocol, fundProtocolUsad, fundProtocolAleo, updateOraclePrice, setRateParams, emergencyPause, resumeProtocol, accrueInterest, resetTransaction } = useTransaction(walletForTx);
 
   // Oracle health state
   const [oracleHealth, setOracleHealth] = useState<{
@@ -60,8 +63,9 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
     }
   };
 
-  // Fetch USDCx liquidity of the protocol
+  // Fetch protocol liquidity for all 3 tokens
   const fetchLiquidity = async () => {
+    // USDCx balance
     try {
       const res = await fetch(
         `${ALEO_TESTNET_API}/program/${USDCX_PROGRAM}/mapping/balances/${PROTOCOL_ADDRESS}`,
@@ -75,6 +79,36 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
       }
     } catch {
       setUsdcxLiquidity(0);
+    }
+    // USAD balance
+    try {
+      const res = await fetch(
+        `${ALEO_TESTNET_API}/program/${USAD_PROGRAM}/mapping/balances/${PROTOCOL_ADDRESS}`,
+      );
+      if (res.ok) {
+        const raw = await res.text();
+        const val = parseInt(raw.replace(/"/g, ''), 10) || 0;
+        setUsadLiquidity(val);
+      } else {
+        setUsadLiquidity(0);
+      }
+    } catch {
+      setUsadLiquidity(0);
+    }
+    // ALEO credits balance
+    try {
+      const res = await fetch(
+        `${ALEO_TESTNET_API}/program/${CREDITS_PROGRAM}/mapping/account/${PROTOCOL_ADDRESS}`,
+      );
+      if (res.ok) {
+        const raw = await res.text();
+        const val = parseInt(raw.replace(/"/g, ''), 10) || 0;
+        setAleoLiquidity(val);
+      } else {
+        setAleoLiquidity(0);
+      }
+    } catch {
+      setAleoLiquidity(0);
     }
   };
 
@@ -483,27 +517,51 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
           </div>
 
           <p className="text-sm text-text-secondary leading-relaxed mb-4">
-            Transfer USDCx stablecoin to the lending protocol so borrowers can take loans.
-            This calls <code className="text-primary text-xs">transfer_public</code> on the USDCx contract.
+            Transfer tokens to the lending protocol so borrowers can take loans.
+            Calls <code className="text-primary text-xs">transfer_public</code> on the respective token contract.
           </p>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="p-4 rounded-lg bg-white/[0.03]">
-              <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
-                Protocol USDCx Balance
-              </p>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="p-3 rounded-lg bg-white/[0.03]">
+              <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">USDCx</p>
               <p className="font-mono text-sm text-text-primary tabular-nums">
-                {usdcxLiquidity !== null ? `${formatCredits(usdcxLiquidity)} USDCx` : '—'}
+                {usdcxLiquidity !== null ? formatCredits(usdcxLiquidity) : '—'}
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-white/[0.03]">
-              <p className="text-[11px] text-text-muted uppercase tracking-wider mb-2">
-                Protocol Address
-              </p>
-              <p className="font-mono text-[10px] text-text-secondary break-all">
-                {PROTOCOL_ADDRESS}
+            <div className="p-3 rounded-lg bg-white/[0.03]">
+              <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">USAD</p>
+              <p className="font-mono text-sm text-text-primary tabular-nums">
+                {usadLiquidity !== null ? formatCredits(usadLiquidity) : '—'}
               </p>
             </div>
+            <div className="p-3 rounded-lg bg-white/[0.03]">
+              <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">ALEO</p>
+              <p className="font-mono text-sm text-text-primary tabular-nums">
+                {aleoLiquidity !== null ? formatCredits(aleoLiquidity) : '—'}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-white/[0.03] mb-4">
+            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Protocol Address</p>
+            <p className="font-mono text-[10px] text-text-secondary break-all">{PROTOCOL_ADDRESS}</p>
+          </div>
+
+          {/* Token selector */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {(['USDCx', 'USAD', 'ALEO'] as const).map((token) => (
+              <button
+                key={token}
+                onClick={() => setFundToken(token)}
+                className={`py-2 rounded-lg text-xs font-label uppercase tracking-[0.1em] transition-all ${
+                  fundToken === token
+                    ? 'bg-primary/20 border border-primary/40 text-primary'
+                    : 'bg-white/[0.03] border border-white/[0.06] text-text-secondary hover:border-white/10'
+                }`}
+              >
+                {token}
+              </button>
+            ))}
           </div>
 
           <div className="flex items-center gap-3 mb-4">
@@ -511,13 +569,13 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               type="number"
               value={fundAmount}
               onChange={(e) => setFundAmount(e.target.value)}
-              placeholder="Amount USDCx"
+              placeholder={`Amount ${fundToken}`}
               min="1"
               step="1"
               className="flex-1 px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] text-text-primary font-mono text-sm tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary/30"
-              aria-label="USDCx amount to fund"
+              aria-label={`${fundToken} amount to fund`}
             />
-            <span className="text-sm text-text-secondary">USDCx</span>
+            <span className="text-sm text-text-secondary">{fundToken}</span>
           </div>
 
           {transactionPending && (
@@ -534,14 +592,19 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
                 return;
               }
               const microAmount = Math.floor(amt * 1_000_000);
-              await fundProtocol(microAmount);
-              // Refresh liquidity after funding
+              if (fundToken === 'USDCx') {
+                await fundProtocol(microAmount);
+              } else if (fundToken === 'USAD') {
+                await fundProtocolUsad(microAmount);
+              } else {
+                await fundProtocolAleo(microAmount);
+              }
               setTimeout(fetchLiquidity, 10_000);
             }}
             disabled={transactionPending}
             className="w-full py-3 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-sm disabled:opacity-40 disabled:cursor-not-allowed focus-ring"
           >
-            {transactionPending ? 'Processing...' : `Fund ${fundAmount || '0'} USDCx to Protocol`}
+            {transactionPending ? 'Processing...' : `Fund ${fundAmount || '0'} ${fundToken} to Protocol`}
           </button>
 
           {transactionStep === 'confirmed' && (

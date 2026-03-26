@@ -474,6 +474,110 @@ export function useTransaction(wallet: WalletExecute) {
     [wallet, setTransactionPending, setTransactionStep, setTransactionId],
   );
 
+  /** Transfer USAD from user to the lending protocol address */
+  const fundProtocolUsad = useCallback(
+    async (amountMicro: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+
+        const tx = createAleoTransaction(
+          USAD_PROGRAM,
+          'transfer_public',
+          [PROTOCOL_ADDRESS, `${amountMicro}u128`],
+          TX_FEE,
+        );
+
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Fund USAD transaction submitted');
+
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Protocol funded with USAD!');
+        } else if (pollResult.confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Fund transaction rejected. Check your USAD balance.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Fund transaction broadcast. Check explorer: ${txId}`);
+        }
+
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        const message = error instanceof Error ? error.message : 'Fund transaction failed';
+        toast.error(message);
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
+  /** Transfer ALEO credits from user to the lending protocol address */
+  const fundProtocolAleo = useCallback(
+    async (amountMicro: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+
+        const tx = createAleoTransaction(
+          CREDITS_PROGRAM,
+          'transfer_public',
+          [PROTOCOL_ADDRESS, `${amountMicro}u64`],
+          TX_FEE,
+        );
+
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Fund ALEO transaction submitted');
+
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Protocol funded with ALEO credits!');
+        } else if (pollResult.confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Fund transaction rejected. Check your ALEO balance.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Fund transaction broadcast. Check explorer: ${txId}`);
+        }
+
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        const message = error instanceof Error ? error.message : 'Fund transaction failed';
+        toast.error(message);
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
   return {
     executeTransaction,
     supplyCollateral,
@@ -500,6 +604,8 @@ export function useTransaction(wallet: WalletExecute) {
     accrueInterest,
     convertCreditsToPrivate,
     fundProtocol,
+    fundProtocolUsad,
+    fundProtocolAleo,
     resetTransaction,
   };
 }

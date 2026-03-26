@@ -26,8 +26,8 @@ export const TOKEN_LABELS: Record<number, string> = {
   2: 'USAD',
 };
 
-// The on-chain address of the deployed program
-export const PROTOCOL_ADDRESS = 'aleo1lquusvxz6syfd4gq2rr2tk46484ee6q4nm5k4q3wmuclgxql7qyq7htwcn';
+// The on-chain address of the deployed program (derived from dara_lend_v6.aleo)
+export const PROTOCOL_ADDRESS = 'aleo14sztdsflcsp4sry92dmd4w88d2chnn592jzwye2d8z0z42v3pgzqezyjpy';
 
 export const ADMIN_ADDRESS = 'aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8';
 
