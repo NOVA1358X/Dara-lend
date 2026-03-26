@@ -331,9 +331,9 @@ export function filterRecordsByType<T extends DaraRecord>(
   const consumed = getConsumedSet();
   return records.filter((r) => {
     if (r.type !== type) return false;
-    // Only hide records we explicitly consumed (repay/withdraw).
-    // Do NOT use wallet's spent flag — it marks records as spent before
-    // new replacement records have synced, creating a display gap.
+    // Hide records already consumed on-chain (wallet reports spent=true)
+    if (r.spent) return false;
+    // Also hide records we explicitly marked consumed locally
     const id = getRecordCommitment(r);
     if (id && consumed.has(id)) return false;
     return true;

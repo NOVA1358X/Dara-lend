@@ -32,7 +32,7 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const { withdrawCollateral, withdrawUsdcxCollateral, withdrawUsadCollateral, resetTransaction } = useTransaction(wallet);
-  const { collateralReceipts, isLoading, refetch } = useWalletRecords(wallet);
+  const { collateralReceipts, debtPositions, repaymentReceipts, isLoading, refetch } = useWalletRecords(wallet);
 
   const handleDismiss = (idx: number) => {
     const receipt = collateralReceipts[idx];
@@ -65,6 +65,26 @@ export function WithdrawForm({ wallet }: WithdrawFormProps) {
   }
 
   if (collateralReceipts.length === 0) {
+    // Check if user has active debt — they need to repay first
+    if (debtPositions.length > 0) {
+      return (
+        <EmptyState
+          title="Repay Your Debt First"
+          description="Your collateral is locked in an active loan. Repay your debt to get your collateral back automatically — the repay transaction returns your collateral in the same step."
+          action={{ label: 'Go to Repay', onClick: () => navigate('/app/repay') }}
+        />
+      );
+    }
+    // Check if user has repayment receipts — collateral was already returned
+    if (repaymentReceipts.length > 0) {
+      return (
+        <EmptyState
+          title="Collateral Already Returned"
+          description="Your collateral was returned when you repaid your loan. Check your wallet balance — the credits should already be there."
+          action={{ label: 'Back to Dashboard', onClick: () => navigate('/app') }}
+        />
+      );
+    }
     return (
       <EmptyState
         title="No Collateral to Withdraw"
