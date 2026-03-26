@@ -330,8 +330,12 @@ export function filterRecordsByType<T extends DaraRecord>(
 ): T[] {
   const consumed = getConsumedSet();
   return records.filter((r) => {
-    if (r.type !== type || r.spent) return false;
+    if (r.type !== type) return false;
+    // Only hide records we explicitly consumed (repay/withdraw).
+    // Do NOT use wallet's spent flag — it marks records as spent before
+    // new replacement records have synced, creating a display gap.
     const id = getRecordCommitment(r);
-    return !id || !consumed.has(id);
+    if (id && consumed.has(id)) return false;
+    return true;
   }) as T[];
 }

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
-import { RECORD_TYPES } from '@/utils/constants';
+import { useProtocolStats } from '@/hooks/useProtocolStats';
 import { PositionCard } from './PositionCard';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -17,7 +17,8 @@ interface PositionsListProps {
 
 export function PositionsList({ wallet }: PositionsListProps) {
   const navigate = useNavigate();
-  const { allRecords, isLoading } = useWalletRecords(wallet);
+  const { collateralReceipts, debtPositions, repaymentReceipts, liquidationReceipts, isLoading } = useWalletRecords(wallet);
+  const { data: stats } = useProtocolStats();
 
   if (!wallet.connected) {
     return (
@@ -39,19 +40,11 @@ export function PositionsList({ wallet }: PositionsListProps) {
     );
   }
 
-  const collateralRecords = allRecords.filter(
-    (r) => r.type === RECORD_TYPES.COLLATERAL_RECEIPT && !r.spent,
-  );
-  const debtRecords = allRecords.filter(
-    (r) => r.type === RECORD_TYPES.DEBT_POSITION && !r.spent,
-  );
-  const historyRecords = allRecords.filter(
-    (r) =>
-      (r.type === RECORD_TYPES.REPAYMENT_RECEIPT ||
-      r.type === RECORD_TYPES.LIQUIDATION_RECEIPT) && !r.spent,
-  );
+  const allRecords = [...collateralReceipts, ...debtPositions, ...repaymentReceipts, ...liquidationReceipts];
+  const hasOnChainPositions = stats && (stats.loanCount > 0 || stats.totalCollateral > 0);
+  const walletRecordsEmpty = collateralReceipts.length === 0 && debtPositions.length === 0;
 
-  if (allRecords.length === 0) {
+  if (allRecords.length === 0 && !hasOnChainPositions) {
     return (
       <EmptyState
         title="No Positions"
@@ -64,14 +57,28 @@ export function PositionsList({ wallet }: PositionsListProps) {
 
   return (
     <div className="space-y-8">
-      {collateralRecords.length > 0 && (
-        <Section title="Active Collateral" records={collateralRecords} />
+      {walletRecordsEmpty && hasOnChainPositions && (
+        <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" />
+            <div>
+              <p className="text-sm font-medium text-yellow-300">Wallet Syncing Records</p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Your wallet is syncing private records. On-chain data shows active positions.
+                Try disconnecting and reconnecting your wallet if this persists.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
-      {debtRecords.length > 0 && (
-        <Section title="Active Loans" records={debtRecords} />
+      {collateralReceipts.length > 0 && (
+        <Section title="Active Collateral" records={collateralReceipts} />
       )}
-      {historyRecords.length > 0 && (
-        <Section title="History" records={historyRecords} />
+      {debtPositions.length > 0 && (
+        <Section title="Active Loans" records={debtPositions} />
+      )}
+      {(repaymentReceipts.length > 0 || liquidationReceipts.length > 0) && (
+        <Section title="History" records={[...repaymentReceipts, ...liquidationReceipts]} />
       )}
     </div>
   );

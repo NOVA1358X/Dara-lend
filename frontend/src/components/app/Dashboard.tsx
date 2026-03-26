@@ -75,6 +75,8 @@ export function Dashboard({ wallet }: DashboardProps) {
   const maxBorrow = Math.floor((totalCollateralValueUsd * 7_000) / 10_000) - totalDebtUsd;
 
   const isLoading = recordsLoading && wallet.connected;
+  const hasOnChainPositions = stats && (stats.loanCount > 0 || stats.totalCollateral > 0);
+  const walletRecordsEmpty = collateralReceipts.length === 0 && debtPositions.length === 0;
 
   const healthColor = healthFactor === Infinity ? 'text-accent-success' :
     healthFactor >= 2.0 ? 'text-accent-success' :
@@ -88,6 +90,25 @@ export function Dashboard({ wallet }: DashboardProps) {
 
   return (
     <div className="space-y-8">
+      {/* Wallet Sync Notice */}
+      {wallet.connected && !isLoading && walletRecordsEmpty && hasOnChainPositions && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/20"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" />
+            <div>
+              <p className="text-sm font-medium text-yellow-300">Wallet Syncing Records</p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Your wallet is syncing private records. Position data may be temporarily incomplete.
+                Try disconnecting and reconnecting your wallet if this persists.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
       {/* Health Alert Banner */}
       {wallet.connected && !isLoading && totalDebtUsd > 0 && healthFactor < 1.5 && (
         <motion.div
