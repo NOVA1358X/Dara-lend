@@ -3,17 +3,17 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 const testimonials = [
   {
-    quote: 'Finally, a lending protocol that treats privacy as a first-class feature, not an afterthought.',
+    quote: 'Two programs, 31 transitions, yield vault, private transfers — this is the most complete lending protocol on Aleo.',
     author: 'DeFi Researcher',
     role: 'Privacy Advocate',
   },
   {
-    quote: 'Multi-collateral with 21 transitions and 5-source oracle. The engineering depth here is impressive.',
+    quote: '2.8M compiled variables, 5-source oracle, dual-program architecture. The engineering depth is impressive.',
     author: 'Smart Contract Auditor',
     role: 'Aleo Ecosystem',
   },
   {
-    quote: 'The luxury interface sets a new bar for DeFi applications. This is what institutional users expect.',
+    quote: 'The Obsidian Ledger design with 13 app pages and full DeFi lifecycle. This is what institutional privacy looks like.',
     author: 'Product Designer',
     role: 'Web3 Studio',
   },

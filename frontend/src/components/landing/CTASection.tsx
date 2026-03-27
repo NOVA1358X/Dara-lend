@@ -20,11 +20,11 @@ export function CTASection() {
             The Obsidian Ledger
           </span>
           <h2 className="font-headline text-cta-headline text-text-primary mb-6">
-            Ready to Build a<br />Private Future?
+            Ready to Lend<br />Without Being Seen?
           </h2>
           <p className="text-[17px] text-text-secondary font-light mb-10 max-w-[500px] mx-auto">
-            Multi-collateral lending with institutional-grade privacy.
-            Your positions. Your data. Your keys.
+            Supply, borrow, earn yield, and transfer privately — 31 transitions across 2 programs.
+            Your positions encrypted. Your identity hidden. Your yield growing.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">

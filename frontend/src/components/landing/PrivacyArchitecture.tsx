@@ -2,12 +2,12 @@ import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 const pipeline = [
-  { label: 'Anonymous Wallet Linking', icon: 'link_off' },
-  { label: 'Encrypted Collateral Deposit', icon: 'lock' },
-  { label: 'Private Debt Issuance', icon: 'visibility_off' },
-  { label: 'Encrypted Interest Accrual', icon: 'trending_up' },
-  { label: 'Private Liquidation Path', icon: 'shield' },
-  { label: 'Zero-Trace Withdrawal', icon: 'logout' },
+  { label: 'Encrypted Collateral Deposit (3 token types)', icon: 'lock' },
+  { label: 'Private Debt Issuance with Dual-Record Pattern', icon: 'visibility_off' },
+  { label: 'ZK Yield Vault — Earn Without Exposure', icon: 'trending_up' },
+  { label: 'Private Transfer Relay — Zero Trace', icon: 'link_off' },
+  { label: 'Automated Liquidation Sentinel', icon: 'shield' },
+  { label: 'Private Withdrawal — Invisible to MEV', icon: 'logout' },
 ];
 
 export function PrivacyArchitecture() {

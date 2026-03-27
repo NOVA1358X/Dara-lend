@@ -57,7 +57,7 @@ export function HeroSection() {
             className="mb-6"
           >
             <span className="font-label text-label uppercase text-secondary tracking-[0.3em]">
-              The Obsidian Ledger
+              The Obsidian Ledger · 2 Programs · 31 Transitions
             </span>
           </motion.div>
 
@@ -76,8 +76,8 @@ export function HeroSection() {
             transition={{ delay: 0.4, duration: 0.7 }}
             className="text-[17px] leading-relaxed text-text-secondary max-w-[480px] mb-10 font-light"
           >
-            The world's first institutional-grade privacy ledger for decentralized lending.
-            Multi-collateral. Zero-knowledge. Fully encrypted.
+            Supply, borrow, earn yield, and transfer privately — all encrypted inside zero-knowledge proofs.
+            3 collateral types. Dual-program architecture. 2.8M compiled variables on Aleo.
           </motion.p>
 
           <motion.div

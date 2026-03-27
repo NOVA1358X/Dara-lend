@@ -5,17 +5,17 @@ const features = [
   {
     icon: 'visibility_off',
     title: 'Private Positions',
-    description: 'Collateral, debt, and liquidation prices encrypted inside zero-knowledge proofs. MEV bots can\'t target what they can\'t see.',
+    description: 'Collateral, debt, and liquidation prices encrypted inside 7 private record types. MEV bots can\'t target what they can\'t see.',
   },
   {
     icon: 'enhanced_encryption',
-    title: 'Encrypted Collateral',
-    description: 'Three collateral types — ALEO, USDCx, and USAD — all deposited through fully private transfer paths.',
+    title: 'Multi-Collateral Vaults',
+    description: 'Supply ALEO, USDCx, or USAD — borrow any token against any collateral. Cross-pair lending with MerkleProof compliance.',
   },
   {
     icon: 'shield',
-    title: 'Zero-Knowledge Debt',
-    description: 'Borrow against any collateral with interest rate model and automated sentinel monitoring. No public traces.',
+    title: 'Yield & Private Transfers',
+    description: 'Earn yield on stablecoin deposits. Send tokens via ZK-shielded relay that breaks all on-chain links between sender and recipient.',
   },
 ];
 
@@ -30,7 +30,7 @@ export function ProblemSolution() {
             The Architecture
           </span>
           <h2 className="font-headline text-section-mobile md:text-section text-text-primary">
-            Invisible Utility
+            Invisible by Design
           </h2>
         </div>
 

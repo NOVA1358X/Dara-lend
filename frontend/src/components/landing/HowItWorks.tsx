@@ -2,10 +2,10 @@ import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 const steps = [
-  { num: '01', title: 'Connect Wallet', desc: 'Link Shield Wallet or Leo Wallet — your address stays private throughout.' },
-  { num: '02', title: 'Supply Collateral', desc: 'Deposit ALEO, USDCx, or USAD via encrypted private transfer paths.' },
-  { num: '03', title: 'Borrow Assets', desc: 'Draw USDCx, USAD, or ALEO against your collateral at up to 70% LTV.' },
-  { num: '04', title: 'Earn & Manage', desc: 'Interest accrues on-chain. Monitor positions. Repay at any time — all private.' },
+  { num: '01', title: 'Connect Wallet', desc: 'Link Shield Wallet — your address stays private throughout. All 13 app pages at your fingertips.' },
+  { num: '02', title: 'Supply & Borrow', desc: 'Deposit ALEO, USDCx, or USAD as collateral. Borrow any token at up to 70% LTV — encrypted in ZK proofs.' },
+  { num: '03', title: 'Earn Yield', desc: 'Deposit stablecoins into the Yield Vault. Earn protocol fees. Redeem PoolShare records for deposit + rewards.' },
+  { num: '04', title: 'Transfer Privately', desc: 'ZK-shielded relay breaks all on-chain links. Repay, withdraw, or transfer — everything stays invisible.' },
 ];
 
 export function HowItWorks() {

@@ -2,10 +2,10 @@ import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 const techPoints = [
-  { title: '21 Transitions', desc: 'Multi-collateral lending engine with interest rate model and circuit breaker.' },
-  { title: '5-Source Oracle', desc: 'CoinGecko, CryptoCompare, Coinbase, Binance, CoinMarketCap — median aggregated.' },
-  { title: '3 Token Types', desc: 'ALEO, USDCx, and USAD as collateral and borrow assets with cross-pair support.' },
-  { title: 'Automated Sentinel', desc: 'Liquidation monitoring service that auto-executes when health drops below threshold.' },
+  { title: '31 Transitions · 2 Programs', desc: 'Dual-program architecture: 21 lending + 10 vault transitions. 2,805,091 compiled variables on Aleo Testnet.' },
+  { title: '5-Source Oracle', desc: 'CoinGecko, CryptoCompare, Coinbase, Binance.us, CoinMarketCap — median aggregated with outlier rejection.' },
+  { title: '7 Private Record Types', desc: 'CollateralReceipt, DebtPosition, LiquidationAuth, RepaymentReceipt, LiquidationReceipt, PoolShare, PrivateTransferReceipt.' },
+  { title: 'Yield Vault + Privacy Relay', desc: 'Earn yield on stablecoin deposits. ZK-shielded transfers break sender-recipient links completely.' },
 ];
 
 export function TechnicalEdge() {
@@ -23,8 +23,8 @@ export function TechnicalEdge() {
               Engineered for<br />Institutional Privacy
             </h2>
             <p className="text-[17px] leading-relaxed text-text-secondary font-light max-w-[440px]">
-              Every transaction path is fully private. No user addresses appear in any on-chain finalize function.
-              The protocol enforces privacy at the architecture level.
+              Two deployed programs. 31 on-chain transitions. Every transaction path fully private.
+              Borrower addresses are BHP256-hashed — solvency is enforceable without exposing position data.
             </p>
           </div>
 

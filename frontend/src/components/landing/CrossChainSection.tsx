@@ -1,17 +1,14 @@
 import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { useProtocolStats } from '@/hooks/useProtocolStats';
-import { formatCredits } from '@/utils/formatting';
 
 export function CrossChainSection() {
   const { ref, inView } = useScrollReveal({ threshold: 0.3 });
-  const { data: stats } = useProtocolStats();
 
   const numbers = [
-    { value: stats?.totalCollateral ? formatCredits(stats.totalCollateral) : '0', label: 'Total Value Locked', suffix: ' ALEO' },
-    { value: stats?.loanCount?.toString() ?? '0', label: 'Active Loans', suffix: '' },
-    { value: '0.5', label: 'Protocol Fee', suffix: '%' },
-    { value: '70', label: 'Max Borrow LTV', suffix: '%' },
+    { value: '31', label: 'On-Chain Transitions', suffix: '' },
+    { value: '2.8', label: 'Million Variables Compiled', suffix: 'M' },
+    { value: '7', label: 'Private Record Types', suffix: '' },
+    { value: '2', label: 'Deployed Programs', suffix: '' },
   ];
 
   return (
