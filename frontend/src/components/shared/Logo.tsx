@@ -6,42 +6,12 @@ interface LogoProps {
 export function Logo({ collapsed = false, className = '' }: LogoProps) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      <svg
-        width={28}
-        height={28}
-        viewBox="0 0 28 28"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M14 1.5L3 7.5v6c0 6.3 4.5 12.18 11 13.5 6.5-1.32 11-7.2 11-13.5v-6L14 1.5z"
-          stroke="#00E5CC"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M14 9.5a2.5 2.5 0 0 0-2.5 2.5v1.5a2.5 2.5 0 0 0 5 0V12a2.5 2.5 0 0 0-2.5-2.5z"
-          stroke="#00E5CC"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <line
-          x1="14"
-          y1="15.5"
-          x2="14"
-          y2="19"
-          stroke="#00E5CC"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-        />
-      </svg>
+      <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 shadow-[0_0_16px_rgba(201,221,255,0.2)] flex-shrink-0">
+        <img src="/logo.png" alt="DARA" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-white/20 pointer-events-none" />
+      </div>
       {!collapsed && (
-        <span className="font-heading text-[18px] tracking-tight">
-          <span className="font-semibold text-text-primary">DARA</span>
-          <span className="font-normal text-text-primary ml-1">Lend</span>
-        </span>
+        <span className="font-headline text-xl text-primary tracking-wide">DARA</span>
       )}
     </div>
   );

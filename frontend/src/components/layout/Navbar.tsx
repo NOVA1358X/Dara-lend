@@ -46,7 +46,11 @@ export function Navbar() {
         }`}
       >
         <div className="w-full max-w-[1280px] mx-auto px-6 flex items-center justify-between">
-          <Link to="/" className="focus-ring rounded-lg" aria-label="DARA Lend Home">
+          <Link to="/" className="focus-ring rounded-lg flex items-center gap-2.5" aria-label="DARA Lend Home">
+            <div className="relative w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/10 shadow-[0_0_20px_rgba(201,221,255,0.25)]">
+              <img src="/logo.png" alt="DARA" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-white/20 pointer-events-none" />
+            </div>
             <span className="font-headline text-2xl text-primary tracking-wide">DARA</span>
           </Link>
 

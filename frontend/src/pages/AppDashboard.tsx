@@ -17,6 +17,7 @@ import { Analytics } from '@/components/app/Analytics';
 import { YieldVault } from '@/components/app/YieldVault';
 import { PrivateTransfer } from '@/components/app/PrivateTransfer';
 import { AdminPanel } from '@/components/app/AdminPanel';
+import { PageTransition } from '@/components/shared/PageTransition';
 
 export default function AppDashboard() {
   const {
@@ -59,19 +60,19 @@ export default function AppDashboard() {
       onDisconnect={disconnect}
     >
       <Routes>
-        <Route index element={<Dashboard wallet={walletProps} />} />
-        <Route path="supply" element={<SupplyForm wallet={walletProps} />} />
-        <Route path="borrow" element={<BorrowForm wallet={walletProps} />} />
-        <Route path="repay" element={<RepayForm wallet={walletProps} />} />
-        <Route path="positions" element={<PositionsList wallet={walletProps} />} />
-        <Route path="withdraw" element={<WithdrawForm wallet={walletProps} />} />
-        <Route path="liquidate" element={<LiquidateForm wallet={walletProps} />} />
-        <Route path="yield" element={<YieldVault wallet={walletProps} />} />
-        <Route path="transfer" element={<PrivateTransfer wallet={walletProps} />} />
-        <Route path="history" element={<TransactionHistory />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="stats" element={<ProtocolStats wallet={walletProps} />} />
-        <Route path="admin" element={<AdminPanel wallet={walletProps} />} />
+        <Route index element={<PageTransition><Dashboard wallet={walletProps} /></PageTransition>} />
+        <Route path="supply" element={<PageTransition><SupplyForm wallet={walletProps} /></PageTransition>} />
+        <Route path="borrow" element={<PageTransition><BorrowForm wallet={walletProps} /></PageTransition>} />
+        <Route path="repay" element={<PageTransition><RepayForm wallet={walletProps} /></PageTransition>} />
+        <Route path="positions" element={<PageTransition><PositionsList wallet={walletProps} /></PageTransition>} />
+        <Route path="withdraw" element={<PageTransition><WithdrawForm wallet={walletProps} /></PageTransition>} />
+        <Route path="liquidate" element={<PageTransition><LiquidateForm wallet={walletProps} /></PageTransition>} />
+        <Route path="yield" element={<PageTransition><YieldVault wallet={walletProps} /></PageTransition>} />
+        <Route path="transfer" element={<PageTransition><PrivateTransfer wallet={walletProps} /></PageTransition>} />
+        <Route path="history" element={<PageTransition><TransactionHistory /></PageTransition>} />
+        <Route path="analytics" element={<PageTransition><Analytics /></PageTransition>} />
+        <Route path="stats" element={<PageTransition><ProtocolStats wallet={walletProps} /></PageTransition>} />
+        <Route path="admin" element={<PageTransition><AdminPanel wallet={walletProps} /></PageTransition>} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </AppLayout>

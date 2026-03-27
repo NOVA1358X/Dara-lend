@@ -76,6 +76,26 @@ const config: Config = {
           '0%': { 'stroke-dashoffset': '283' },
           '100%': { 'stroke-dashoffset': '70.75' },
         },
+        'border-beam-spin': {
+          '0%': { transform: 'translate(-50%, -50%) rotate(0deg)' },
+          '100%': { transform: 'translate(-50%, -50%) rotate(360deg)' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+          '50%': { opacity: '0.8', transform: 'scale(1.05)' },
+        },
+        'slide-up-fade': {
+          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.9)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'logo-glow': {
+          '0%, 100%': { boxShadow: '0 0 15px rgba(201, 221, 255, 0.2), 0 0 30px rgba(201, 221, 255, 0.1)' },
+          '50%': { boxShadow: '0 0 20px rgba(201, 221, 255, 0.35), 0 0 40px rgba(201, 221, 255, 0.15)' },
+        },
       },
       animation: {
         'shimmer': 'shimmer 2s infinite',
@@ -84,6 +104,11 @@ const config: Config = {
         'marquee': 'marquee 30s linear infinite',
         'fade-in': 'fade-in 0.6s ease-out forwards',
         'gauge-fill': 'gauge-fill 2s ease-out forwards',
+        'border-beam': 'border-beam-spin 6s linear infinite',
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
+        'slide-up': 'slide-up-fade 0.5s ease-out forwards',
+        'scale-in': 'scale-in 0.4s ease-out forwards',
+        'logo-glow': 'logo-glow 3s ease-in-out infinite',
       },
     },
   },

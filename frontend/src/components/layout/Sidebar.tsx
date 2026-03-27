@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAppStore } from '@/stores/appStore';
 import { ShieldIcon } from '@/components/icons/ShieldIcon';
 import { WalletIcon } from '@/components/icons/WalletIcon';
@@ -41,17 +42,19 @@ export function Sidebar() {
         }`}
       >
         <div className={`h-[72px] flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? 'justify-center px-2' : 'px-5'}`}>
-          <NavLink to="/" aria-label="DARA Lend Home">
-            {sidebarCollapsed ? (
-              <span className="font-headline text-lg text-primary">D</span>
-            ) : (
+          <NavLink to="/" aria-label="DARA Lend Home" className="flex items-center gap-2.5">
+            <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 shadow-[0_0_16px_rgba(201,221,255,0.2)] flex-shrink-0">
+              <img src="/logo.png" alt="DARA" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-white/20 pointer-events-none" />
+            </div>
+            {!sidebarCollapsed && (
               <span className="font-headline text-xl text-primary tracking-wide">DARA</span>
             )}
           </NavLink>
         </div>
 
-        <nav className="flex-1 py-4 px-2 space-y-0.5">
-          {navItems.map((item) => {
+        <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
+          {navItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = item.end
               ? location.pathname === item.path
@@ -60,26 +63,36 @@ export function Sidebar() {
             const active = isActive || isDashActive;
 
             return (
-              <NavLink
+              <motion.div
                 key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 rounded-lg transition-all duration-300 relative ${
-                  sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'
-                } ${
-                  active
-                    ? 'bg-white/[0.04] text-text-primary'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-white/[0.02]'
-                }`}
-                aria-label={item.label}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.03, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 signature-gradient rounded-r" />
-                )}
-                <Icon size={20} />
-                {!sidebarCollapsed && (
-                  <span className="font-label text-xs uppercase tracking-[0.12em]">{item.label}</span>
-                )}
-              </NavLink>
+                <NavLink
+                  to={item.path}
+                  className={`flex items-center gap-3 rounded-lg transition-all duration-300 relative ${
+                    sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'
+                  } ${
+                    active
+                      ? 'bg-white/[0.04] text-text-primary'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-white/[0.02]'
+                  }`}
+                  aria-label={item.label}
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="sidebar-active"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 signature-gradient rounded-r"
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                  <Icon size={20} />
+                  {!sidebarCollapsed && (
+                    <span className="font-label text-xs uppercase tracking-[0.12em]">{item.label}</span>
+                  )}
+                </NavLink>
+              </motion.div>
             );
           })}
         </nav>

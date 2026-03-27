@@ -14,6 +14,8 @@ import { ArrowDownIcon } from '@/components/icons/ArrowDownIcon';
 import { UnlockIcon } from '@/components/icons/UnlockIcon';
 import { LinkIcon } from '@/components/icons/LinkIcon';
 import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
+import { SpotlightCard } from '@/components/shared/SpotlightCard';
+import { FadeInView } from '@/components/shared/FadeInView';
 import { motion } from 'framer-motion';
 
 interface DashboardProps {
@@ -150,90 +152,97 @@ export function Dashboard({ wallet }: DashboardProps) {
         </motion.div>
       )}
       {/* User Position Stats */}
-      <div>
+      <FadeInView direction="up" delay={0.1}>
         <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Your Position
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Your Collateral"
-            value={
-              !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalCollateralValueUsd)}`
-            }
-            loading={isLoading}
-          />
-          <StatCard
-            label="Your Debt"
-            value={
-              !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalDebtUsd)}`
-            }
-            loading={isLoading}
-          />
-          <div className="rounded-card glass-panel-sm p-5">
-            <p className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-2">
-              Health Factor
-            </p>
-            {!wallet.connected ? (
-              <p className="text-2xl font-semibold font-mono text-text-primary tabular-nums">—</p>
-            ) : isLoading ? (
-              <LoadingSkeleton width="80%" height={32} />
-            ) : (
-              <div>
-                <HealthFactorGauge value={healthFactor} size={100} />
-                <p className={`text-xs font-medium mt-1 ${healthColor}`}>{healthLabel}</p>
-              </div>
-            )}
-          </div>
-          <StatCard
-            label="Available to Borrow"
-            value={
-              !wallet.connected
-                ? '—'
-                : isLoading
-                ? ''
-                : `${formatCredits(Math.max(0, maxBorrow))} Stablecoin`
-            }
-            loading={isLoading}
-          />
+          {[
+            <StatCard
+              key="collateral"
+              label="Your Collateral"
+              value={
+                !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalCollateralValueUsd)}`
+              }
+              loading={isLoading}
+            />,
+            <StatCard
+              key="debt"
+              label="Your Debt"
+              value={
+                !wallet.connected ? '—' : isLoading ? '' : `$${formatCredits(totalDebtUsd)}`
+              }
+              loading={isLoading}
+            />,
+            <div key="health" className="rounded-card glass-panel-sm p-5">
+              <p className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-2">
+                Health Factor
+              </p>
+              {!wallet.connected ? (
+                <p className="text-2xl font-semibold font-mono text-text-primary tabular-nums">—</p>
+              ) : isLoading ? (
+                <LoadingSkeleton width="80%" height={32} />
+              ) : (
+                <div>
+                  <HealthFactorGauge value={healthFactor} size={100} />
+                  <p className={`text-xs font-medium mt-1 ${healthColor}`}>{healthLabel}</p>
+                </div>
+              )}
+            </div>,
+            <StatCard
+              key="borrow"
+              label="Available to Borrow"
+              value={
+                !wallet.connected
+                  ? '—'
+                  : isLoading
+                  ? ''
+                  : `${formatCredits(Math.max(0, maxBorrow))} Stablecoin`
+              }
+              loading={isLoading}
+            />,
+          ].map((card, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: idx * 0.08, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              {card}
+            </motion.div>
+          ))}
         </div>
-      </div>
+      </FadeInView>
 
       {/* Protocol Overview */}
-      <div>
+      <FadeInView direction="up" delay={0.2}>
         <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Protocol Overview
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Total Value Locked"
-            value={stats ? `$${formatCredits(stats.totalCollateral)}` : '—'}
-            loading={statsLoading}
-          />
-          <StatCard
-            label="Total Borrowed"
-            value={stats ? `$${formatCredits(stats.totalBorrowed)}` : '—'}
-            loading={statsLoading}
-          />
-          <StatCard
-            label="Active Loans"
-            value={stats ? String(stats.loanCount) : '—'}
-            loading={statsLoading}
-          />
-          <StatCard
-            label="ALEO Price"
-            value={
-              marketPrice ? `$${marketPrice.toFixed(4)}` : '—'
-            }
-            loading={false}
-          />
+          {[
+            { label: 'Total Value Locked', value: stats ? `$${formatCredits(stats.totalCollateral)}` : '—', loading: statsLoading },
+            { label: 'Total Borrowed', value: stats ? `$${formatCredits(stats.totalBorrowed)}` : '—', loading: statsLoading },
+            { label: 'Active Loans', value: stats ? String(stats.loanCount) : '—', loading: statsLoading },
+            { label: 'ALEO Price', value: marketPrice ? `$${marketPrice.toFixed(4)}` : '—', loading: false },
+          ].map((stat, idx) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.15 + idx * 0.08, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <StatCard label={stat.label} value={stat.value} loading={stat.loading} />
+            </motion.div>
+          ))}
         </div>
-      </div>
+      </FadeInView>
 
       {/* Oracle Price Feed */}
       <OracleStatus />
 
       {/* Quick Actions */}
-      <div>
+      <FadeInView direction="up" delay={0.3}>
         <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
           Quick Actions
         </h2>
@@ -246,29 +255,31 @@ export function Dashboard({ wallet }: DashboardProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  delay: idx * 0.08,
+                  delay: 0.3 + idx * 0.08,
                   type: 'spring',
                   stiffness: 120,
                   damping: 20,
                 }}
               >
-                <Link
-                  to={action.href}
-                  className="block p-5 rounded-card glass-panel-sm hover:-translate-y-0.5 transition-all duration-300"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <Icon size={18} className="text-primary" />
-                  </div>
-                  <h3 className="font-headline text-base text-text-primary mb-1">
-                    {action.label}
-                  </h3>
-                  <p className="text-sm text-text-secondary">{action.description}</p>
-                </Link>
+                <SpotlightCard className="h-full">
+                  <Link
+                    to={action.href}
+                    className="block p-5"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-3 transition-all duration-300 group-hover:bg-primary/20 group-hover:shadow-[0_0_20px_rgba(201,221,255,0.1)]">
+                      <Icon size={18} className="text-primary" />
+                    </div>
+                    <h3 className="font-headline text-base text-text-primary mb-1">
+                      {action.label}
+                    </h3>
+                    <p className="text-sm text-text-secondary">{action.description}</p>
+                  </Link>
+                </SpotlightCard>
               </motion.div>
             );
           })}
         </div>
-      </div>
+      </FadeInView>
     </div>
   );
 }

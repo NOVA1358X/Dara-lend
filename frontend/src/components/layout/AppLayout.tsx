@@ -2,6 +2,7 @@ import { type ReactNode, useCallback } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { NoiseOverlay } from '@/components/shared/NoiseOverlay';
+import { Galaxy } from '@/components/shared/Galaxy';
 import { useAppStore } from '@/stores/appStore';
 
 interface AppLayoutProps {
@@ -33,6 +34,19 @@ export function AppLayout({
 
   return (
     <div className="min-h-screen bg-bg-primary">
+      <Galaxy
+        starSpeed={0.4}
+        density={0.7}
+        hueShift={140}
+        speed={1}
+        glowIntensity={0.05}
+        saturation={0}
+        mouseRepulsion
+        repulsionStrength={2}
+        twinkleIntensity={0.3}
+        rotationSpeed={0.1}
+        transparent
+      />
       <NoiseOverlay />
       <Sidebar />
 
