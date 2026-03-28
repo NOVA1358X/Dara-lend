@@ -14,8 +14,8 @@ interface YieldBotState {
 const state: YieldBotState = {
   lastDistributionTimestamp: 0,
   distributionCount: 0,
-  lastFeesUsdcx: 0,
-  lastFeesUsad: 0,
+  lastFeesUsdcx: -1,  // -1 = not yet seeded from chain
+  lastFeesUsad: -1,
   lastError: null,
   isRunning: false,
 };
@@ -62,6 +62,13 @@ export async function runYieldBotCycle(): Promise<boolean> {
     const currentFeesUsdcx = parseAleoU64(feesUsdcxRaw);
     const currentFeesUsad = parseAleoU64(feesUsadRaw);
 
+    // On first run after startup, seed baseline from chain — do NOT distribute historical fees
+    if (state.lastFeesUsdcx === -1) {
+      state.lastFeesUsdcx = currentFeesUsdcx;
+      state.lastFeesUsad = currentFeesUsad;
+      console.log(`[yield-bot] Baseline seeded: ${currentFeesUsdcx} USDCx, ${currentFeesUsad} USAD — waiting for new fees`);
+      return false;
+    }
     // Calculate delta since last distribution
     const deltaUsdcx = currentFeesUsdcx - state.lastFeesUsdcx;
     const deltaUsad = currentFeesUsad - state.lastFeesUsad;

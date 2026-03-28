@@ -11,7 +11,7 @@ interface InterestBotState {
 }
 
 const state: InterestBotState = {
-  lastAccrualTimestamp: 0,
+  lastAccrualTimestamp: Date.now(), // start at now so first accrual waits the full interval
   lastAccrualBlock: 0,
   accrualCount: 0,
   lastError: null,
