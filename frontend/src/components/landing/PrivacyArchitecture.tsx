@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { FloatingParticles } from '@/components/shared/FloatingParticles';
 
 const pipeline = [
   { label: 'Your deposit amount is encrypted the moment you submit', icon: 'lock' },
@@ -25,18 +24,16 @@ export function PrivacyArchitecture() {
             transition={{ duration: 0.7 }}
             className="relative aspect-video rounded-card overflow-hidden glass-panel"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-bg-primary to-secondary/5" />
-            <FloatingParticles count={40} maxSize={2} speed={0.2} color="201, 221, 255" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-20 h-20 rounded-full signature-gradient mx-auto mb-4 flex items-center justify-center shadow-[0_0_60px_rgba(201,221,255,0.2)]">
-                  <span className="material-symbols-outlined text-3xl text-on-primary">lock</span>
-                </div>
-                <p className="font-headline text-2xl text-text-primary mb-2">End-to-End Encrypted</p>
-                <p className="font-label text-[10px] uppercase tracking-[0.3em] text-text-muted">From deposit to withdrawal</p>
-              </div>
+            <video
+              autoPlay muted loop playsInline
+              className="w-full h-full object-cover opacity-60"
+            >
+              <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260324_024928_1efd0b0d-6c02-45a8-8847-1030900c4f63.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute bottom-6 left-6">
+              <span className="font-label text-[10px] uppercase tracking-[0.3em] text-primary">Privacy Pipeline</span>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </motion.div>
 
           <div>

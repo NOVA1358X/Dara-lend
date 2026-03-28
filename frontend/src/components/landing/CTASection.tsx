@@ -8,7 +8,14 @@ export function CTASection() {
 
   return (
     <section ref={ref} className="relative py-section-mobile md:py-section overflow-hidden">
-      <div className="absolute inset-0 bg-bg-primary" />
+      <div className="absolute inset-0">
+        <img
+          alt=""
+          className="w-full h-full object-cover grayscale opacity-20"
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuABki7-DVIP20Y04R_LGNrN6QZcBm6eaMk59W7q2-_dIK_wdRTcsXTEHq0mzbdd0jgly9v2uaALWA6nEr4xgCCvbmh6PECR_LnSqktiLyni2hDHy4bHfF3eTkPTUtozoo8EvdHHHyGj0qiglZS5Vs_sBsAGfjeBx6Ca2JP82wfdyXSIZu5Jply7F0xeWzHuJ68rl9YZ_HrBY-p_47SeVVHO2gse22DnTZj2YmUxYEQoMXz99Eq6j9e7p6ZycsBXX3sA0KIVbvCnoVlA"
+        />
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/0 to-black/80" />
       <FloatingParticles count={25} maxSize={1.5} speed={0.15} />
 

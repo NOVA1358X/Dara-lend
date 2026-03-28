@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { FloatingParticles } from '@/components/shared/FloatingParticles';
+import { Aurora } from '@/components/shared/Aurora';
 
 export function CrossChainSection() {
   const { ref, inView } = useScrollReveal({ threshold: 0.3 });
@@ -15,8 +16,16 @@ export function CrossChainSection() {
 
   return (
     <section id="numbers" ref={ref} className="relative py-section-mobile md:py-section overflow-hidden">
-      <div className="absolute inset-0 bg-black">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+      {/* Video background */}
+      <div className="absolute inset-0">
+        <video
+          autoPlay muted loop playsInline
+          className="w-full h-full object-cover opacity-20"
+        >
+          <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260324_024928_1efd0b0d-6c02-45a8-8847-1030900c4f63.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/70" />
+        <Aurora colorStops={['#1a3a5c', '#2a1a4c', '#0a2a3c']} amplitude={1.2} blend={0.7} speed={0.6} />
         <FloatingParticles count={30} maxSize={1.5} speed={0.15} color="214, 197, 161" />
       </div>
 

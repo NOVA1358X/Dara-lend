@@ -74,7 +74,7 @@ const config: Config = {
         },
         'gauge-fill': {
           '0%': { 'stroke-dashoffset': '283' },
-          '100%': { 'stroke-dashoffset': '70.75' },
+          '100%': { 'stroke-dashoffset': '0' },
         },
         'border-beam-spin': {
           '0%': { transform: 'translate(-50%, -50%) rotate(0deg)' },
