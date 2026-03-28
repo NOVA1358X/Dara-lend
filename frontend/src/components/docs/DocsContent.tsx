@@ -78,7 +78,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             { value: '31', label: 'On-Chain Transitions', desc: '21 lending + 10 vault across 2 programs' },
             { value: '2.8M', label: 'Compiled Variables', desc: '1.98M lending + 822K vault' },
             { value: '7', label: 'Private Record Types', desc: 'Collateral, Debt, Liquidation, Pool, Transfer' },
-            { value: '5', label: 'Oracle Sources', desc: 'CoinGecko, CryptoCompare, Coinbase, Binance, CMC' },
+            { value: '5', label: 'Oracle Sources', desc: 'CoinGecko, CryptoCompare, Coinbase, Gate.io, CMC' },
           ].map((stat) => (
             <div key={stat.label} className="p-4 rounded-lg glass-panel-sm">
               <p className="text-primary font-mono text-2xl font-bold mb-1">{stat.value}</p>
@@ -657,7 +657,7 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
             { source: 'CoinGecko', role: 'Primary source (free tier)', color: 'text-primary' },
             { source: 'CryptoCompare', role: 'Secondary source (free tier)', color: 'text-text-primary' },
             { source: 'Coinbase', role: 'Exchange direct (free tier)', color: 'text-text-primary' },
-            { source: 'Binance', role: 'Exchange direct (free tier)', color: 'text-text-primary' },
+            { source: 'Gate.io', role: 'Exchange direct (free tier)', color: 'text-text-primary' },
             { source: 'CoinMarketCap', role: 'Tertiary source (API key authenticated)', color: 'text-text-primary' },
           ].map((s, idx) => (
             <div key={s.source} className="flex items-center gap-3 p-2 rounded bg-white/[0.03]">
@@ -674,17 +674,17 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
           Aggregation Pipeline
         </h3>
         <p className="text-text-secondary leading-relaxed mb-2">
-          The backend aggregator runs every 2 minutes:
+          The backend aggregator polls every 2 minutes. The oracle bot pushes on-chain via Provable DPS every 30 minutes (or immediately on ≥ 0.1% price delta):
         </p>
         <ul className="space-y-2 mb-6">
           {[
-            'Fetches ALEO/USD from all 5 sources in parallel',
+            'Fetches ALEO/USD from all 5 sources in parallel (CoinGecko, CryptoCompare, Coinbase, Gate.io, CMC)',
             'Rejects outlier prices (>2σ from median) for manipulation resistance',
             'Computes median of remaining valid prices',
-            'Compares against current on-chain price — skips update if change < 0.1% (saves gas)',
-            'Submits update_oracle_price transaction via @provablehq/sdk',
+            'Oracle Bot checks cooldown (30 min) and price delta (≥ 0.1%) — skips if neither threshold met',
+            'Submits update_oracle_price via Provable DPS (useFeeMaster: true — zero gas cost)',
+            'Admin Panel always available as manual fallback to push outside the 30-min cadence',
             'Smart contract enforces additional 15% deviation cap + round-based replay protection',
-            'Frontend serves cached prices via /api/price with 5-minute TTL and cascading fallback',
           ].map((item) => (
             <li key={item} className="flex items-start gap-2 text-text-secondary text-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
@@ -709,10 +709,10 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
           Admin Fallback
         </h3>
         <p className="text-text-secondary leading-relaxed">
-          As a safety net, the protocol admin can also trigger an oracle price update via
-          the Stats page. The same on-chain validation applies — deviation cap, round counter,
-          and minimum interval are enforced regardless of whether the update comes from the
-          automated backend or the admin UI.
+          As a safety net, the protocol admin can trigger an oracle price update, interest accrual,
+          or yield distribution manually via the Admin Panel at <code className="text-primary text-xs">/app/admin</code>.
+          The same on-chain validation applies regardless of whether the update comes from the
+          automated bots or the admin UI.
         </p>
       </section>
 
@@ -733,16 +733,17 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
                 'Dual-program architecture — dara_lend_v7.aleo (21 transitions) + dara_lend_v7_vault.aleo (10 transitions)',
                 'Yield Vault — deposit USDCx/USAD stablecoins, earn protocol fees, redeem PoolShare records',
                 'Private Transfers — ZK-shielded relay breaks sender-recipient on-chain link completely',
-                'Admin Panel — distribute yield, pause/resume protocol + vault, accrue interest',
+                'Admin Panel — distribute yield, pause/resume protocol + vault, accrue interest (manual fallback)',
                 'Multi-collateral vaults — ALEO, USDCx, USAD as collateral types with cross-pair borrowing',
                 'Interest rate model — on-chain base rate + slope (BPS), utilization-based APY',
                 'Emergency circuit breaker — independent pause/resume for lending core and vault',
                 'MerkleProof freeze-list compliance for all stablecoin operations',
                 '31 transitions, 2,805,091 compiled variables, 7 private record types',
                 'Analytics dashboard — TVL, oracle prices, vault stats, interest rates',
-                'Complete UI/UX redesign — Obsidian Ledger luxury dark theme with 13 app pages',
-                '5-source Oracle — CoinGecko, CryptoCompare, Coinbase, Binance.us, CoinMarketCap',
-                'Liquidation Sentinel — automated monitoring with circuit breaker awareness',
+                'Complete UI/UX redesign — Obsidian Ledger luxury dark theme with 14 app pages',
+                '5-source Oracle — CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap',
+                'Provable DPS Automation — Oracle Bot (30 min), Interest Bot (1 hr), Yield Bot (6 hr), Liquidation Monitor',
+                'Solvency Proof dashboard — live bot health, collateral vs debt, explorer links',
               ],
             },
             {

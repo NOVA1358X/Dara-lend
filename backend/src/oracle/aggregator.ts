@@ -53,7 +53,7 @@ export async function aggregatePrices(): Promise<AggregatedPrice> {
 
   const successful: PriceResult[] = [];
   const failedSources: string[] = [];
-  const sourceNames = ['coinmarketcap', 'coingecko', 'cryptocompare', 'coinbase', 'binance'];
+  const sourceNames = ['coinmarketcap', 'coingecko', 'cryptocompare', 'coinbase', 'gateio'];
 
   results.forEach((result, i) => {
     if (result.status === 'fulfilled') {

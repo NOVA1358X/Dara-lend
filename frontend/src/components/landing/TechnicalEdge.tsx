@@ -4,8 +4,9 @@ import { SpotlightCard } from '@/components/shared/SpotlightCard';
 
 const advantages = [
   { title: 'Battle-Tested Architecture', desc: 'Two verified smart contracts running on Aleo — purpose-built for private lending and earning.', icon: 'architecture' },
-  { title: 'Real-Time Price Feeds', desc: 'Asset prices are pulled from five independent sources and cross-checked for accuracy before every transaction.', icon: 'monitoring' },
+  { title: 'Real-Time Price Feeds', desc: 'Prices pulled from 5 independent sources (CoinGecko, Coinbase, Gate.io, CryptoCompare, CMC), cross-checked, and pushed on-chain every 30 minutes automatically.', icon: 'monitoring' },
   { title: 'Fully Private Records', desc: 'Your deposits, loans, and transfers each generate encrypted records only you can read — nothing is public.', icon: 'enhanced_encryption' },
+  { title: 'Fully Automated Protocol', desc: 'Oracle, interest accrual, and yield distribution run headlessly via Provable DPS — no manual intervention needed. Admin Panel always available as fallback.', icon: 'smart_toy' },
   { title: 'Earn While You Sleep', desc: 'Deposit stablecoins into the yield vault and earn interest privately — withdraw anytime with zero trace.', icon: 'savings' },
 ];
 

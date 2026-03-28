@@ -67,7 +67,7 @@ export function startPriceUpdater(): void {
     `[oracle] Starting price aggregator (cron: ${config.oracleUpdateCron})`,
   );
   console.log(
-    '[oracle] Backend aggregates prices from 4 sources. Frontend wallet handles on-chain updates.',
+    '[oracle] Backend aggregates prices from 5 sources. Oracle bot auto-pushes on-chain every 30 min via Provable DPS.',
   );
 
   // Run immediately, then on cron

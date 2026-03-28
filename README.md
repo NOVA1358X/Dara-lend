@@ -60,7 +60,7 @@ Deposit USDCx or USAD into the yield pool via private token records. Receive `Po
 ZK-shielded token relay that atomically breaks the on-chain link between sender and recipient. The vault contract deposits and re-mints tokens in a single transaction — truly private transfers with nonce replay protection.
 
 ### 📊 5-Source Oracle with Automated On-Chain Writes
-CoinGecko, CryptoCompare, Coinbase, Binance.us, CoinMarketCap — median aggregated with outlier rejection (>2σ), 15% deviation cap, round replay protection. **Prices are pushed on-chain automatically every 30 minutes** (or instantly if price moves ≥ 0.1%) via Provable DPS. Admin can also push manually via the Admin Panel at any time as a fallback.
+CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap — median aggregated with outlier rejection (>2σ), 15% deviation cap, round replay protection. **Prices are pushed on-chain automatically every 30 minutes** (or instantly if price moves ≥ 0.1%) via Provable DPS. Admin can also push manually via the Admin Panel at any time as a fallback.
 
 ### 🛡️ Emergency Circuit Breaker
 Admin can pause/resume both the lending protocol and vault independently via `emergency_pause()` / `resume_protocol()` / `pause_vault()` / `resume_vault()`. Admin Panel is always available as the human fallback for all bot operations.
@@ -217,7 +217,7 @@ All features have been tested and verified on Aleo Testnet:
 5-source price aggregation with on-chain oracle updates:
 
 ```
-  CoinGecko · CryptoCompare · Coinbase · Binance.us · CoinMarketCap
+  CoinGecko · CryptoCompare · Coinbase · Gate.io · CoinMarketCap
                             ↓
                 Median filter + outlier rejection (>2σ)
                             ↓
