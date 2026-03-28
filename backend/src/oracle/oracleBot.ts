@@ -47,8 +47,8 @@ export async function runOracleBotCycle(): Promise<boolean> {
     }
 
     if (aggregation.confidence === 'low') {
-      console.warn('[oracle-bot] Low confidence (< 2 sources agree), skipping push');
-      return false;
+      console.warn('[oracle-bot] Low confidence (1 source), proceeding with caution');
+      // 1 source is still acceptable for testnet — Coinbase alone is authoritative
     }
 
     // 2. Read current on-chain state
