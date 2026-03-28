@@ -14,4 +14,14 @@ services:
         value: https://api.explorer.provable.com/v1
       - key: FRONTEND_URL
         sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: PROVABLE_API_KEY
+        sync: false
+      - key: PROVABLE_CONSUMER_ID
+        sync: false
+      - key: DPS_ENABLED
+        value: "true"
+      - key: BOT_ENABLED
+        value: "true"
     healthCheckPath: /api/health

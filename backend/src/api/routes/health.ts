@@ -3,6 +3,7 @@ import { getLatestBlockHeight } from '../../utils/aleoClient.js';
 import { config } from '../../utils/config.js';
 import { getOracleStatus } from '../../oracle/priceUpdater.js';
 import { getMonitorStatus } from '../../liquidation/executor.js';
+import { getOrchestratorHealth } from '../../automation/orchestrator.js';
 
 const router = Router();
 
@@ -40,6 +41,14 @@ router.get('/', async (_req, res) => {
     });
   } catch {
     res.status(503).json({ status: 'error', timestamp: Date.now() });
+  }
+});
+
+router.get('/bot', (_req, res) => {
+  try {
+    res.json(getOrchestratorHealth());
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch bot health' });
   }
 });
 

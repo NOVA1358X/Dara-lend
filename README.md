@@ -59,20 +59,32 @@ Deposit USDCx or USAD into the yield pool via private token records. Receive `Po
 ### 🕵️ Private Transfers
 ZK-shielded token relay that atomically breaks the on-chain link between sender and recipient. The vault contract deposits and re-mints tokens in a single transaction — truly private transfers with nonce replay protection.
 
-### 📊 5-Source Oracle
-CoinGecko, CryptoCompare, Coinbase, Binance.us, CoinMarketCap — median aggregated with outlier rejection (>2σ), 15% deviation cap, round replay protection. Admin updates price on-chain via `update_oracle_price`.
+### 📊 5-Source Oracle with Automated On-Chain Writes
+CoinGecko, CryptoCompare, Coinbase, Binance.us, CoinMarketCap — median aggregated with outlier rejection (>2σ), 15% deviation cap, round replay protection. **Prices are pushed on-chain automatically every 30 minutes** (or instantly if price moves ≥ 0.1%) via Provable DPS. Admin can also push manually via the Admin Panel at any time as a fallback.
 
 ### 🛡️ Emergency Circuit Breaker
-Admin can pause/resume both the lending protocol and vault independently via `emergency_pause()` / `resume_protocol()` / `emergency_pause_vault()` / `resume_vault()`.
+Admin can pause/resume both the lending protocol and vault independently via `emergency_pause()` / `resume_protocol()` / `pause_vault()` / `resume_vault()`. Admin Panel is always available as the human fallback for all bot operations.
 
-### 📈 Interest Rate Model
-On-chain configurable base rate + slope (BPS). Utilization-based supply/borrow APY computed and stored in mappings. Admin configures via `set_rate_params()`, triggers accrual via `accrue_interest()`.
+### 📈 Interest Rate Model with Auto-Accrual
+On-chain configurable base rate + slope (BPS). Utilization-based supply/borrow APY computed and stored in mappings. **Interest accrues automatically every 1 hour** via the orchestrator bot (only when active loans exist). Admin can trigger `accrue_interest()` manually via Admin Panel at any time.
 
 ### 🔐 MerkleProof Compliance
 All stablecoin operations verified against a freeze-list via `merkle_tree.aleo`. Non-inclusion proofs ensure addresses aren't frozen before executing transfers.
 
-### 🤖 Liquidation Sentinel
-Automated monitoring service that scans positions across both programs. Circuit breaker aware. Executes liquidations when health factor drops below threshold. 5% liquidation bonus for liquidators.
+### 🤖 Automated Orchestrator (Provable DPS)
+Full protocol automation via Delegated Proving Service — all timers are minimums, manual admin overrides always available:
+
+| Bot | Schedule | Trigger |
+|-----|----------|---------|
+| **Oracle Bot** | **Every 30 min** | Also triggers on ≥ 0.1% price delta |
+| **Interest Bot** | **Every 1 hour** | Only when `loan_count > 0` |
+| **Yield Bot** | **Every 6 hours** | Only when accumulated fees ≥ threshold |
+| **Liquidation Bot** | Every tick (1 min) | Only when global LTV > 80% |
+
+Sequential execution queue prevents nonce conflicts. `useFeeMaster: true` for zero gas costs. JWT auto-refresh keeps DPS connection active 24/7.
+
+### 🔍 Solvency Proof Dashboard
+Real-time on-chain verification page at `/app/solvency` — shows collateral vs debt breakdown, oracle freshness, bot activity, and direct links to explorer mappings for independent verification.
 
 ### 🎨 Obsidian Ledger Design
 Luxury dark UI with Gilda Display serif headlines, Inter body, Space Grotesk labels, JetBrains Mono for values. Glass-morphism panels, signature gradients (C9DDFF → D6C5A1), Framer Motion animations.
@@ -224,14 +236,16 @@ All features have been tested and verified on Aleo Testnet:
 ┌──────────────────────────────────────────────────────────┐
 │  Frontend (React 18 + Vite + Tailwind + Framer Motion)   │
 │  Shield Wallet ←→ Private record decrypt/display         │
-│  13 pages: Dashboard, Supply, Borrow, Repay, Withdraw,   │
+│  14 pages: Dashboard, Supply, Borrow, Repay, Withdraw,   │
 │  Positions, Liquidate, Yield, Transfer, Analytics,        │
-│  History, Stats, Admin                                    │
+│  History, Stats, Solvency, Admin                          │
 ├──────────────────────────────────────────────────────────┤
-│  Backend Sentinel (Express + TypeScript)                  │
+│  Backend Sentinel + Bot Orchestrator (Express + TS)       │
 │  5-source oracle aggregator · liquidation monitor · API   │
-│  Routes: health, oracle, price, solvency, stats,          │
-│  analytics (TVL, vault, multi-price)                      │
+│  Oracle Bot · Liquidation Bot · Interest Bot · Yield Bot  │
+│  Provable DPS integration (useFeeMaster)                  │
+│  Routes: health, health/bot, oracle, price, solvency,     │
+│  stats, analytics (TVL, vault, multi-price)               │
 ├──────────────────────────────────────────────────────────┤
 │  dara_lend_v7.aleo (Lending Core · 21 transitions)       │
 │  3 collateral types · interest model · circuit breaker    │
@@ -266,18 +280,22 @@ DARA-Lend/
 │   └── dara_lend_v1/src/main.leo        # Lending core (21 transitions, 1.98M vars)
 │
 ├── backend/src/
-│   ├── index.ts                          # Sentinel entry point
-│   ├── api/routes/                       # health, oracle, price, solvency, stats, analytics, transaction
-│   ├── oracle/                           # 5-source aggregator, priceUpdater, validator
-│   ├── liquidation/                      # monitor.ts + executor.ts (dual-program)
-│   └── utils/                            # aleoClient, config, transactionBuilder
+│   ├── index.ts                          # Sentinel + orchestrator entry point
+│   ├── api/routes/                       # health, health/bot, oracle, price, solvency,
+│   │                                     # stats, analytics, transaction
+│   ├── oracle/                           # 5-source aggregator, priceUpdater, validator,
+│   │                                     # oracleBot (auto on-chain writes via DPS)
+│   ├── liquidation/                      # monitor.ts, executor.ts, liquidationBot.ts
+│   ├── automation/                       # orchestrator.ts, interestBot.ts, yieldBot.ts
+│   └── utils/                            # aleoClient, config, transactionBuilder (DPS)
 │
 ├── frontend/src/
-│   ├── pages/                            # Landing, AppDashboard (13 routes), Docs
+│   ├── pages/                            # Landing, AppDashboard (14 routes), Docs
 │   ├── components/
 │   │   ├── app/                          # Dashboard, Supply, Borrow, Repay, Withdraw,
 │   │   │                                 # Liquidate, Positions, YieldVault, PrivateTransfer,
-│   │   │                                 # Analytics, ProtocolStats, AdminPanel, History
+│   │   │                                 # Analytics, ProtocolStats, AdminPanel, History,
+│   │   │                                 # SolvencyProof
 │   │   ├── landing/                      # Hero, ProblemSolution, HowItWorks, Privacy,
 │   │   │                                 # TechnicalEdge, CrossChain, Security, CTA
 │   │   ├── layout/                       # Sidebar (13 nav items), TopBar, AppLayout
@@ -288,6 +306,7 @@ DARA-Lend/
 │   ├── stores/appStore.ts                # Zustand state management
 │   └── utils/                            # constants, formatting, records
 │
+├── whitepaper.md                         # Technical whitepaper (15 sections)
 ├── render.yaml                           # Backend deployment
 └── vercel.json                           # Frontend deployment
 ```
@@ -337,6 +356,8 @@ npm run dev             # Starts on :3000
 
 ### Backend
 - 5-source oracle aggregator with median + outlier rejection
+- **Automated bot orchestrator** (Provable DPS): oracle writes, liquidation execution, interest accrual, yield distribution
+- Solvency proof dashboard with live bot health monitoring
 - Liquidation monitoring sentinel for both programs
 - Analytics API: TVL, vault stats, multi-asset prices, interest rates
 

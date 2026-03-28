@@ -17,6 +17,7 @@ import { Analytics } from '@/components/app/Analytics';
 import { YieldVault } from '@/components/app/YieldVault';
 import { PrivateTransfer } from '@/components/app/PrivateTransfer';
 import { AdminPanel } from '@/components/app/AdminPanel';
+import { SolvencyProof } from '@/components/app/SolvencyProof';
 import { PageTransition } from '@/components/shared/PageTransition';
 
 export default function AppDashboard() {
@@ -73,6 +74,7 @@ export default function AppDashboard() {
         <Route path="analytics" element={<PageTransition><Analytics /></PageTransition>} />
         <Route path="stats" element={<PageTransition><ProtocolStats wallet={walletProps} /></PageTransition>} />
         <Route path="admin" element={<PageTransition><AdminPanel wallet={walletProps} /></PageTransition>} />
+        <Route path="solvency" element={<PageTransition><SolvencyProof /></PageTransition>} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </AppLayout>
