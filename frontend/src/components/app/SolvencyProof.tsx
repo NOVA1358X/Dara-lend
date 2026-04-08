@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { BACKEND_API, PROGRAM_ID, VAULT_PROGRAM_ID, ALEO_TESTNET_API, PRECISION } from '@/utils/constants';
+import { BACKEND_API, PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, GOV_PROGRAM_ID, ALEO_TESTNET_API, PRECISION } from '@/utils/constants';
 
 interface SolvencyData {
   isSolvent: boolean;
@@ -139,8 +139,8 @@ export function SolvencyProof() {
           <div className="space-y-3">
             <p className="text-sm font-medium text-emerald-400">Total Collateral</p>
             <Row label="ALEO" value={formatValue(proto?.totalCollateralAleo ?? 0)} mapping="vault_collateral_aleo" />
-            <Row label="USDCx" value={formatValue(proto?.totalCollateralUsdcx ?? 0)} mapping="vault_collateral_usdcx" />
-            <Row label="USAD" value={formatValue(proto?.totalCollateralUsad ?? 0)} mapping="vault_collateral_usad" />
+            <Row label="USDCx" value={formatValue(proto?.totalCollateralUsdcx ?? 0)} mapping="vault_collateral_usdcx" program={CREDITS_PROGRAM_ID} />
+            <Row label="USAD" value={formatValue(proto?.totalCollateralUsad ?? 0)} mapping="vault_collateral_usad" program={CREDITS_PROGRAM_ID} />
           </div>
           {/* Debt */}
           <div className="space-y-3">
@@ -262,8 +262,10 @@ export function SolvencyProof() {
       >
         <h2 className="text-lg font-display text-text-primary mb-4">Deployed Programs</h2>
         <div className="space-y-2">
-          <ProgramRow name="Lending Core" id={PROGRAM_ID} transitions={21} />
+          <ProgramRow name="Main Lending (ALEO)" id={PROGRAM_ID} transitions={12} />
+          <ProgramRow name="Credits Lending (Stablecoin)" id={CREDITS_PROGRAM_ID} transitions={12} />
           <ProgramRow name="Yield Vault" id={VAULT_PROGRAM_ID} transitions={10} />
+          <ProgramRow name="Governance" id={GOV_PROGRAM_ID} transitions={11} />
         </div>
       </motion.div>
     </div>

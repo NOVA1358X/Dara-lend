@@ -5,7 +5,7 @@ import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useTransaction } from '@/hooks/useTransaction';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits } from '@/utils/formatting';
-import { PRECISION, USDCX_PROGRAM, USAD_PROGRAM, CREDITS_PROGRAM, ALEO_TESTNET_API, PROTOCOL_ADDRESS, ADMIN_ADDRESS, BACKEND_API } from '@/utils/constants';
+import { PRECISION, USDCX_PROGRAM, USAD_PROGRAM, CREDITS_PROGRAM, ALEO_TESTNET_API, PROTOCOL_ADDRESS, CREDITS_PROTOCOL_ADDRESS, ADMIN_ADDRESS, BACKEND_API } from '@/utils/constants';
 import { StatCard } from '@/components/shared/StatCard';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { PrivacyBadge } from '@/components/shared/PrivacyBadge';
@@ -95,10 +95,10 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
     } catch {
       setUsadLiquidity(0);
     }
-    // ALEO credits balance
+    // ALEO credits balance (at credits contract address)
     try {
       const res = await fetch(
-        `${ALEO_TESTNET_API}/program/${CREDITS_PROGRAM}/mapping/account/${PROTOCOL_ADDRESS}`,
+        `${ALEO_TESTNET_API}/program/${CREDITS_PROGRAM}/mapping/account/${CREDITS_PROTOCOL_ADDRESS}`,
       );
       if (res.ok) {
         const raw = await res.text();
@@ -542,9 +542,13 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-white/[0.03] mb-4">
-            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Protocol Address</p>
+          <div className="p-3 rounded-lg bg-white/[0.03] mb-2">
+            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Main Protocol Address (USDCx/USAD)</p>
             <p className="font-mono text-[10px] text-text-secondary break-all">{PROTOCOL_ADDRESS}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.03] mb-4">
+            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Credits Protocol Address (ALEO)</p>
+            <p className="font-mono text-[10px] text-text-secondary break-all">{CREDITS_PROTOCOL_ADDRESS}</p>
           </div>
 
           {/* Token selector */}

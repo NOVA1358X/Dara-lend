@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, CREDITS_TRANSITIONS, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, CREDITS_TRANSITIONS, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import { saveTxToHistory } from '@/components/app/TransactionHistory';
@@ -584,7 +584,7 @@ export function useTransaction(wallet: WalletExecute) {
     [wallet, setTransactionPending, setTransactionStep, setTransactionId],
   );
 
-  /** Transfer ALEO credits from user to the lending protocol address */
+  /** Transfer ALEO credits from user to the credits lending protocol address */
   const fundProtocolAleo = useCallback(
     async (amountMicro: number) => {
       if (!wallet.connected || !wallet.requestTransaction) {
@@ -599,7 +599,7 @@ export function useTransaction(wallet: WalletExecute) {
         const tx = createAleoTransaction(
           CREDITS_PROGRAM,
           'transfer_public',
-          [PROTOCOL_ADDRESS, `${amountMicro}u64`],
+          [CREDITS_PROTOCOL_ADDRESS, `${amountMicro}u64`],
           TX_FEE,
         );
 

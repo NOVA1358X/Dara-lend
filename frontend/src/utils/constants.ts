@@ -35,8 +35,10 @@ export const TOKEN_LABELS: Record<number, string> = {
 // Vault: at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t
 // Credits: at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp
 // Gov: at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d
-export const PROTOCOL_ADDRESS = 'aleo17900g0qun6jqan677l8nhjht3ffyd94fl36w9ys8lwp9w4eklc8sd5ls3g';
-export const VAULT_ADDRESS = 'aleo1mgv9tv2a6vcm6n0m3hq58manlmwcr73yjynluuwq4tk966v8mvzqfvcehz';
+export const PROTOCOL_ADDRESS = 'aleo1ngje2reufy2frsjhru4920ncn0spvlwr2s9vkthmvufa8arrqg9swmcn32';
+export const CREDITS_PROTOCOL_ADDRESS = 'aleo1l42ej05k26xzc06y8yynasjqgnt6tq0c3k5ruwk35wlzqey29ypqfvhv0u';
+export const VAULT_ADDRESS = 'aleo1w9j2fge5683q5mnldq5x8vuavnhnd6eweyfzvdg3cd9uvg3f4qxq6phlsq';
+export const GOV_ADDRESS = 'aleo1jhyy6dtmsctfnca7dcv9tckyfxesnr4j9zv0qqqd6aummhnrj5xsh87huv';
 
 export const ADMIN_ADDRESS = 'aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8';
 

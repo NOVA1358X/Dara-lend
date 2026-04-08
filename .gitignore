@@ -10,6 +10,9 @@ node_modules/
 dist/
 build/
 
+# Temporary test folders
+tmp_test/
+
 # Old contract versions (deprecated)
 contract/dara_lend_v1/
 contract/dara_lend_v2/
