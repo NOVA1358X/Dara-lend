@@ -37,7 +37,7 @@ export function createServer() {
     res.json({
       name: 'DARA Lend API',
       version: '3.0.0',
-      programs: [config.programId, config.vaultProgramId],
+      programs: [config.programId, config.vaultProgramId, config.creditsProgramId, config.govProgramId],
       endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price'],
     });
   });

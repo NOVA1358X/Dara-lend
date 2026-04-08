@@ -2,7 +2,7 @@ import credits.aleo;
 import test_usdcx_stablecoin.aleo;
 import test_usad_stablecoin.aleo;
 
-program dara_lend_v6.aleo {
+program dara_lend_v8.aleo {
 
     // Local struct matching merkle_tree.aleo/MerkleProof layout
     struct MerkleProof {
@@ -27,8 +27,37 @@ program dara_lend_v6.aleo {
     const MIN_UPDATE_INTERVAL: u32 = 5u32;                // min blocks between updates
     const BLOCKS_PER_YEAR: u128 = 2_628_000u128;          // ~12s blocks
     const RESERVE_FACTOR_BPS: u128 = 1_000u128;           // 10% protocol reserve
+    const MAX_ORACLE_ASSETS: u8 = 6u8;                    // 0=ALEO,1=USDCx,2=USAD,3=BTC,4=ETH,5=SOL
+
+    // Governance constants
+    const MIN_PROPOSAL_POWER: u64 = 100u64;               // min voting power to create proposal
+    const VOTING_PERIOD_BLOCKS: u32 = 200u32;             // ~27 min voting window
+    const TIMELOCK_BLOCKS: u32 = 100u32;                  // ~13 min execution delay
+    const QUORUM_BPS: u64 = 2_000u64;                     // 20% quorum requirement
 
     // Token type identifiers: 0u8 = ALEO, 1u8 = USDCx, 2u8 = USAD
+    // Extended oracle assets: 3u8 = BTC, 4u8 = ETH, 5u8 = SOL
+
+    // ═══════════════════════════════════════════════════
+    // STRUCTS — Governance data structures
+    // ═══════════════════════════════════════════════════
+
+    struct ProposalData {
+        proposer: address,
+        proposal_type: u8,      // 0=rate_change, 1=ltv_change, 2=liq_threshold, 3=pause, 4=admin_transfer
+        param_key: u8,          // which asset or parameter
+        param_value: u64,       // new value
+        description_hash: field, // BHP256 hash of off-chain description
+        start_block: u32,
+        end_block: u32,
+        timelock_end: u32,
+    }
+
+    struct VoteCount {
+        votes_for: u64,
+        votes_against: u64,
+        votes_abstain: u64,
+    }
 
     // ═══════════════════════════════════════════════════
     // RECORDS — All position data encrypted in private records
@@ -84,6 +113,19 @@ program dara_lend_v6.aleo {
         debt_covered: u128,
     }
 
+    // Governance records — private voting via ZK records
+    record GovernanceToken {
+        owner: address,
+        voting_power: u64,
+    }
+
+    record ProposalReceipt {
+        owner: address,
+        proposal_id: field,
+        vote: u8,              // 0=against, 1=for, 2=abstain
+        amount: u64,
+    }
+
     // ═══════════════════════════════════════════════════
     // MAPPINGS — Only aggregate public data (no user addresses)
     // ═══════════════════════════════════════════════════
@@ -94,7 +136,7 @@ program dara_lend_v6.aleo {
     mapping pool_total_borrowed: u8 => u128;       // 0=USDCx, 1=USAD, 2=ALEO debt
     mapping loan_count: u8 => u64;
     mapping active_loans: field => bool;
-    mapping oracle_price: u8 => u64;               // 0=ALEO, 1=USDCx, 2=USAD
+    mapping oracle_price: u8 => u64;               // 0=ALEO, 1=USDCx, 2=USAD, 3=BTC, 4=ETH, 5=SOL
     mapping price_update_block: u8 => u32;
     mapping price_round: u8 => u64;
     mapping price_history: u8 => u64;
@@ -103,11 +145,23 @@ program dara_lend_v6.aleo {
     mapping total_fees_collected: u8 => u128;
     mapping protocol_paused: u8 => bool;
     mapping privacy_version: u8 => u64;
-    mapping rate_base_bps: u8 => u64;
-    mapping rate_slope_bps: u8 => u64;
+
+    // Interest rate model — Two-slope kink model (Compound V2 style)
+    mapping rate_base_bps: u8 => u64;              // base rate per asset (e.g., 200 = 2%)
+    mapping rate_slope1_bps: u8 => u64;            // gentle slope below kink (e.g., 400 = 4%)
+    mapping rate_slope2_bps: u8 => u64;            // steep slope above kink (e.g., 7500 = 75%)
+    mapping rate_optimal_util: u8 => u64;          // kink point (e.g., 8000 = 80%)
     mapping last_accrual_block: u8 => u32;
     mapping supply_apy_bps: u8 => u64;
     mapping borrow_apy_bps: u8 => u64;
+
+    // Governance mappings — on-chain DAO
+    mapping governance_token_supply: u8 => u64;
+    mapping proposals: field => ProposalData;
+    mapping proposal_votes: field => VoteCount;
+    mapping proposal_executed: field => bool;
+    mapping proposal_count: u8 => u64;
+    mapping voting_power: address => u64;
 
     // ═══════════════════════════════════════════════════
     // CONSTRUCTOR
@@ -122,27 +176,32 @@ program dara_lend_v6.aleo {
         Mapping::set(price_history, 0u8, 1_000_000u64);
         Mapping::set(price_history, 1u8, 1_000_000u64);
         Mapping::set(price_history, 2u8, 1_000_000u64);
+        // Kink model defaults: 2% base, 4% slope1, 75% slope2, 80% optimal
         Mapping::set(rate_base_bps, 0u8, 200u64);
-        Mapping::set(rate_slope_bps, 0u8, 400u64);
-        Mapping::set(privacy_version, 0u8, 2u64);
+        Mapping::set(rate_slope1_bps, 0u8, 400u64);
+        Mapping::set(rate_slope2_bps, 0u8, 7_500u64);
+        Mapping::set(rate_optimal_util, 0u8, 8_000u64);
+        Mapping::set(privacy_version, 0u8, 4u64);
+        Mapping::set(governance_token_supply, 0u8, 0u64);
+        Mapping::set(proposal_count, 0u8, 0u64);
     }
 
     // ═══════════════════════════════════════════════════
-    // 1. UPDATE ORACLE PRICE — Multi-token support
+    // 1. UPDATE ORACLE PRICE — Multi-asset support (0-5)
     // ═══════════════════════════════════════════════════
 
-    async transition update_oracle_price(
+    fn update_oracle_price(
         token_id: u8,
         new_price: u64,
         round: u64,
-    ) -> Future {
+    ) -> Final {
         assert(new_price > 0u64);
         assert(round > 0u64);
-        assert(token_id <= 2u8);
+        assert(token_id < MAX_ORACLE_ASSETS);
         return finalize_update_oracle_price(self.caller, token_id, new_price, round);
     }
 
-    async function finalize_update_oracle_price(
+    final finalize_update_oracle_price(
         caller: address,
         token_id: u8,
         new_price: u64,
@@ -174,36 +233,44 @@ program dara_lend_v6.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 2. SET RATE PARAMS — Admin configures interest model
+    // 2. SET RATE PARAMS — Configure kink interest model
     // ═══════════════════════════════════════════════════
 
-    async transition set_rate_params(
+    fn set_rate_params(
         base_rate: u64,
-        slope: u64,
-    ) -> Future {
-        return finalize_set_rate_params(self.caller, base_rate, slope);
+        slope1: u64,
+        slope2: u64,
+        optimal_util: u64,
+    ) -> Final {
+        assert(optimal_util > 0u64);
+        assert(optimal_util <= 10_000u64);
+        return finalize_set_rate_params(self.caller, base_rate, slope1, slope2, optimal_util);
     }
 
-    async function finalize_set_rate_params(
+    final finalize_set_rate_params(
         caller: address,
         base_rate: u64,
-        slope: u64,
+        slope1: u64,
+        slope2: u64,
+        optimal_util: u64,
     ) {
         let admin: address = Mapping::get(protocol_admin, 0u8);
         assert_eq(caller, admin);
         Mapping::set(rate_base_bps, 0u8, base_rate);
-        Mapping::set(rate_slope_bps, 0u8, slope);
+        Mapping::set(rate_slope1_bps, 0u8, slope1);
+        Mapping::set(rate_slope2_bps, 0u8, slope2);
+        Mapping::set(rate_optimal_util, 0u8, optimal_util);
     }
 
     // ═══════════════════════════════════════════════════
     // 3. EMERGENCY PAUSE
     // ═══════════════════════════════════════════════════
 
-    async transition emergency_pause() -> Future {
+    fn emergency_pause() -> Final {
         return finalize_emergency_pause(self.caller);
     }
 
-    async function finalize_emergency_pause(caller: address) {
+    final finalize_emergency_pause(caller: address) {
         let admin: address = Mapping::get(protocol_admin, 0u8);
         assert_eq(caller, admin);
         Mapping::set(protocol_paused, 0u8, true);
@@ -213,31 +280,36 @@ program dara_lend_v6.aleo {
     // 4. RESUME PROTOCOL
     // ═══════════════════════════════════════════════════
 
-    async transition resume_protocol() -> Future {
+    fn resume_protocol() -> Final {
         return finalize_resume_protocol(self.caller);
     }
 
-    async function finalize_resume_protocol(caller: address) {
+    final finalize_resume_protocol(caller: address) {
         let admin: address = Mapping::get(protocol_admin, 0u8);
         assert_eq(caller, admin);
         Mapping::set(protocol_paused, 0u8, false);
     }
 
     // ═══════════════════════════════════════════════════
-    // 5. ACCRUE INTEREST — Utilization-based rate model
+    // 5. ACCRUE INTEREST — Two-slope kink rate model
+    //    Below optimal: gentle slope (encourages borrowing)
+    //    Above optimal: steep slope (forces repayment under stress)
     // ═══════════════════════════════════════════════════
 
-    async transition accrue_interest() -> Future {
+    fn accrue_interest() -> Final {
         return finalize_accrue_interest();
     }
 
-    async function finalize_accrue_interest() {
+    final finalize_accrue_interest() {
         let last_block: u32 = Mapping::get_or_use(last_accrual_block, 0u8, 0u32);
         let elapsed: u32 = block.height - last_block;
         let should_accrue: bool = elapsed > 0u32 && last_block > 0u32;
 
+        // Load kink model parameters
         let base_rate: u64 = Mapping::get_or_use(rate_base_bps, 0u8, 200u64);
-        let slope: u64 = Mapping::get_or_use(rate_slope_bps, 0u8, 400u64);
+        let slope1: u64 = Mapping::get_or_use(rate_slope1_bps, 0u8, 400u64);
+        let slope2: u64 = Mapping::get_or_use(rate_slope2_bps, 0u8, 7_500u64);
+        let optimal_util: u64 = Mapping::get_or_use(rate_optimal_util, 0u8, 8_000u64);
 
         let borrowed: u128 = Mapping::get_or_use(pool_total_borrowed, 0u8, 0u128);
         let aleo_collateral: u64 = Mapping::get_or_use(vault_collateral_aleo, 0u8, 0u64);
@@ -246,7 +318,21 @@ program dara_lend_v6.aleo {
 
         let util_bps: u128 = supply_value > 0u128 ? borrowed * BPS / supply_value : 0u128;
         let capped_util: u128 = util_bps > BPS ? BPS : util_bps;
-        let borrow_rate: u128 = (base_rate as u128) + capped_util * (slope as u128) / BPS;
+
+        // Two-slope kink model calculation
+        let optimal_u128: u128 = optimal_util as u128;
+        let slope1_u128: u128 = slope1 as u128;
+        let slope2_u128: u128 = slope2 as u128;
+        let base_u128: u128 = base_rate as u128;
+
+        // Below kink: borrow_rate = base + util * slope1 / optimal
+        // Above kink: borrow_rate = base + slope1 + (util - optimal) * slope2 / (BPS - optimal)
+        let below_kink_rate: u128 = base_u128 + capped_util * slope1_u128 / optimal_u128;
+        let excess_util: u128 = capped_util > optimal_u128 ? capped_util - optimal_u128 : 0u128;
+        let remaining_bps: u128 = BPS - optimal_u128;
+        let above_kink_extra: u128 = remaining_bps > 0u128 ? excess_util * slope2_u128 / remaining_bps : 0u128;
+        let borrow_rate: u128 = capped_util <= optimal_u128 ? below_kink_rate : base_u128 + slope1_u128 + above_kink_extra;
+
         let supply_rate: u128 = borrow_rate * capped_util * (BPS - RESERVE_FACTOR_BPS) / BPS / BPS;
 
         let elapsed_u128: u128 = elapsed as u128;
@@ -266,11 +352,11 @@ program dara_lend_v6.aleo {
     // 6. SUPPLY ALEO COLLATERAL — Private credits flow
     // ═══════════════════════════════════════════════════
 
-    async transition supply_collateral(
+    fn supply_collateral(
         input_credits: credits.aleo/credits,
         amount: u64,
         nonce: field,
-    ) -> (CollateralReceipt, Future) {
+    ) -> (CollateralReceipt, Final) {
         assert(amount >= MIN_COLLATERAL_ALEO);
 
         let signer_field: field = BHP256::hash_to_field(self.signer);
@@ -285,18 +371,18 @@ program dara_lend_v6.aleo {
             nonce_hash: nonce_hash,
         };
 
-        let (change_credits, credit_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_private_to_public(input_credits, self.address, amount);
+        let (change_credits, credit_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_private_to_public(input_credits, self.address, amount);
 
         return (receipt, finalize_supply_collateral(credit_future, nonce_hash, amount));
     }
 
-    async function finalize_supply_collateral(
-        credit_future: Future,
+    final finalize_supply_collateral(
+        credit_future: Final,
         nonce_hash: field,
         amount: u64,
     ) {
-        credit_future.await();
+        credit_future.run();
 
         let paused: bool = Mapping::get_or_use(protocol_paused, 0u8, false);
         assert(!paused);
@@ -313,12 +399,12 @@ program dara_lend_v6.aleo {
     // 7. SUPPLY USDCx COLLATERAL — Private stablecoin flow
     // ═══════════════════════════════════════════════════
 
-    async transition supply_usdcx_collateral(
+    fn supply_usdcx_collateral(
         input_token: test_usdcx_stablecoin.aleo/Token,
         merkle_proof: [MerkleProof; 2u32],
         amount: u128,
         nonce: field,
-    ) -> (CollateralReceipt, Future) {
+    ) -> (CollateralReceipt, Final) {
         assert(amount >= MIN_COLLATERAL_STABLE);
 
         let signer_field: field = BHP256::hash_to_field(self.signer);
@@ -333,18 +419,18 @@ program dara_lend_v6.aleo {
             nonce_hash: nonce_hash,
         };
 
-        let (compliance_record, change_token, usdcx_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_private_to_public(self.address, amount, input_token, merkle_proof);
+        let (compliance_record, change_token, usdcx_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_private_to_public(self.address, amount, input_token, merkle_proof);
 
         return (receipt, finalize_supply_usdcx(usdcx_future, nonce_hash, amount));
     }
 
-    async function finalize_supply_usdcx(
-        usdcx_future: Future,
+    final finalize_supply_usdcx(
+        usdcx_future: Final,
         nonce_hash: field,
         amount: u128,
     ) {
-        usdcx_future.await();
+        usdcx_future.run();
 
         let paused: bool = Mapping::get_or_use(protocol_paused, 0u8, false);
         assert(!paused);
@@ -361,12 +447,12 @@ program dara_lend_v6.aleo {
     // 8. SUPPLY USAD COLLATERAL — Private stablecoin flow
     // ═══════════════════════════════════════════════════
 
-    async transition supply_usad_collateral(
+    fn supply_usad_collateral(
         input_token: test_usad_stablecoin.aleo/Token,
         merkle_proof: [MerkleProof; 2u32],
         amount: u128,
         nonce: field,
-    ) -> (CollateralReceipt, Future) {
+    ) -> (CollateralReceipt, Final) {
         assert(amount >= MIN_COLLATERAL_STABLE);
 
         let signer_field: field = BHP256::hash_to_field(self.signer);
@@ -381,18 +467,18 @@ program dara_lend_v6.aleo {
             nonce_hash: nonce_hash,
         };
 
-        let (compliance_record, change_token, usad_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_private_to_public(self.address, amount, input_token, merkle_proof);
+        let (compliance_record, change_token, usad_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_private_to_public(self.address, amount, input_token, merkle_proof);
 
         return (receipt, finalize_supply_usad(usad_future, nonce_hash, amount));
     }
 
-    async function finalize_supply_usad(
-        usad_future: Future,
+    final finalize_supply_usad(
+        usad_future: Final,
         nonce_hash: field,
         amount: u128,
     ) {
-        usad_future.await();
+        usad_future.run();
 
         let paused: bool = Mapping::get_or_use(protocol_paused, 0u8, false);
         assert(!paused);
@@ -409,12 +495,12 @@ program dara_lend_v6.aleo {
     // 9. BORROW USDCx — Against ALEO collateral (private)
     // ═══════════════════════════════════════════════════
 
-    async transition borrow(
+    fn borrow(
         collateral_record: CollateralReceipt,
         borrow_amount: u128,
         current_price: u64,
         orchestrator: address,
-    ) -> (DebtPosition, LiquidationAuth, Future) {
+    ) -> (DebtPosition, LiquidationAuth, Final) {
         assert(borrow_amount > 0u128);
         assert(collateral_record.token_type == 0u8);
 
@@ -456,22 +542,22 @@ program dara_lend_v6.aleo {
             borrower_hash: borrower_hash,
         };
 
-        let (compliance_record, usdcx_token, borrow_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_public_to_private(self.caller, net_borrow);
+        let (compliance_record, usdcx_token, borrow_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_public_to_private(self.caller, net_borrow);
 
         return (debt, liq_auth, finalize_borrow(
             borrow_future, current_price, borrow_amount, fee, loan_id,
         ));
     }
 
-    async function finalize_borrow(
-        borrow_future: Future,
+    final finalize_borrow(
+        borrow_future: Final,
         current_price: u64,
         borrow_amount: u128,
         fee: u128,
         loan_id: field,
     ) {
-        borrow_future.await();
+        borrow_future.run();
 
         let paused: bool = Mapping::get_or_use(protocol_paused, 0u8, false);
         assert(!paused);
@@ -497,12 +583,12 @@ program dara_lend_v6.aleo {
     // 10. BORROW USAD — Against ALEO collateral (private)
     // ═══════════════════════════════════════════════════
 
-    async transition borrow_usad(
+    fn borrow_usad(
         collateral_record: CollateralReceipt,
         borrow_amount: u128,
         current_price: u64,
         orchestrator: address,
-    ) -> (DebtPosition, LiquidationAuth, Future) {
+    ) -> (DebtPosition, LiquidationAuth, Final) {
         assert(borrow_amount > 0u128);
         assert(collateral_record.token_type == 0u8);
 
@@ -544,22 +630,22 @@ program dara_lend_v6.aleo {
             borrower_hash: borrower_hash,
         };
 
-        let (compliance_record, usad_token, borrow_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_public_to_private(self.caller, net_borrow);
+        let (compliance_record, usad_token, borrow_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_public_to_private(self.caller, net_borrow);
 
         return (debt, liq_auth, finalize_borrow_usad(
             borrow_future, current_price, borrow_amount, fee, loan_id,
         ));
     }
 
-    async function finalize_borrow_usad(
-        borrow_future: Future,
+    final finalize_borrow_usad(
+        borrow_future: Final,
         current_price: u64,
         borrow_amount: u128,
         fee: u128,
         loan_id: field,
     ) {
-        borrow_future.await();
+        borrow_future.run();
 
         let paused: bool = Mapping::get_or_use(protocol_paused, 0u8, false);
         assert(!paused);
@@ -585,13 +671,13 @@ program dara_lend_v6.aleo {
     // 11. BORROW CREDITS — ALEO against stablecoins
     // ═══════════════════════════════════════════════════
 
-    async transition borrow_credits(
+    fn borrow_credits(
         collateral_record: CollateralReceipt,
         borrow_amount: u64,
         current_col_price: u64,
         current_aleo_price: u64,
         orchestrator: address,
-    ) -> (DebtPosition, LiquidationAuth, Future) {
+    ) -> (DebtPosition, LiquidationAuth, Final) {
         assert(borrow_amount > 0u64);
         assert(collateral_record.token_type == 1u8 || collateral_record.token_type == 2u8);
 
@@ -633,8 +719,8 @@ program dara_lend_v6.aleo {
             borrower_hash: borrower_hash,
         };
 
-        let (borrow_credits_out, borrow_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_public_to_private(self.caller, net_borrow);
+        let (borrow_credits_out, borrow_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_public_to_private(self.caller, net_borrow);
 
         return (debt, liq_auth, finalize_borrow_credits(
             borrow_future, collateral_record.token_type,
@@ -643,8 +729,8 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_borrow_credits(
-        borrow_future: Future,
+    final finalize_borrow_credits(
+        borrow_future: Final,
         collateral_token: u8,
         current_col_price: u64,
         current_aleo_price: u64,
@@ -652,7 +738,7 @@ program dara_lend_v6.aleo {
         fee: u128,
         loan_id: field,
     ) {
-        borrow_future.await();
+        borrow_future.run();
 
         let paused: bool = Mapping::get_or_use(protocol_paused, 0u8, false);
         assert(!paused);
@@ -679,9 +765,9 @@ program dara_lend_v6.aleo {
     // 12. REPAY USDCx DEBT — Return ALEO collateral
     // ═══════════════════════════════════════════════════
 
-    async transition repay(
+    fn repay(
         debt_record: DebtPosition,
-    ) -> (RepaymentReceipt, Future) {
+    ) -> (RepaymentReceipt, Final) {
         assert(debt_record.debt_token == 1u8);
         assert(debt_record.collateral_token == 0u8);
 
@@ -694,12 +780,12 @@ program dara_lend_v6.aleo {
             loan_id: debt_record.loan_id,
         };
 
-        let repay_future: Future =
-            test_usdcx_stablecoin.aleo/transfer_from_public(
+        let repay_future: Final =
+            test_usdcx_stablecoin.aleo::transfer_from_public(
                 self.caller, self.address, debt_record.debt_amount);
 
-        let (return_credits, return_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_public_to_private(
+        let (return_credits, return_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_public_to_private(
                 self.caller, debt_record.collateral_amount);
 
         return (receipt, finalize_repay(
@@ -709,16 +795,16 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_repay(
-        repay_future: Future,
-        return_future: Future,
+    final finalize_repay(
+        repay_future: Final,
+        return_future: Final,
         debt_amount: u128,
         collateral_amount: u64,
         loan_id: field,
         pool_id: u8,
     ) {
-        repay_future.await();
-        return_future.await();
+        repay_future.run();
+        return_future.run();
 
         let current_borrowed: u128 = Mapping::get(pool_total_borrowed, pool_id);
         Mapping::set(pool_total_borrowed, pool_id, current_borrowed - debt_amount);
@@ -737,9 +823,9 @@ program dara_lend_v6.aleo {
     // 13. REPAY USAD DEBT — Return ALEO collateral
     // ═══════════════════════════════════════════════════
 
-    async transition repay_usad(
+    fn repay_usad(
         debt_record: DebtPosition,
-    ) -> (RepaymentReceipt, Future) {
+    ) -> (RepaymentReceipt, Final) {
         assert(debt_record.debt_token == 2u8);
         assert(debt_record.collateral_token == 0u8);
 
@@ -752,12 +838,12 @@ program dara_lend_v6.aleo {
             loan_id: debt_record.loan_id,
         };
 
-        let repay_future: Future =
-            test_usad_stablecoin.aleo/transfer_from_public(
+        let repay_future: Final =
+            test_usad_stablecoin.aleo::transfer_from_public(
                 self.caller, self.address, debt_record.debt_amount);
 
-        let (return_credits, return_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_public_to_private(
+        let (return_credits, return_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_public_to_private(
                 self.caller, debt_record.collateral_amount);
 
         return (receipt, finalize_repay_usad(
@@ -767,15 +853,15 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_repay_usad(
-        repay_future: Future,
-        return_future: Future,
+    final finalize_repay_usad(
+        repay_future: Final,
+        return_future: Final,
         debt_amount: u128,
         collateral_amount: u64,
         loan_id: field,
     ) {
-        repay_future.await();
-        return_future.await();
+        repay_future.run();
+        return_future.run();
 
         let current_borrowed: u128 = Mapping::get(pool_total_borrowed, 1u8);
         Mapping::set(pool_total_borrowed, 1u8, current_borrowed - debt_amount);
@@ -794,10 +880,10 @@ program dara_lend_v6.aleo {
     // 14. REPAY CREDITS — USDCx collateral returned
     // ═══════════════════════════════════════════════════
 
-    async transition repay_credits_usdcx(
+    fn repay_credits_usdcx(
         debt_record: DebtPosition,
         input_credits: credits.aleo/credits,
-    ) -> (RepaymentReceipt, Future) {
+    ) -> (RepaymentReceipt, Final) {
         assert(debt_record.debt_token == 0u8);
         assert(debt_record.collateral_token == 1u8);
 
@@ -812,11 +898,11 @@ program dara_lend_v6.aleo {
             loan_id: debt_record.loan_id,
         };
 
-        let (change_credits, repay_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_private_to_public(input_credits, self.address, repay_amount);
+        let (change_credits, repay_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_private_to_public(input_credits, self.address, repay_amount);
 
-        let (compliance_record, usdcx_token, return_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_public_to_private(self.caller, debt_record.collateral_amount_u128);
+        let (compliance_record, usdcx_token, return_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_public_to_private(self.caller, debt_record.collateral_amount_u128);
 
         return (receipt, finalize_repay_credits_usdcx(
             repay_future, return_future,
@@ -825,15 +911,15 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_repay_credits_usdcx(
-        repay_future: Future,
-        return_future: Future,
+    final finalize_repay_credits_usdcx(
+        repay_future: Final,
+        return_future: Final,
         debt_amount: u128,
         collateral_amount: u128,
         loan_id: field,
     ) {
-        repay_future.await();
-        return_future.await();
+        repay_future.run();
+        return_future.run();
 
         let current_borrowed: u128 = Mapping::get(pool_total_borrowed, 2u8);
         Mapping::set(pool_total_borrowed, 2u8, current_borrowed - debt_amount);
@@ -852,10 +938,10 @@ program dara_lend_v6.aleo {
     // 15. REPAY CREDITS — USAD collateral returned
     // ═══════════════════════════════════════════════════
 
-    async transition repay_credits_usad(
+    fn repay_credits_usad(
         debt_record: DebtPosition,
         input_credits: credits.aleo/credits,
-    ) -> (RepaymentReceipt, Future) {
+    ) -> (RepaymentReceipt, Final) {
         assert(debt_record.debt_token == 0u8);
         assert(debt_record.collateral_token == 2u8);
 
@@ -870,11 +956,11 @@ program dara_lend_v6.aleo {
             loan_id: debt_record.loan_id,
         };
 
-        let (change_credits, repay_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_private_to_public(input_credits, self.address, repay_amount);
+        let (change_credits, repay_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_private_to_public(input_credits, self.address, repay_amount);
 
-        let (compliance_record, usad_token, return_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_public_to_private(self.caller, debt_record.collateral_amount_u128);
+        let (compliance_record, usad_token, return_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_public_to_private(self.caller, debt_record.collateral_amount_u128);
 
         return (receipt, finalize_repay_credits_usad(
             repay_future, return_future,
@@ -883,15 +969,15 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_repay_credits_usad(
-        repay_future: Future,
-        return_future: Future,
+    final finalize_repay_credits_usad(
+        repay_future: Final,
+        return_future: Final,
         debt_amount: u128,
         collateral_amount: u128,
         loan_id: field,
     ) {
-        repay_future.await();
-        return_future.await();
+        repay_future.run();
+        return_future.run();
 
         let current_borrowed: u128 = Mapping::get(pool_total_borrowed, 2u8);
         Mapping::set(pool_total_borrowed, 2u8, current_borrowed - debt_amount);
@@ -910,10 +996,10 @@ program dara_lend_v6.aleo {
     // 16. LIQUIDATE — ALEO collateral positions
     // ═══════════════════════════════════════════════════
 
-    async transition liquidate(
+    fn liquidate(
         auth: LiquidationAuth,
         current_oracle_price: u64,
-    ) -> (LiquidationReceipt, Future) {
+    ) -> (LiquidationReceipt, Final) {
         assert(current_oracle_price <= auth.liquidation_price);
         assert(auth.collateral_token == 0u8);
 
@@ -931,8 +1017,8 @@ program dara_lend_v6.aleo {
             debt_covered: auth.debt_amount,
         };
 
-        let (seize_credits, seize_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_public_to_private(self.caller, total_seize);
+        let (seize_credits, seize_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_public_to_private(self.caller, total_seize);
 
         return (receipt, finalize_liquidate(
             seize_future, current_oracle_price,
@@ -940,15 +1026,15 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_liquidate(
-        seize_future: Future,
+    final finalize_liquidate(
+        seize_future: Final,
         current_oracle_price: u64,
         total_seize: u64,
         debt_amount: u128,
         loan_id: field,
         debt_token: u8,
     ) {
-        seize_future.await();
+        seize_future.run();
 
         let stored_price: u64 = Mapping::get(oracle_price, 0u8);
         assert_eq(current_oracle_price, stored_price);
@@ -971,10 +1057,10 @@ program dara_lend_v6.aleo {
     // 17. LIQUIDATE USDCx — USDCx collateral positions
     // ═══════════════════════════════════════════════════
 
-    async transition liquidate_usdcx(
+    fn liquidate_usdcx(
         auth: LiquidationAuth,
         current_oracle_price: u64,
-    ) -> (LiquidationReceipt, Future) {
+    ) -> (LiquidationReceipt, Final) {
         assert(current_oracle_price <= auth.liquidation_price);
         assert(auth.collateral_token == 1u8);
 
@@ -991,8 +1077,8 @@ program dara_lend_v6.aleo {
             debt_covered: auth.debt_amount,
         };
 
-        let (compliance_record, seize_token, seize_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_public_to_private(self.caller, total_seize);
+        let (compliance_record, seize_token, seize_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_public_to_private(self.caller, total_seize);
 
         return (receipt, finalize_liquidate_usdcx(
             seize_future, current_oracle_price,
@@ -1000,14 +1086,14 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_liquidate_usdcx(
-        seize_future: Future,
+    final finalize_liquidate_usdcx(
+        seize_future: Final,
         current_oracle_price: u64,
         total_seize: u128,
         debt_amount: u128,
         loan_id: field,
     ) {
-        seize_future.await();
+        seize_future.run();
 
         let stored_price: u64 = Mapping::get(oracle_price, 1u8);
         assert_eq(current_oracle_price, stored_price);
@@ -1029,10 +1115,10 @@ program dara_lend_v6.aleo {
     // 18. LIQUIDATE USAD — USAD collateral positions
     // ═══════════════════════════════════════════════════
 
-    async transition liquidate_usad(
+    fn liquidate_usad(
         auth: LiquidationAuth,
         current_oracle_price: u64,
-    ) -> (LiquidationReceipt, Future) {
+    ) -> (LiquidationReceipt, Final) {
         assert(current_oracle_price <= auth.liquidation_price);
         assert(auth.collateral_token == 2u8);
 
@@ -1049,8 +1135,8 @@ program dara_lend_v6.aleo {
             debt_covered: auth.debt_amount,
         };
 
-        let (compliance_record, seize_token, seize_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_public_to_private(self.caller, total_seize);
+        let (compliance_record, seize_token, seize_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_public_to_private(self.caller, total_seize);
 
         return (receipt, finalize_liquidate_usad(
             seize_future, current_oracle_price,
@@ -1058,14 +1144,14 @@ program dara_lend_v6.aleo {
         ));
     }
 
-    async function finalize_liquidate_usad(
-        seize_future: Future,
+    final finalize_liquidate_usad(
+        seize_future: Final,
         current_oracle_price: u64,
         total_seize: u128,
         debt_amount: u128,
         loan_id: field,
     ) {
-        seize_future.await();
+        seize_future.run();
 
         let stored_price: u64 = Mapping::get(oracle_price, 2u8);
         assert_eq(current_oracle_price, stored_price);
@@ -1087,23 +1173,23 @@ program dara_lend_v6.aleo {
     // 19. WITHDRAW ALEO COLLATERAL
     // ═══════════════════════════════════════════════════
 
-    async transition withdraw_collateral(
+    fn withdraw_collateral(
         receipt: CollateralReceipt,
-    ) -> Future {
+    ) -> Final {
         assert(receipt.token_type == 0u8);
 
-        let (return_credits, return_future): (credits.aleo/credits, Future) =
-            credits.aleo/transfer_public_to_private(
+        let (return_credits, return_future): (credits.aleo/credits, Final) =
+            credits.aleo::transfer_public_to_private(
                 self.caller, receipt.collateral_amount);
 
         return finalize_withdraw_collateral(return_future, receipt.collateral_amount);
     }
 
-    async function finalize_withdraw_collateral(
-        withdraw_future: Future,
+    final finalize_withdraw_collateral(
+        withdraw_future: Final,
         collateral_amount: u64,
     ) {
-        withdraw_future.await();
+        withdraw_future.run();
 
         let current_collateral: u64 = Mapping::get(vault_collateral_aleo, 0u8);
         Mapping::set(vault_collateral_aleo, 0u8, current_collateral - collateral_amount);
@@ -1113,23 +1199,23 @@ program dara_lend_v6.aleo {
     // 20. WITHDRAW USDCx COLLATERAL
     // ═══════════════════════════════════════════════════
 
-    async transition withdraw_usdcx_collateral(
+    fn withdraw_usdcx_collateral(
         receipt: CollateralReceipt,
-    ) -> Future {
+    ) -> Final {
         assert(receipt.token_type == 1u8);
 
-        let (compliance_record, usdcx_token, return_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_public_to_private(
+        let (compliance_record, usdcx_token, return_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_public_to_private(
                 self.caller, receipt.collateral_amount_u128);
 
         return finalize_withdraw_usdcx(return_future, receipt.collateral_amount_u128);
     }
 
-    async function finalize_withdraw_usdcx(
-        withdraw_future: Future,
+    final finalize_withdraw_usdcx(
+        withdraw_future: Final,
         collateral_amount: u128,
     ) {
-        withdraw_future.await();
+        withdraw_future.run();
 
         let current_collateral: u128 = Mapping::get(vault_collateral_usdcx, 0u8);
         Mapping::set(vault_collateral_usdcx, 0u8, current_collateral - collateral_amount);
@@ -1139,25 +1225,230 @@ program dara_lend_v6.aleo {
     // 21. WITHDRAW USAD COLLATERAL
     // ═══════════════════════════════════════════════════
 
-    async transition withdraw_usad_collateral(
+    fn withdraw_usad_collateral(
         receipt: CollateralReceipt,
-    ) -> Future {
+    ) -> Final {
         assert(receipt.token_type == 2u8);
 
-        let (compliance_record, usad_token, return_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_public_to_private(
+        let (compliance_record, usad_token, return_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_public_to_private(
                 self.caller, receipt.collateral_amount_u128);
 
         return finalize_withdraw_usad(return_future, receipt.collateral_amount_u128);
     }
 
-    async function finalize_withdraw_usad(
-        withdraw_future: Future,
+    final finalize_withdraw_usad(
+        withdraw_future: Final,
         collateral_amount: u128,
     ) {
-        withdraw_future.await();
+        withdraw_future.run();
 
         let current_collateral: u128 = Mapping::get(vault_collateral_usad, 0u8);
         Mapping::set(vault_collateral_usad, 0u8, current_collateral - collateral_amount);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // GOVERNANCE — On-chain DAO with private voting via ZK
+    // ═══════════════════════════════════════════════════════
+
+    // 22. MINT GOVERNANCE TOKENS — Admin distributes voting power
+    fn mint_governance_tokens(
+        recipient: address,
+        amount: u64,
+    ) -> (GovernanceToken, Final) {
+        assert(amount > 0u64);
+
+        let token: GovernanceToken = GovernanceToken {
+            owner: recipient,
+            voting_power: amount,
+        };
+
+        return (token, finalize_mint_governance_tokens(self.caller, recipient, amount));
+    }
+
+    final finalize_mint_governance_tokens(
+        caller: address,
+        recipient: address,
+        amount: u64,
+    ) {
+        let admin: address = Mapping::get(protocol_admin, 0u8);
+        assert_eq(caller, admin);
+
+        let supply: u64 = Mapping::get_or_use(governance_token_supply, 0u8, 0u64);
+        Mapping::set(governance_token_supply, 0u8, supply + amount);
+
+        let power: u64 = Mapping::get_or_use(voting_power, recipient, 0u64);
+        Mapping::set(voting_power, recipient, power + amount);
+    }
+
+    // 23. CREATE PROPOSAL — Propose parameter changes
+    fn create_proposal(
+        proposal_type: u8,
+        param_key: u8,
+        param_value: u64,
+        description_hash: field,
+    ) -> Final {
+        assert(proposal_type <= 4u8);
+        return finalize_create_proposal(
+            self.caller, proposal_type, param_key, param_value, description_hash,
+        );
+    }
+
+    final finalize_create_proposal(
+        caller: address,
+        proposal_type: u8,
+        param_key: u8,
+        param_value: u64,
+        description_hash: field,
+    ) {
+        let paused: bool = Mapping::get_or_use(protocol_paused, 0u8, false);
+        assert(!paused);
+
+        // Require minimum voting power to create proposals
+        let power: u64 = Mapping::get_or_use(voting_power, caller, 0u64);
+        assert(power >= MIN_PROPOSAL_POWER);
+
+        let count: u64 = Mapping::get_or_use(proposal_count, 0u8, 0u64);
+        let proposal_id: field = BHP256::hash_to_field(count);
+
+        let proposal: ProposalData = ProposalData {
+            proposer: caller,
+            proposal_type: proposal_type,
+            param_key: param_key,
+            param_value: param_value,
+            description_hash: description_hash,
+            start_block: block.height,
+            end_block: block.height + VOTING_PERIOD_BLOCKS,
+            timelock_end: block.height + VOTING_PERIOD_BLOCKS + TIMELOCK_BLOCKS,
+        };
+
+        Mapping::set(proposals, proposal_id, proposal);
+        Mapping::set(proposal_votes, proposal_id, VoteCount {
+            votes_for: 0u64,
+            votes_against: 0u64,
+            votes_abstain: 0u64,
+        });
+        Mapping::set(proposal_executed, proposal_id, false);
+        Mapping::set(proposal_count, 0u8, count + 1u64);
+    }
+
+    // 24. VOTE — Private vote via ZK record (vote content invisible on-chain)
+    fn vote(
+        proposal_id: field,
+        support: u8,
+        amount: u64,
+    ) -> (ProposalReceipt, Final) {
+        assert(support <= 2u8);
+        assert(amount > 0u64);
+
+        let receipt: ProposalReceipt = ProposalReceipt {
+            owner: self.signer,
+            proposal_id: proposal_id,
+            vote: support,
+            amount: amount,
+        };
+
+        return (receipt, finalize_vote(self.caller, proposal_id, support, amount));
+    }
+
+    final finalize_vote(
+        caller: address,
+        proposal_id: field,
+        support: u8,
+        amount: u64,
+    ) {
+        let proposal: ProposalData = Mapping::get(proposals, proposal_id);
+        assert(block.height >= proposal.start_block);
+        assert(block.height <= proposal.end_block);
+
+        // Verify voter has sufficient voting power
+        let power: u64 = Mapping::get_or_use(voting_power, caller, 0u64);
+        assert(power >= amount);
+
+        let current_votes: VoteCount = Mapping::get(proposal_votes, proposal_id);
+
+        // Update vote tallies based on support type
+        let new_for: u64 = support == 1u8 ? current_votes.votes_for + amount : current_votes.votes_for;
+        let new_against: u64 = support == 0u8 ? current_votes.votes_against + amount : current_votes.votes_against;
+        let new_abstain: u64 = support == 2u8 ? current_votes.votes_abstain + amount : current_votes.votes_abstain;
+
+        Mapping::set(proposal_votes, proposal_id, VoteCount {
+            votes_for: new_for,
+            votes_against: new_against,
+            votes_abstain: new_abstain,
+        });
+    }
+
+    // 25. EXECUTE PROPOSAL — Permissionless after timelock + quorum
+    fn execute_proposal(
+        proposal_id: field,
+    ) -> Final {
+        return finalize_execute_proposal(proposal_id);
+    }
+
+    final finalize_execute_proposal(
+        proposal_id: field,
+    ) {
+        let proposal: ProposalData = Mapping::get(proposals, proposal_id);
+        assert(block.height >= proposal.timelock_end);
+
+        let executed: bool = Mapping::get_or_use(proposal_executed, proposal_id, false);
+        assert(!executed);
+
+        let votes: VoteCount = Mapping::get(proposal_votes, proposal_id);
+        let total_votes: u64 = votes.votes_for + votes.votes_against + votes.votes_abstain;
+        let supply: u64 = Mapping::get_or_use(governance_token_supply, 0u8, 1u64);
+        let quorum_met: bool = total_votes * 10_000u64 / supply >= QUORUM_BPS;
+        assert(quorum_met);
+        assert(votes.votes_for > votes.votes_against);
+
+        // Execute based on proposal type
+        // 0=rate_change: update interest rate params
+        if proposal.proposal_type == 0u8 {
+            // param_key: 0=base, 1=slope1, 2=slope2, 3=optimal
+            if proposal.param_key == 0u8 {
+                Mapping::set(rate_base_bps, 0u8, proposal.param_value);
+            }
+            if proposal.param_key == 1u8 {
+                Mapping::set(rate_slope1_bps, 0u8, proposal.param_value);
+            }
+            if proposal.param_key == 2u8 {
+                Mapping::set(rate_slope2_bps, 0u8, proposal.param_value);
+            }
+            if proposal.param_key == 3u8 {
+                Mapping::set(rate_optimal_util, 0u8, proposal.param_value);
+            }
+        }
+
+        // 3=pause: emergency pause via governance
+        if proposal.proposal_type == 3u8 {
+            let should_pause: bool = proposal.param_value > 0u64;
+            Mapping::set(protocol_paused, 0u8, should_pause);
+        }
+
+        Mapping::set(proposal_executed, proposal_id, true);
+    }
+
+    // 26. DELEGATE VOTES — Transfer voting power
+    fn delegate_votes(
+        delegate_to: address,
+        amount: u64,
+    ) -> Final {
+        assert(amount > 0u64);
+        return finalize_delegate_votes(self.caller, delegate_to, amount);
+    }
+
+    final finalize_delegate_votes(
+        caller: address,
+        delegate_to: address,
+        amount: u64,
+    ) {
+        let caller_power: u64 = Mapping::get_or_use(voting_power, caller, 0u64);
+        assert(caller_power >= amount);
+
+        Mapping::set(voting_power, caller, caller_power - amount);
+
+        let delegate_power: u64 = Mapping::get_or_use(voting_power, delegate_to, 0u64);
+        Mapping::set(voting_power, delegate_to, delegate_power + amount);
     }
 }

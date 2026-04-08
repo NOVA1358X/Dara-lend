@@ -1,0 +1,28 @@
+{
+  "program": "dara_lend_v8_credits.aleo",
+  "version": "1.0.0",
+  "description": "Stablecoin collateral lending operations - supply USDCx/USAD, borrow ALEO credits, repay, liquidate, withdraw",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}

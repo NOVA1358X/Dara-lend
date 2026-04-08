@@ -10,6 +10,12 @@ node_modules/
 dist/
 build/
 
+# Old contract versions (deprecated)
+contract/dara_lend_v1/
+contract/dara_lend_v2/
+contract/dara_lend_v7_vault/
+contract/dara_pool_v2/
+
 # Leo contract build artifacts
 contract/*/build/
 contract/*/outputs/
@@ -41,3 +47,4 @@ memoryv6.md
 landing.md
 memoryv7.md
 whitepaper.md
+memoryv8.md

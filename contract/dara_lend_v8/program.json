@@ -1,0 +1,28 @@
+{
+  "program": "dara_lend_v8.aleo",
+  "version": "1.0.0",
+  "description": "Privacy-first multi-collateral lending protocol on Aleo with on-chain governance and optimized interest rate curves (Leo v4.0)",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}

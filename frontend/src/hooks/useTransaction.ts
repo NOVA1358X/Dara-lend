@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PROGRAM_ID, VAULT_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, CREDITS_TRANSITIONS, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import { saveTxToHistory } from '@/components/app/TransactionHistory';
@@ -39,7 +39,7 @@ export function useTransaction(wallet: WalletExecute) {
     useAppStore();
 
   const executeTransaction = useCallback(
-    async (functionName: string, inputs: string[], fee: number = TX_FEE) => {
+    async (functionName: string, inputs: string[], fee: number = TX_FEE, programId: string = PROGRAM_ID) => {
       if (!wallet.connected || !wallet.requestTransaction) {
         toast.error('Please connect your wallet first');
         return null;
@@ -49,7 +49,7 @@ export function useTransaction(wallet: WalletExecute) {
         setTransactionPending(true);
         setTransactionStep('encrypting');
 
-        const tx = createAleoTransaction(PROGRAM_ID, functionName, inputs, fee);
+        const tx = createAleoTransaction(programId, functionName, inputs, fee);
 
         setTransactionStep('proving');
 
@@ -301,24 +301,24 @@ export function useTransaction(wallet: WalletExecute) {
     async (tokenRecord: string, amount: number, nonce: number) => {
       // MerkleProof placeholder: the contract expects [MerkleProof; 2] but Shield Wallet
       // handles the proof serialization from the token record itself
-      return executeTransaction(TRANSITIONS.SUPPLY_USDCX_COLLATERAL, [
+      return executeTransaction(CREDITS_TRANSITIONS.SUPPLY_USDCX_COLLATERAL, [
         tokenRecord,
         FREEZE_LIST_PROOF,
         microCreditsToU128Input(amount),
         fieldToInput(nonce),
-      ], TX_FEE_HIGH);
+      ], TX_FEE_HIGH, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
 
   const supplyUsadCollateral = useCallback(
     async (tokenRecord: string, amount: number, nonce: number) => {
-      return executeTransaction(TRANSITIONS.SUPPLY_USAD_COLLATERAL, [
+      return executeTransaction(CREDITS_TRANSITIONS.SUPPLY_USAD_COLLATERAL, [
         tokenRecord,
         FREEZE_LIST_PROOF,
         microCreditsToU128Input(amount),
         fieldToInput(nonce),
-      ], TX_FEE_HIGH);
+      ], TX_FEE_HIGH, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
@@ -350,13 +350,13 @@ export function useTransaction(wallet: WalletExecute) {
       currentAleoPrice: number,
       orchestrator: string,
     ) => {
-      return executeTransaction(TRANSITIONS.BORROW_CREDITS, [
+      return executeTransaction(CREDITS_TRANSITIONS.BORROW_CREDITS, [
         collateralRecord,
         microCreditsToInput(borrowAmount),
         microCreditsToInput(currentColPrice),
         microCreditsToInput(currentAleoPrice),
         orchestrator,
-      ]);
+      ], TX_FEE, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
@@ -372,20 +372,20 @@ export function useTransaction(wallet: WalletExecute) {
 
   const repayCreditsUsdcx = useCallback(
     async (debtRecord: string, creditsRecord: string) => {
-      return executeTransaction(TRANSITIONS.REPAY_CREDITS_USDCX, [
+      return executeTransaction(CREDITS_TRANSITIONS.REPAY_CREDITS_USDCX, [
         debtRecord,
         creditsRecord,
-      ]);
+      ], TX_FEE, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
 
   const repayCreditsUsad = useCallback(
     async (debtRecord: string, creditsRecord: string) => {
-      return executeTransaction(TRANSITIONS.REPAY_CREDITS_USAD, [
+      return executeTransaction(CREDITS_TRANSITIONS.REPAY_CREDITS_USAD, [
         debtRecord,
         creditsRecord,
-      ]);
+      ], TX_FEE, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
@@ -394,20 +394,20 @@ export function useTransaction(wallet: WalletExecute) {
 
   const liquidateUsdcx = useCallback(
     async (authRecord: string, oraclePrice: number) => {
-      return executeTransaction(TRANSITIONS.LIQUIDATE_USDCX, [
+      return executeTransaction(CREDITS_TRANSITIONS.LIQUIDATE_USDCX, [
         authRecord,
         microCreditsToInput(oraclePrice),
-      ]);
+      ], TX_FEE, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
 
   const liquidateUsad = useCallback(
     async (authRecord: string, oraclePrice: number) => {
-      return executeTransaction(TRANSITIONS.LIQUIDATE_USAD, [
+      return executeTransaction(CREDITS_TRANSITIONS.LIQUIDATE_USAD, [
         authRecord,
         microCreditsToInput(oraclePrice),
-      ]);
+      ], TX_FEE, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
@@ -416,14 +416,14 @@ export function useTransaction(wallet: WalletExecute) {
 
   const withdrawUsdcxCollateral = useCallback(
     async (receiptRecord: string) => {
-      return executeTransaction(TRANSITIONS.WITHDRAW_USDCX_COLLATERAL, [receiptRecord]);
+      return executeTransaction(CREDITS_TRANSITIONS.WITHDRAW_USDCX_COLLATERAL, [receiptRecord], TX_FEE, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );
 
   const withdrawUsadCollateral = useCallback(
     async (receiptRecord: string) => {
-      return executeTransaction(TRANSITIONS.WITHDRAW_USAD_COLLATERAL, [receiptRecord]);
+      return executeTransaction(CREDITS_TRANSITIONS.WITHDRAW_USAD_COLLATERAL, [receiptRecord], TX_FEE, CREDITS_PROGRAM_ID);
     },
     [executeTransaction],
   );

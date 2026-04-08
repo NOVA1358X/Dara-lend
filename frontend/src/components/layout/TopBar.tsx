@@ -32,7 +32,7 @@ export function TopBar({ address, connected, connecting, onConnect, onDisconnect
     <header className="h-[72px] flex items-center justify-between px-6 bg-black/80 backdrop-blur-[20px] border-b border-white/[0.06] sticky top-0 z-30">
       <div>
         <h1 className="font-headline text-lg text-text-primary">{title}</h1>
-        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-text-muted">dara_lend_v7</p>
+        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-text-muted">dara_lend_v8</p>
       </div>
 
       <div className="flex items-center gap-3">

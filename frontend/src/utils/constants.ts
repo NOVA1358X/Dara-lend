@@ -1,10 +1,12 @@
-export const PROGRAM_ID = 'dara_lend_v7.aleo';
-export const VAULT_PROGRAM_ID = 'dara_lend_v7_vault.aleo';
+export const PROGRAM_ID = 'dara_lend_v8.aleo';
+export const VAULT_PROGRAM_ID = 'dara_lend_v8_vault.aleo';
+export const CREDITS_PROGRAM_ID = 'dara_lend_v8_credits.aleo';
+export const GOV_PROGRAM_ID = 'dara_lend_v8_gov.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 export const USAD_PROGRAM = 'test_usad_stablecoin.aleo';
 
-export const ALEO_TESTNET_API = 'https://api.explorer.provable.com/v1/testnet';
+export const ALEO_TESTNET_API = 'https://api.provable.com/v2/testnet';
 export const BACKEND_API = import.meta.env.VITE_BACKEND_URL || '/api';
 
 export const PRECISION = 1_000_000;
@@ -28,6 +30,11 @@ export const TOKEN_LABELS: Record<number, string> = {
 };
 
 // The on-chain address of the deployed programs
+// On-chain program addresses (deploy TX IDs below)
+// Main: at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg
+// Vault: at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t
+// Credits: at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp
+// Gov: at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d
 export const PROTOCOL_ADDRESS = 'aleo17900g0qun6jqan677l8nhjht3ffyd94fl36w9ys8lwp9w4eklc8sd5ls3g';
 export const VAULT_ADDRESS = 'aleo1mgv9tv2a6vcm6n0m3hq58manlmwcr73yjynluuwq4tk966v8mvzqfvcehz';
 
@@ -39,8 +46,6 @@ export const MAPPING_KEYS = {
 
 export const MAPPINGS = {
   VAULT_COLLATERAL_ALEO: 'vault_collateral_aleo',
-  VAULT_COLLATERAL_USDCX: 'vault_collateral_usdcx',
-  VAULT_COLLATERAL_USAD: 'vault_collateral_usad',
   POOL_TOTAL_BORROWED: 'pool_total_borrowed',
   LOAN_COUNT: 'loan_count',
   ORACLE_PRICE: 'oracle_price',
@@ -54,10 +59,46 @@ export const MAPPINGS = {
   PROTOCOL_PAUSED: 'protocol_paused',
   PRIVACY_VERSION: 'privacy_version',
   RATE_BASE_BPS: 'rate_base_bps',
-  RATE_SLOPE_BPS: 'rate_slope_bps',
+  RATE_SLOPE1_BPS: 'rate_slope1_bps',
+  RATE_SLOPE2_BPS: 'rate_slope2_bps',
+  RATE_OPTIMAL_UTIL: 'rate_optimal_util',
   LAST_ACCRUAL_BLOCK: 'last_accrual_block',
   SUPPLY_APY_BPS: 'supply_apy_bps',
   BORROW_APY_BPS: 'borrow_apy_bps',
+  // Governance mappings (on GOV_PROGRAM_ID)
+  GOVERNANCE_TOKEN_SUPPLY: 'governance_token_supply',
+  PROPOSALS: 'proposals',
+  PROPOSAL_VOTES: 'proposal_votes',
+  PROPOSAL_EXECUTED: 'proposal_executed',
+  PROPOSAL_COUNT: 'proposal_count',
+  VOTING_POWER: 'voting_power',
+} as const;
+
+// Credits program mappings (CREDITS_PROGRAM_ID)
+export const CREDITS_MAPPINGS = {
+  VAULT_COLLATERAL_USDCX: 'vault_collateral_usdcx',
+  VAULT_COLLATERAL_USAD: 'vault_collateral_usad',
+  POOL_TOTAL_BORROWED: 'pool_total_borrowed',
+  LOAN_COUNT: 'loan_count',
+  ACTIVE_LOANS: 'active_loans',
+  ORACLE_PRICE: 'oracle_price',
+  CREDITS_ADMIN: 'credits_admin',
+  CREDITS_PAUSED: 'credits_paused',
+  TOTAL_FEES_COLLECTED: 'total_fees_collected',
+} as const;
+
+// Governance program mappings (GOV_PROGRAM_ID)
+export const GOV_MAPPINGS = {
+  GOV_ADMIN: 'gov_admin',
+  GOVERNANCE_TOKEN_SUPPLY: 'governance_token_supply',
+  PROPOSALS: 'proposals',
+  PROPOSAL_VOTES: 'proposal_votes',
+  PROPOSAL_EXECUTED: 'proposal_executed',
+  PROPOSAL_COUNT: 'proposal_count',
+  VOTING_POWER: 'voting_power',
+  GOV_PAUSED: 'gov_paused',
+  EXECUTION_RESULTS: 'execution_results',
+  EXECUTION_COUNT: 'execution_count',
 } as const;
 
 // Vault program mappings
@@ -81,6 +122,7 @@ export const TRANSITIONS = {
   RESUME_PROTOCOL: 'resume_protocol',
   ACCRUE_INTEREST: 'accrue_interest',
   SUPPLY_COLLATERAL: 'supply_collateral',
+  // Stablecoin-collateral transitions live in CREDITS_PROGRAM_ID
   SUPPLY_USDCX_COLLATERAL: 'supply_usdcx_collateral',
   SUPPLY_USAD_COLLATERAL: 'supply_usad_collateral',
   BORROW: 'borrow',
@@ -94,6 +136,37 @@ export const TRANSITIONS = {
   LIQUIDATE_USDCX: 'liquidate_usdcx',
   LIQUIDATE_USAD: 'liquidate_usad',
   WITHDRAW_COLLATERAL: 'withdraw_collateral',
+  WITHDRAW_USDCX_COLLATERAL: 'withdraw_usdcx_collateral',
+  WITHDRAW_USAD_COLLATERAL: 'withdraw_usad_collateral',
+} as const;
+
+// Governance transitions (GOV_PROGRAM_ID)
+export const GOV_TRANSITIONS = {
+  SET_LENDING_PROTOCOL: 'set_lending_protocol',
+  MINT_GOVERNANCE_TOKENS: 'mint_governance_tokens',
+  BURN_GOVERNANCE_TOKENS: 'burn_governance_tokens',
+  CREATE_PROPOSAL: 'create_proposal',
+  VOTE: 'vote',
+  EXECUTE_PROPOSAL: 'execute_proposal',
+  DELEGATE_VOTES: 'delegate_votes',
+  UNDELEGATE_VOTES: 'undelegate_votes',
+  SET_GOV_ADMIN: 'set_gov_admin',
+  PAUSE_GOVERNANCE: 'pause_governance',
+  RESUME_GOVERNANCE: 'resume_governance',
+} as const;
+
+// Credits program transitions (CREDITS_PROGRAM_ID)
+export const CREDITS_TRANSITIONS = {
+  UPDATE_ORACLE_PRICE: 'update_oracle_price',
+  EMERGENCY_PAUSE: 'emergency_pause',
+  RESUME_PROTOCOL: 'resume_protocol',
+  SUPPLY_USDCX_COLLATERAL: 'supply_usdcx_collateral',
+  SUPPLY_USAD_COLLATERAL: 'supply_usad_collateral',
+  BORROW_CREDITS: 'borrow_credits',
+  REPAY_CREDITS_USDCX: 'repay_credits_usdcx',
+  REPAY_CREDITS_USAD: 'repay_credits_usad',
+  LIQUIDATE_USDCX: 'liquidate_usdcx',
+  LIQUIDATE_USAD: 'liquidate_usad',
   WITHDRAW_USDCX_COLLATERAL: 'withdraw_usdcx_collateral',
   WITHDRAW_USAD_COLLATERAL: 'withdraw_usad_collateral',
 } as const;
@@ -125,6 +198,8 @@ export const ROUTES = {
   ANALYTICS: '/app/analytics',
   YIELD: '/app/yield',
   TRANSFER: '/app/transfer',
+  GOVERNANCE: '/app/governance',
+  RATES: '/app/rates',
   DOCS: '/docs',
 } as const;
 
@@ -137,6 +212,10 @@ export const RECORD_TYPES = {
   LIQUIDATION_AUTH: 'LiquidationAuth',
   REPAYMENT_RECEIPT: 'RepaymentReceipt',
   LIQUIDATION_RECEIPT: 'LiquidationReceipt',
+  // Governance (GOV_PROGRAM_ID)
+  GOVERNANCE_TOKEN: 'GovernanceToken',
+  PROPOSAL_RECEIPT: 'ProposalReceipt',
+  DELEGATION_RECEIPT: 'DelegationReceipt',
 } as const;
 
 export const REFETCH_INTERVAL = 30_000;

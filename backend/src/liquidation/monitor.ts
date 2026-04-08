@@ -19,8 +19,8 @@ interface ProtocolSnapshot {
 async function getProtocolSnapshot(): Promise<ProtocolSnapshot> {
   const [collateralAleoRaw, collateralUsdcxRaw, collateralUsadRaw, borrowedUsdcxRaw, borrowedUsadRaw, borrowedCreditsRaw, priceRaw, loansRaw, pausedRaw, blockHeight] = await Promise.all([
     getMappingValue('vault_collateral_aleo'),
-    getMappingValue('vault_collateral_usdcx'),
-    getMappingValue('vault_collateral_usad'),
+    getMappingValue('vault_collateral_usdcx', '0u8', config.creditsProgramId),
+    getMappingValue('vault_collateral_usad', '0u8', config.creditsProgramId),
     getMappingValue('pool_total_borrowed', '0u8'),
     getMappingValue('pool_total_borrowed', '1u8'),
     getMappingValue('pool_total_borrowed', '2u8'),

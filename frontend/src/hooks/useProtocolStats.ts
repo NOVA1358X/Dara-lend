@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAleoClient } from './useAleoClient';
-import { MAPPINGS, REFETCH_INTERVAL, PRECISION } from '@/utils/constants';
+import { MAPPINGS, CREDITS_MAPPINGS, CREDITS_PROGRAM_ID, REFETCH_INTERVAL, PRECISION } from '@/utils/constants';
 import { parseAleoU64 } from '@/utils/formatting';
 
 export interface ProtocolStats {
@@ -29,11 +29,11 @@ export function useProtocolStats() {
         loansRaw, priceRaw,
       ] = await Promise.all([
           getMappingValue(MAPPINGS.VAULT_COLLATERAL_ALEO),
-          getMappingValue(MAPPINGS.VAULT_COLLATERAL_USDCX),
-          getMappingValue(MAPPINGS.VAULT_COLLATERAL_USAD),
+          getMappingValue(CREDITS_MAPPINGS.VAULT_COLLATERAL_USDCX, '0u8', CREDITS_PROGRAM_ID),
+          getMappingValue(CREDITS_MAPPINGS.VAULT_COLLATERAL_USAD, '0u8', CREDITS_PROGRAM_ID),
           getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '0u8'),
           getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '1u8'),
-          getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '2u8'),
+          getMappingValue(CREDITS_MAPPINGS.POOL_TOTAL_BORROWED, '0u8', CREDITS_PROGRAM_ID),
           getMappingValue(MAPPINGS.LOAN_COUNT),
           getMappingValue(MAPPINGS.ORACLE_PRICE),
         ]);

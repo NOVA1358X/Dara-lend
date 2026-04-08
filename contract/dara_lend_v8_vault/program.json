@@ -1,7 +1,7 @@
 {
-  "program": "dara_lend_v7_vault.aleo",
-  "version": "0.1.0",
-  "description": "DARA Lend v7 Vault — Yield pools, private transfers, and analytics companion program",
+  "program": "dara_lend_v8_vault.aleo",
+  "version": "1.0.0",
+  "description": "DARA Lend v8 Vault — Yield pools, private transfers, and analytics companion program (Leo v4.0)",
   "license": "MIT",
   "dependencies": [
     {

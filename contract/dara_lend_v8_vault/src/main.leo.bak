@@ -2,7 +2,7 @@ import credits.aleo;
 import test_usdcx_stablecoin.aleo;
 import test_usad_stablecoin.aleo;
 
-program dara_lend_v7_vault.aleo {
+program dara_lend_v8_vault.aleo {
 
     // Local struct matching merkle_tree.aleo/MerkleProof layout
     struct MerkleProof {
@@ -75,12 +75,12 @@ program dara_lend_v7_vault.aleo {
     // 1. PROVIDE USDCx CAPITAL — Deposit USDCx to yield pool
     // ═══════════════════════════════════════════════════
 
-    async transition provide_usdcx_capital(
+    fn provide_usdcx_capital(
         input_token: test_usdcx_stablecoin.aleo/Token,
         merkle_proof: [MerkleProof; 2u32],
         amount: u128,
         nonce: field,
-    ) -> (PoolShare, Future) {
+    ) -> (PoolShare, Final) {
         assert(amount >= MIN_POOL_DEPOSIT);
 
         let signer_field: field = BHP256::hash_to_field(self.signer);
@@ -94,18 +94,18 @@ program dara_lend_v7_vault.aleo {
             nonce_hash: nonce_hash,
         };
 
-        let (compliance_record, change_token, deposit_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_private_to_public(self.address, amount, input_token, merkle_proof);
+        let (compliance_record, change_token, deposit_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_private_to_public(self.address, amount, input_token, merkle_proof);
 
         return (share, finalize_provide_usdcx(deposit_future, nonce_hash, amount));
     }
 
-    async function finalize_provide_usdcx(
-        deposit_future: Future,
+    final finalize_provide_usdcx(
+        deposit_future: Final,
         nonce_hash: field,
         amount: u128,
     ) {
-        deposit_future.await();
+        deposit_future.run();
 
         let paused: bool = Mapping::get_or_use(vault_paused, 0u8, false);
         assert(!paused);
@@ -132,12 +132,12 @@ program dara_lend_v7_vault.aleo {
     // 2. PROVIDE USAD CAPITAL — Deposit USAD to yield pool
     // ═══════════════════════════════════════════════════
 
-    async transition provide_usad_capital(
+    fn provide_usad_capital(
         input_token: test_usad_stablecoin.aleo/Token,
         merkle_proof: [MerkleProof; 2u32],
         amount: u128,
         nonce: field,
-    ) -> (PoolShare, Future) {
+    ) -> (PoolShare, Final) {
         assert(amount >= MIN_POOL_DEPOSIT);
 
         let signer_field: field = BHP256::hash_to_field(self.signer);
@@ -151,18 +151,18 @@ program dara_lend_v7_vault.aleo {
             nonce_hash: nonce_hash,
         };
 
-        let (compliance_record, change_token, deposit_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_private_to_public(self.address, amount, input_token, merkle_proof);
+        let (compliance_record, change_token, deposit_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_private_to_public(self.address, amount, input_token, merkle_proof);
 
         return (share, finalize_provide_usad(deposit_future, nonce_hash, amount));
     }
 
-    async function finalize_provide_usad(
-        deposit_future: Future,
+    final finalize_provide_usad(
+        deposit_future: Final,
         nonce_hash: field,
         amount: u128,
     ) {
-        deposit_future.await();
+        deposit_future.run();
 
         let paused: bool = Mapping::get_or_use(vault_paused, 0u8, false);
         assert(!paused);
@@ -188,30 +188,27 @@ program dara_lend_v7_vault.aleo {
     // 3. REDEEM USDCx CAPITAL — Withdraw USDCx + yield
     // ═══════════════════════════════════════════════════
 
-    async transition redeem_usdcx_capital(
+    fn redeem_usdcx_capital(
         share_record: PoolShare,
-    ) -> Future {
+    ) -> Final {
         assert(share_record.token_type == 0u8);
         assert(share_record.share_amount > 0u128);
 
-        // Withdrawal amount is computed in finalize (based on current pool ratio)
-        // Send proportional amount back to user as private USDCx
-        let (compliance_record, usdcx_token, redeem_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_public_to_private(self.caller, share_record.share_amount);
+        let (compliance_record, usdcx_token, redeem_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_public_to_private(self.caller, share_record.share_amount);
 
         return finalize_redeem_usdcx(redeem_future, share_record.share_amount);
     }
 
-    async function finalize_redeem_usdcx(
-        redeem_future: Future,
+    final finalize_redeem_usdcx(
+        redeem_future: Final,
         share_amount: u128,
     ) {
-        redeem_future.await();
+        redeem_future.run();
 
         let total_deposits: u128 = Mapping::get(supply_pool_total, 0u8);
         let total_shares: u128 = Mapping::get(supply_pool_shares, 0u8);
 
-        // Calculate underlying value: shares * total_deposits / total_shares
         let underlying: u128 = share_amount * total_deposits / total_shares;
         let fee: u128 = underlying * WITHDRAWAL_FEE_BPS / BPS;
         let net_withdrawal: u128 = underlying - fee;
@@ -225,23 +222,23 @@ program dara_lend_v7_vault.aleo {
     // 4. REDEEM USAD CAPITAL — Withdraw USAD + yield
     // ═══════════════════════════════════════════════════
 
-    async transition redeem_usad_capital(
+    fn redeem_usad_capital(
         share_record: PoolShare,
-    ) -> Future {
+    ) -> Final {
         assert(share_record.token_type == 1u8);
         assert(share_record.share_amount > 0u128);
 
-        let (compliance_record, usad_token, redeem_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_public_to_private(self.caller, share_record.share_amount);
+        let (compliance_record, usad_token, redeem_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_public_to_private(self.caller, share_record.share_amount);
 
         return finalize_redeem_usad(redeem_future, share_record.share_amount);
     }
 
-    async function finalize_redeem_usad(
-        redeem_future: Future,
+    final finalize_redeem_usad(
+        redeem_future: Final,
         share_amount: u128,
     ) {
-        redeem_future.await();
+        redeem_future.run();
 
         let total_deposits: u128 = Mapping::get(supply_pool_total, 1u8);
         let total_shares: u128 = Mapping::get(supply_pool_shares, 1u8);
@@ -259,16 +256,16 @@ program dara_lend_v7_vault.aleo {
     // 5. DISTRIBUTE YIELD — Admin adds yield to pool
     // ═══════════════════════════════════════════════════
 
-    async transition distribute_yield(
+    fn distribute_yield(
         token_type: u8,
         amount: u128,
-    ) -> Future {
+    ) -> Final {
         assert(token_type <= 1u8);
         assert(amount > 0u128);
         return finalize_distribute_yield(self.caller, token_type, amount);
     }
 
-    async function finalize_distribute_yield(
+    final finalize_distribute_yield(
         caller: address,
         token_type: u8,
         amount: u128,
@@ -288,13 +285,13 @@ program dara_lend_v7_vault.aleo {
     // 6. PRIVATE TRANSFER USDCx — Privacy relay
     // ═══════════════════════════════════════════════════
 
-    async transition private_transfer_usdcx(
+    fn private_transfer_usdcx(
         input_token: test_usdcx_stablecoin.aleo/Token,
         merkle_proof: [MerkleProof; 2u32],
         recipient: address,
         amount: u128,
         nonce: field,
-    ) -> (PrivateTransferReceipt, Future) {
+    ) -> (PrivateTransferReceipt, Final) {
         assert(amount >= MIN_TRANSFER_AMOUNT);
 
         let signer_field: field = BHP256::hash_to_field(self.signer);
@@ -308,26 +305,26 @@ program dara_lend_v7_vault.aleo {
         };
 
         // Step 1: sender deposits tokens to protocol (public)
-        let (compliance_in, change_token, deposit_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_private_to_public(self.address, amount, input_token, merkle_proof);
+        let (compliance_in, change_token, deposit_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_private_to_public(self.address, amount, input_token, merkle_proof);
 
         // Step 2: protocol sends tokens to recipient (private)
-        let (compliance_out, recipient_token, withdraw_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Future) =
-            test_usdcx_stablecoin.aleo/transfer_public_to_private(recipient, amount);
+        let (compliance_out, recipient_token, withdraw_future): (test_usdcx_stablecoin.aleo/ComplianceRecord, test_usdcx_stablecoin.aleo/Token, Final) =
+            test_usdcx_stablecoin.aleo::transfer_public_to_private(recipient, amount);
 
         return (receipt, finalize_private_transfer_usdcx(
             deposit_future, withdraw_future, nonce_hash, amount,
         ));
     }
 
-    async function finalize_private_transfer_usdcx(
-        deposit_future: Future,
-        withdraw_future: Future,
+    final finalize_private_transfer_usdcx(
+        deposit_future: Final,
+        withdraw_future: Final,
         nonce_hash: field,
         amount: u128,
     ) {
-        deposit_future.await();
-        withdraw_future.await();
+        deposit_future.run();
+        withdraw_future.run();
 
         let paused: bool = Mapping::get_or_use(vault_paused, 0u8, false);
         assert(!paused);
@@ -347,13 +344,13 @@ program dara_lend_v7_vault.aleo {
     // 7. PRIVATE TRANSFER USAD — Privacy relay
     // ═══════════════════════════════════════════════════
 
-    async transition private_transfer_usad(
+    fn private_transfer_usad(
         input_token: test_usad_stablecoin.aleo/Token,
         merkle_proof: [MerkleProof; 2u32],
         recipient: address,
         amount: u128,
         nonce: field,
-    ) -> (PrivateTransferReceipt, Future) {
+    ) -> (PrivateTransferReceipt, Final) {
         assert(amount >= MIN_TRANSFER_AMOUNT);
 
         let signer_field: field = BHP256::hash_to_field(self.signer);
@@ -366,25 +363,25 @@ program dara_lend_v7_vault.aleo {
             nonce_hash: nonce_hash,
         };
 
-        let (compliance_in, change_token, deposit_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_private_to_public(self.address, amount, input_token, merkle_proof);
+        let (compliance_in, change_token, deposit_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_private_to_public(self.address, amount, input_token, merkle_proof);
 
-        let (compliance_out, recipient_token, withdraw_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Future) =
-            test_usad_stablecoin.aleo/transfer_public_to_private(recipient, amount);
+        let (compliance_out, recipient_token, withdraw_future): (test_usad_stablecoin.aleo/ComplianceRecord, test_usad_stablecoin.aleo/Token, Final) =
+            test_usad_stablecoin.aleo::transfer_public_to_private(recipient, amount);
 
         return (receipt, finalize_private_transfer_usad(
             deposit_future, withdraw_future, nonce_hash, amount,
         ));
     }
 
-    async function finalize_private_transfer_usad(
-        deposit_future: Future,
-        withdraw_future: Future,
+    final finalize_private_transfer_usad(
+        deposit_future: Final,
+        withdraw_future: Final,
         nonce_hash: field,
         amount: u128,
     ) {
-        deposit_future.await();
-        withdraw_future.await();
+        deposit_future.run();
+        withdraw_future.run();
 
         let paused: bool = Mapping::get_or_use(vault_paused, 0u8, false);
         assert(!paused);
@@ -404,13 +401,13 @@ program dara_lend_v7_vault.aleo {
     // 8. SET VAULT ADMIN — Transfer admin control
     // ═══════════════════════════════════════════════════
 
-    async transition set_vault_admin(
+    fn set_vault_admin(
         new_admin: address,
-    ) -> Future {
+    ) -> Final {
         return finalize_set_vault_admin(self.caller, new_admin);
     }
 
-    async function finalize_set_vault_admin(
+    final finalize_set_vault_admin(
         caller: address,
         new_admin: address,
     ) {
@@ -423,11 +420,11 @@ program dara_lend_v7_vault.aleo {
     // 9. PAUSE VAULT — Emergency stop
     // ═══════════════════════════════════════════════════
 
-    async transition pause_vault() -> Future {
+    fn pause_vault() -> Final {
         return finalize_pause_vault(self.caller);
     }
 
-    async function finalize_pause_vault(caller: address) {
+    final finalize_pause_vault(caller: address) {
         let admin: address = Mapping::get(vault_admin, 0u8);
         assert_eq(caller, admin);
         Mapping::set(vault_paused, 0u8, true);
@@ -437,11 +434,11 @@ program dara_lend_v7_vault.aleo {
     // 10. RESUME VAULT
     // ═══════════════════════════════════════════════════
 
-    async transition resume_vault() -> Future {
+    fn resume_vault() -> Final {
         return finalize_resume_vault(self.caller);
     }
 
-    async function finalize_resume_vault(caller: address) {
+    final finalize_resume_vault(caller: address) {
         let admin: address = Mapping::get(vault_admin, 0u8);
         assert_eq(caller, admin);
         Mapping::set(vault_paused, 0u8, false);

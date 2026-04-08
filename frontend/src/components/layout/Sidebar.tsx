@@ -27,6 +27,8 @@ const navItems = [
   { path: '/app/analytics', label: 'Analytics', icon: ChartIcon, end: false },
   { path: '/app/stats', label: 'Stats', icon: ShieldIcon, end: false },
   { path: '/app/admin', label: 'Admin', icon: KeyIcon, end: false },
+  { path: '/app/governance', label: 'Governance', icon: ShieldIcon, end: false },
+  { path: '/app/rates', label: 'Rate Curve', icon: ChartIcon, end: false },
 ];
 
 export function Sidebar() {

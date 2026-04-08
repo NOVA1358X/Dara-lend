@@ -1,0 +1,13 @@
+{
+  "program": "dara_lend_v8_gov.aleo",
+  "version": "1.0.0",
+  "description": "On-chain governance DAO for DARA Lend v8 — private voting via ZK records, proposal execution with timelock, and vote delegation",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}

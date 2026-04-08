@@ -57,7 +57,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           DARA Lend — The Obsidian Ledger
         </h1>
         <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary mb-8">
-          Protocol Documentation &middot; v7 &middot; Dual-Program Architecture
+          Protocol Documentation &middot; v8 &middot; Four-Program Architecture
         </p>
         <p className="text-text-secondary leading-relaxed mb-4">
           DARA Lend is a privacy-first, multi-collateral lending protocol built on the Aleo blockchain.
@@ -65,18 +65,20 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           verifiable protocol solvency — protecting borrowers from MEV attacks and front-running.
         </p>
         <p className="text-text-secondary leading-relaxed mb-4">
-          v7 introduces a dual-program architecture: <strong className="text-text-primary">dara_lend_v7.aleo</strong> (lending core with 21 transitions)
-          and <strong className="text-text-primary">dara_lend_v7_vault.aleo</strong> (yield vault + private transfers with 10 transitions).
+          v8 introduces a four-program architecture: <strong className="text-text-primary">dara_lend_v8.aleo</strong> (ALEO-collateral lending, 12 transitions),{' '}
+          <strong className="text-text-primary">dara_lend_v8_credits.aleo</strong> (stablecoin-collateral lending, 12 transitions),{' '}
+          <strong className="text-text-primary">dara_lend_v8_vault.aleo</strong> (yield vault + private transfers, 10 transitions), and{' '}
+          <strong className="text-text-primary">dara_lend_v8_gov.aleo</strong> (governance + voting, 11 transitions).
           Users supply ALEO, USDCx, or USAD, borrow against them, earn yield on stablecoin deposits,
-          and transfer tokens with zero on-chain traceability.
+          govern the protocol via proposals, and transfer tokens with zero on-chain traceability.
         </p>
 
         <div className="grid grid-cols-2 gap-4 mt-8">
           {[
             { value: '100%', label: 'Private Positions', desc: 'All positions encrypted by default' },
             { value: '0', label: 'MEV Attack Surface', desc: 'Liquidation prices invisible to bots' },
-            { value: '31', label: 'On-Chain Transitions', desc: '21 lending + 10 vault across 2 programs' },
-            { value: '2.8M', label: 'Compiled Variables', desc: '1.98M lending + 822K vault' },
+            { value: '45', label: 'On-Chain Transitions', desc: '12+12 lending + 10 vault + 11 gov across 4 programs' },
+            { value: '3.5M', label: 'Compiled Variables', desc: '1.03M main + 1.31M credits + 822K vault + 380K gov' },
             { value: '7', label: 'Private Record Types', desc: 'Collateral, Debt, Liquidation, Pool, Transfer' },
             { value: '5', label: 'Oracle Sources', desc: 'CoinGecko, CryptoCompare, Coinbase, Gate.io, CMC' },
           ].map((stat) => (
@@ -90,25 +92,41 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
 
         <div className="mt-6 p-4 rounded-lg bg-primary/5 border border-primary/10">
           <p className="text-sm text-text-secondary">
-            <strong className="text-primary">Lending:</strong>{' '}
+            <strong className="text-primary">Main:</strong>{' '}
             <a
-              href="https://testnet.explorer.provable.com/program/dara_lend_v7.aleo"
+              href="https://testnet.explorer.provable.com/program/dara_lend_v8.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-primary hover:underline"
-            >dara_lend_v7.aleo</a>
+            >dara_lend_v8.aleo</a>
+            {' · '}
+            <strong className="text-primary">Credits:</strong>{' '}
+            <a
+              href="https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-primary hover:underline"
+            >dara_lend_v8_credits.aleo</a>
             {' · '}
             <strong className="text-primary">Vault:</strong>{' '}
             <a
-              href="https://testnet.explorer.provable.com/program/dara_lend_v7_vault.aleo"
+              href="https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-primary hover:underline"
-            >dara_lend_v7_vault.aleo</a>
+            >dara_lend_v8_vault.aleo</a>
+            {' · '}
+            <strong className="text-primary">Gov:</strong>{' '}
+            <a
+              href="https://testnet.explorer.provable.com/program/dara_lend_v8_gov.aleo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-primary hover:underline"
+            >dara_lend_v8_gov.aleo</a>
             {' · '}
             <strong className="text-text-primary">Network:</strong> Aleo Testnet
             {' · '}
-            <strong className="text-text-primary">Language:</strong> Leo 3.4.0
+            <strong className="text-text-primary">Language:</strong> Leo 4.0.0
           </p>
         </div>
       </section>
@@ -282,22 +300,36 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           Smart Contract
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          The DARA Lend protocol is powered by two linked Leo smart contracts deployed on Aleo Testnet:{' '}
+          The DARA Lend protocol is powered by four linked Leo smart contracts deployed on Aleo Testnet:{' '}
           <a
-            href="https://testnet.explorer.provable.com/program/dara_lend_v7.aleo"
+            href="https://testnet.explorer.provable.com/program/dara_lend_v8.aleo"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-primary hover:underline"
-          >dara_lend_v7.aleo</a>
-          {' '}(21 transitions — lending, oracle, liquidation) and{' '}
+          >dara_lend_v8.aleo</a>
+          {' '}(12 transitions — ALEO-collateral lending, oracle, liquidation),{' '}
           <a
-            href="https://testnet.explorer.provable.com/program/dara_lend_v7_vault.aleo"
+            href="https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-primary hover:underline"
-          >dara_lend_v7_vault.aleo</a>
-          {' '}(10 transitions — yield vault, private transfers). Combined 31 transitions
-          managing multi-collateral lending, yield pools, private transfers, interest rate accrual, and emergency controls.
+          >dara_lend_v8_credits.aleo</a>
+          {' '}(12 transitions — stablecoin-collateral lending),{' '}
+          <a
+            href="https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-primary hover:underline"
+          >dara_lend_v8_vault.aleo</a>
+          {' '}(10 transitions — yield vault, private transfers), and{' '}
+          <a
+            href="https://testnet.explorer.provable.com/program/dara_lend_v8_gov.aleo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-primary hover:underline"
+          >dara_lend_v8_gov.aleo</a>
+          {' '}(11 transitions — governance, voting, proposals). Combined 45 transitions
+          managing multi-collateral lending, yield pools, private transfers, governance, interest rate accrual, and emergency controls.
         </p>
 
         <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
@@ -307,7 +339,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           All position data is stored in encrypted private records — only the record owner
           can decrypt and view their contents:
         </p>
-        <CodeBlock>{`// ─── dara_lend_v7.aleo (5 records) ───
+        <CodeBlock>{`// ─── dara_lend_v8.aleo (5 records) ───
 record CollateralReceipt {
     owner: address,
     token_type: u8,              // 0=ALEO, 1=USDCx, 2=USAD
@@ -338,7 +370,7 @@ record LiquidationAuth {
 record RepaymentReceipt { owner, amount_repaid, collateral_returned, loan_id }
 record LiquidationReceipt { owner, loan_id, collateral_seized, debt_covered }
 
-// ─── dara_lend_v7_vault.aleo (2 records) ───
+// ─── dara_lend_v8_vault.aleo (2 records) ───
 record PoolShare {
     owner: address,
     token_type: u8,              // 0=USDCx, 1=USAD
@@ -354,7 +386,7 @@ record PrivateTransferReceipt {
 }`}</CodeBlock>
 
         <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
-          Lending Transitions (21) — dara_lend_v7.aleo
+          Lending Transitions (12) — dara_lend_v8.aleo
         </h3>
         <p className="text-text-secondary leading-relaxed mb-4">
           The core lending program handles multi-collateral supply, multi-borrow,
@@ -424,7 +456,7 @@ record PrivateTransferReceipt {
         </div>
 
         <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
-          Vault Transitions (10) — dara_lend_v7_vault.aleo
+          Vault Transitions (10) — dara_lend_v8_vault.aleo
         </h3>
         <p className="text-text-secondary leading-relaxed mb-4">
           The vault program manages yield pools, private transfers, and independent admin controls:
@@ -471,7 +503,7 @@ record PrivateTransferReceipt {
         <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
           Public Mappings
         </h3>
-        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary mb-2">dara_lend_v7.aleo</p>
+        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary mb-2">dara_lend_v8.aleo</p>
         <div className="grid grid-cols-1 gap-2">
           {[
             { name: 'vault_collateral_aleo', desc: 'Total ALEO collateral in microcredits' },
@@ -492,7 +524,7 @@ record PrivateTransferReceipt {
             </div>
           ))}
         </div>
-        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary mt-4 mb-2">dara_lend_v7_vault.aleo</p>
+        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary mt-4 mb-2">dara_lend_v8_vault.aleo</p>
         <div className="grid grid-cols-1 gap-2">
           {[
             { name: 'pool_total_deposits[0|1]', desc: 'Total deposits in yield pool: 0=USDCx, 1=USAD' },
@@ -563,8 +595,8 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
         <div className="space-y-4 mb-6">
           {[
             {
-              title: 'Leo Smart Contracts (dara_lend_v7.aleo + vault)',
-              items: ['Main: 812 statements, 1.98M variables — Vault: 274 statements, 822K variables', '31 total transitions (21 lending + 10 vault), 7 private records', 'Imports credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo + merkle_tree.aleo', 'Yield vault pools, private transfers, auto liquidation bot, circuit breaker'],
+              title: 'Leo Smart Contracts (4 programs — v8)',
+              items: ['Main: 482 statements, 1.03M variables — Credits: 381 statements, 1.31M variables — Vault: 272 statements, 822K variables — Gov: 223 statements, 380K variables', '45 total transitions (12+12 lending + 10 vault + 11 governance), 7+ private records', 'Imports credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo + merkle_tree.aleo', 'Yield vault pools, private transfers, governance proposals & voting, auto liquidation bot, circuit breaker'],
             },
             {
               title: 'React Frontend (Vite + TypeScript)',
@@ -728,9 +760,11 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
         <div className="space-y-4">
           {[
             {
-              phase: 'Wave 4 — Current Release (v7)',
+              phase: 'Wave 5 — Current Release (v8)',
               items: [
-                'Dual-program architecture — dara_lend_v7.aleo (21 transitions) + dara_lend_v7_vault.aleo (10 transitions)',
+                'Four-program architecture — dara_lend_v8.aleo (12) + dara_lend_v8_credits.aleo (12) + dara_lend_v8_vault.aleo (10) + dara_lend_v8_gov.aleo (11)',
+                'Governance — GovernanceToken minting/burning, proposals, delegation, voting, execution',
+                'Credits contract — stablecoin collateral supply, ALEO borrow against stablecoins',
                 'Yield Vault — deposit USDCx/USAD stablecoins, earn protocol fees, redeem PoolShare records',
                 'Private Transfers — ZK-shielded relay breaks sender-recipient on-chain link completely',
                 'Admin Panel — distribute yield, pause/resume protocol + vault, accrue interest (manual fallback)',
@@ -738,7 +772,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
                 'Interest rate model — on-chain base rate + slope (BPS), utilization-based APY',
                 'Emergency circuit breaker — independent pause/resume for lending core and vault',
                 'MerkleProof freeze-list compliance for all stablecoin operations',
-                '31 transitions, 2,805,091 compiled variables, 7 private record types',
+                '45 transitions, ~3.5M compiled variables, 7+ private record types',
                 'Analytics dashboard — TVL, oracle prices, vault stats, interest rates',
                 'Complete UI/UX redesign — Obsidian Ledger luxury dark theme with 14 app pages',
                 '5-source Oracle — CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap',
@@ -815,7 +849,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'What network is DARA Lend deployed on?',
-              a: 'Currently on Aleo Testnet. Lending: dara_lend_v7.aleo (TX: at17alxm45te8xjcuc8n4h6zajjf8ke5s0sa6tvvp4umwrwlmje4q8sjrnesl). Vault: dara_lend_v7_vault.aleo (TX: at16d0eejg60l3xatmxl6uyrvyajyuy3h6808d225dsac48chgf2yzsaxvdge). Mainnet deployment planned after audits.',
+              a: 'Currently on Aleo Testnet. Main: dara_lend_v8.aleo (TX: at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg). Credits: dara_lend_v8_credits.aleo (TX: at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp). Vault: dara_lend_v8_vault.aleo (TX: at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t). Gov: dara_lend_v8_gov.aleo (TX: at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d). Mainnet deployment planned after audits.',
             },
             {
               q: 'What is the Yield Vault?',
