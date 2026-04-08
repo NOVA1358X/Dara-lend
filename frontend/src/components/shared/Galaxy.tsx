@@ -77,8 +77,8 @@ export function Galaxy({
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      // Canvas is fixed inset-0 so clientX/Y equals canvas-local coords
+      mouseRef.current = { x: e.clientX, y: e.clientY };
     };
 
     const handleMouseLeave = () => {
@@ -166,8 +166,8 @@ export function Galaxy({
     resize();
     window.addEventListener('resize', resize);
     if (mouseRepulsion) {
-      canvas.addEventListener('mousemove', handleMouseMove);
-      canvas.addEventListener('mouseleave', handleMouseLeave);
+      window.addEventListener('mousemove', handleMouseMove);
+      document.documentElement.addEventListener('mouseleave', handleMouseLeave);
     }
     frameRef.current = requestAnimationFrame(draw);
 
@@ -175,8 +175,8 @@ export function Galaxy({
       cancelAnimationFrame(frameRef.current);
       window.removeEventListener('resize', resize);
       if (mouseRepulsion) {
-        canvas.removeEventListener('mousemove', handleMouseMove);
-        canvas.removeEventListener('mouseleave', handleMouseLeave);
+        window.removeEventListener('mousemove', handleMouseMove);
+        document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
   }, [density, speed, starSpeed, hueShift, saturation, glowIntensity, twinkleIntensity, rotationSpeed, mouseRepulsion, repulsionStrength, transparent]);
@@ -184,7 +184,7 @@ export function Galaxy({
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full pointer-events-auto"
+      className="fixed inset-0 w-full h-full pointer-events-none"
       style={{ zIndex: 0 }}
     />
   );

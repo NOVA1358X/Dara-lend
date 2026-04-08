@@ -8,6 +8,7 @@ import transactionRouter from './routes/transaction.js';
 import priceRouter from './routes/price.js';
 import oracleRouter from './routes/oracle.js';
 import analyticsRouter from './routes/analytics.js';
+import governanceRouter from './routes/governance.js';
 
 export function createServer() {
   const app = express();
@@ -32,13 +33,14 @@ export function createServer() {
   app.use('/api/price', priceRouter);
   app.use('/api/oracle', oracleRouter);
   app.use('/api/analytics', analyticsRouter);
+  app.use('/api/governance', governanceRouter);
 
   app.get('/', (_req, res) => {
     res.json({
       name: 'DARA Lend API',
       version: '3.0.0',
       programs: [config.programId, config.vaultProgramId, config.creditsProgramId, config.govProgramId],
-      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price'],
+      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info'],
     });
   });
 
