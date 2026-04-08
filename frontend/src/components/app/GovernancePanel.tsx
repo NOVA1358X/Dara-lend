@@ -8,6 +8,7 @@ import {
   GOV_TRANSITIONS,
   ADMIN_ADDRESS,
   BACKEND_API,
+  PROPOSAL_ID_TABLE,
 } from '@/utils/constants';
 
 interface GovernanceProps {
@@ -116,11 +117,13 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
       setTokenSupply(parseU64(supplyRaw));
       setVotingPower(parseU64(powerRaw));
 
-      // Fetch recent proposals (last 10)
+      // Fetch recent proposals (last 10) using PRECOMPUTED proposal IDs
+      // Proposal IDs = BHP256::hash_to_field(index_u64) — computed via Leo CLI
       const proposalPromises = [];
       const start = Math.max(0, count - 10);
       for (let i = start; i < count; i++) {
-        proposalPromises.push(fetchProposal(i));
+        const realId = PROPOSAL_ID_TABLE[i];
+        if (realId) proposalPromises.push(fetchProposal(i, realId));
       }
       const fetched = (await Promise.all(proposalPromises)).filter(Boolean) as Proposal[];
       setProposals(fetched.reverse());
@@ -130,19 +133,18 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
     setLoading(false);
   }, [wallet.address]);
 
-  async function fetchProposal(index: number): Promise<Proposal | null> {
-    const idField = `${index}field`;
+  async function fetchProposal(index: number, realId: string): Promise<Proposal | null> {
     try {
       const [proposalRaw, votesRaw, executedRaw] = await Promise.all([
-        fetchMapping(GOV_MAPPINGS.PROPOSALS, idField),
-        fetchMapping(GOV_MAPPINGS.PROPOSAL_VOTES, idField),
-        fetchMapping(GOV_MAPPINGS.PROPOSAL_EXECUTED, idField),
+        fetchMapping(GOV_MAPPINGS.PROPOSALS, realId),
+        fetchMapping(GOV_MAPPINGS.PROPOSAL_VOTES, realId),
+        fetchMapping(GOV_MAPPINGS.PROPOSAL_EXECUTED, realId),
       ]);
 
       if (!proposalRaw) return null;
 
       const getField = (data: string, name: string): string => {
-        const match = data.match(new RegExp(`${name}:\\s*([^,}]+)`));
+        const match = data.match(new RegExp(`${name}:\\s*([^,}\\n\\r]+)`));
         return match ? match[1].trim() : '0';
       };
 
@@ -163,7 +165,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
       const executed = executedRaw?.includes('true') ?? false;
 
       return {
-        id: idField,
+        id: realId,
         proposer: getField(proposalRaw, 'proposer'),
         type: pType,
         paramKey: pKey,
@@ -323,8 +325,10 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
       const result = await wallet.requestTransaction(tx);
       if (result?.transactionId) {
         const supportLabel = support === 1 ? 'For' : support === 0 ? 'Against' : 'Abstain';
-        toast.success(`Voted ${supportLabel} with ${amount} power: ${result.transactionId.slice(0, 16)}...`);
-        setTimeout(fetchGovernanceData, 10_000);
+        toast.success(`Vote ${supportLabel} submitted! TX: ${result.transactionId.slice(0, 16)}... (refresh in ~30s to see votes)`);
+        setTimeout(fetchGovernanceData, 15_000);
+      } else {
+        toast('Vote transaction sent — check wallet activity for confirmation');
       }
     } catch (err: any) {
       toast.error(err?.message || 'Voting failed');
@@ -649,29 +653,33 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
                         <button
                           onClick={() => handleVote(p.id, 1)}
                           disabled={txPending || !wallet.connected || votingPower <= 0}
-                          className="bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors"
+                          className="bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors flex items-center gap-1.5"
                         >
+                          {txPending ? <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : null}
                           Vote For
                         </button>
                         <button
                           onClick={() => handleVote(p.id, 0)}
                           disabled={txPending || !wallet.connected || votingPower <= 0}
-                          className="bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors"
+                          className="bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors flex items-center gap-1.5"
                         >
+                          {txPending ? <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : null}
                           Vote Against
                         </button>
                         <button
                           onClick={() => handleVote(p.id, 2)}
                           disabled={txPending || !wallet.connected || votingPower <= 0}
-                          className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors"
+                          className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors flex items-center gap-1.5"
                         >
+                          {txPending ? <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : null}
                           Abstain
                         </button>
                         <button
                           onClick={() => handleExecute(p.id)}
                           disabled={txPending || !wallet.connected}
-                          className="ml-auto bg-yellow-600 hover:bg-yellow-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors"
+                          className="ml-auto bg-yellow-600 hover:bg-yellow-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-xs font-medium transition-colors flex items-center gap-1.5"
                         >
+                          {txPending ? <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : null}
                           Execute
                         </button>
                       </div>
