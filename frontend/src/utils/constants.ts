@@ -2,6 +2,9 @@ export const PROGRAM_ID = 'dara_lend_v8.aleo';
 export const VAULT_PROGRAM_ID = 'dara_lend_v8_vault.aleo';
 export const CREDITS_PROGRAM_ID = 'dara_lend_v8_credits.aleo';
 export const GOV_PROGRAM_ID = 'dara_lend_v8_gov_v3.aleo';
+export const DARKPOOL_PROGRAM_ID = 'dara_dark_pool_v1.aleo';
+export const AUCTION_PROGRAM_ID = 'dara_auction_v1.aleo';
+export const FLASH_PROGRAM_ID = 'dara_flash_v1.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 export const USAD_PROGRAM = 'test_usad_stablecoin.aleo';
@@ -206,6 +209,85 @@ export const VAULT_TRANSITIONS = {
   RESUME_VAULT: 'resume_vault',
 } as const;
 
+// Dark Pool transitions (DARKPOOL_PROGRAM_ID)
+export const DARKPOOL_TRANSITIONS = {
+  SUBMIT_BUY_INTENT: 'submit_buy_intent',
+  SUBMIT_SELL_INTENT: 'submit_sell_intent',
+  SETTLE_EPOCH: 'settle_epoch',
+  CLAIM_BUY_FILL: 'claim_buy_fill',
+  CLAIM_SELL_FILL: 'claim_sell_fill',
+  CANCEL_BUY: 'cancel_buy',
+  CANCEL_SELL: 'cancel_sell',
+  PAUSE_DARKPOOL: 'pause_darkpool',
+  RESUME_DARKPOOL: 'resume_darkpool',
+} as const;
+
+// Dark Pool mappings
+export const DARKPOOL_MAPPINGS = {
+  DARKPOOL_ADMIN: 'darkpool_admin',
+  DARKPOOL_PAUSED: 'darkpool_paused',
+  CURRENT_EPOCH: 'current_epoch',
+  EPOCH_BUY_VOLUME: 'epoch_buy_volume',
+  EPOCH_SELL_VOLUME: 'epoch_sell_volume',
+  EPOCH_SETTLED: 'epoch_settled',
+  EPOCH_PRICE: 'epoch_price',
+  TOTAL_TRADES: 'total_trades',
+  TOTAL_VOLUME: 'total_volume',
+} as const;
+
+// Sealed-Bid Auction transitions (AUCTION_PROGRAM_ID)
+export const AUCTION_TRANSITIONS = {
+  START_AUCTION: 'start_auction',
+  SUBMIT_SEALED_BID: 'submit_sealed_bid',
+  REVEAL_BID: 'reveal_bid',
+  SETTLE_AUCTION: 'settle_auction',
+  CLAIM_COLLATERAL: 'claim_collateral',
+  REDEEM_COLLATERAL: 'redeem_collateral',
+  REFUND_BID: 'refund_bid',
+  CANCEL_AUCTION: 'cancel_auction',
+  PAUSE_AUCTIONS: 'pause_auctions',
+  RESUME_AUCTIONS: 'resume_auctions',
+} as const;
+
+// Auction mappings
+export const AUCTION_MAPPINGS = {
+  AUCTION_ADMIN: 'auction_admin',
+  AUCTION_PAUSED: 'auction_paused',
+  AUCTION_COUNT: 'auction_count',
+  AUCTIONS: 'auctions',
+  AUCTION_SETTLED: 'auction_settled',
+  HIGHEST_BID: 'highest_bid',
+  BID_COUNT: 'bid_count',
+  TOTAL_AUCTIONS: 'total_auctions',
+  TOTAL_BID_VOLUME: 'total_bid_volume',
+} as const;
+
+// Flash Loan transitions (FLASH_PROGRAM_ID)
+export const FLASH_TRANSITIONS = {
+  UPDATE_ORACLE_PRICE: 'update_oracle_price',
+  FLASH_BORROW_USDCX: 'flash_borrow_usdcx',
+  FLASH_CLAIM_USDCX: 'flash_claim_usdcx',
+  FLASH_REPAY_USDCX: 'flash_repay_usdcx',
+  FLASH_WITHDRAW_ALEO: 'flash_withdraw_aleo',
+  FLASH_BORROW_ALEO: 'flash_borrow_aleo',
+  FLASH_CLAIM_ALEO: 'flash_claim_aleo',
+  FLASH_REPAY_ALEO: 'flash_repay_aleo',
+  FLASH_WITHDRAW_USDCX: 'flash_withdraw_usdcx',
+  PAUSE_FLASH: 'pause_flash',
+  RESUME_FLASH: 'resume_flash',
+} as const;
+
+// Flash Loan mappings
+export const FLASH_MAPPINGS = {
+  FLASH_ADMIN: 'flash_admin',
+  FLASH_PAUSED: 'flash_paused',
+  ORACLE_PRICE: 'oracle_price',
+  TOTAL_FLASH_LOANS: 'total_flash_loans',
+  TOTAL_FLASH_VOLUME: 'total_flash_volume',
+  TOTAL_FEES_EARNED: 'total_fees_earned',
+  ACTIVE_FLASH_COUNT: 'active_flash_count',
+} as const;
+
 export const ROUTES = {
   HOME: '/',
   APP: '/app',
@@ -221,6 +303,9 @@ export const ROUTES = {
   TRANSFER: '/app/transfer',
   GOVERNANCE: '/app/governance',
   RATES: '/app/rates',
+  DARKPOOL: '/app/darkpool',
+  AUCTIONS: '/app/auctions',
+  FLASH: '/app/flash',
   DOCS: '/docs',
 } as const;
 

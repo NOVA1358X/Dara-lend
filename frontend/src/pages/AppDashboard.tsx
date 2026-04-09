@@ -20,6 +20,9 @@ import { AdminPanel } from '@/components/app/AdminPanel';
 import { GovernancePanel } from '@/components/app/GovernancePanel';
 import { RateCurveChart } from '@/components/app/RateCurveChart';
 import { SolvencyProof } from '@/components/app/SolvencyProof';
+import { DarkPool } from '@/components/app/DarkPool';
+import { Auctions } from '@/components/app/Auctions';
+import { FlashLoan } from '@/components/app/FlashLoan';
 import { PageTransition } from '@/components/shared/PageTransition';
 
 export default function AppDashboard() {
@@ -79,6 +82,9 @@ export default function AppDashboard() {
         <Route path="governance" element={<PageTransition><GovernancePanel wallet={walletProps} /></PageTransition>} />
         <Route path="rates" element={<PageTransition><RateCurveChart /></PageTransition>} />
         <Route path="solvency" element={<PageTransition><SolvencyProof /></PageTransition>} />
+        <Route path="darkpool" element={<PageTransition><DarkPool wallet={walletProps} /></PageTransition>} />
+        <Route path="auctions" element={<PageTransition><Auctions wallet={walletProps} /></PageTransition>} />
+        <Route path="flash" element={<PageTransition><FlashLoan wallet={walletProps} /></PageTransition>} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </AppLayout>

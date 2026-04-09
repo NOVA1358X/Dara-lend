@@ -1,0 +1,28 @@
+{
+  "program": "dara_flash_v1.aleo",
+  "version": "1.0.0",
+  "description": "DARA Flash Loans — Instant collateral-backed lending with 0.09% fee for atomic arbitrage (Leo v4.0)",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}

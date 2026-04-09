@@ -57,6 +57,24 @@ const quickActions = [
     href: '/app/transfer',
     icon: EyeOffIcon,
   },
+  {
+    label: 'Dark Pool',
+    description: 'Private batch trading at oracle price',
+    href: '/app/darkpool',
+    icon: EyeOffIcon,
+  },
+  {
+    label: 'Auctions',
+    description: 'Sealed-bid liquidation auctions',
+    href: '/app/auctions',
+    icon: ShieldIcon,
+  },
+  {
+    label: 'Flash Loans',
+    description: 'Instant collateral-backed flash lending',
+    href: '/app/flash',
+    icon: LinkIcon,
+  },
 ];
 
 export function Dashboard({ wallet }: DashboardProps) {

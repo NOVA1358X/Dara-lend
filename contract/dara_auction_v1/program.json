@@ -1,0 +1,28 @@
+{
+  "program": "dara_auction_v1.aleo",
+  "version": "1.0.0",
+  "description": "DARA Sealed-Bid Auction — Privacy-preserving sealed-bid liquidation auctions preventing MEV front-running (Leo v4.0)",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}

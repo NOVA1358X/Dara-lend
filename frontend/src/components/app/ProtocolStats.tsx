@@ -625,6 +625,46 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
         </motion.div>
         </>
       )}
+
+      {/* New Contract Programs */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, type: 'spring', stiffness: 120, damping: 20 }}
+      >
+        <h2 className="font-label text-[10px] uppercase text-text-muted tracking-[0.2em] mb-4">
+          Advanced Modules
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="rounded-xl glass-panel p-5">
+            <h3 className="font-headline text-sm text-primary mb-2">Dark Pool</h3>
+            <p className="text-xs text-text-muted mb-3">Epoch-based private batch trading at oracle mid-price</p>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between text-text-secondary"><span>Transitions</span><span>9</span></div>
+              <div className="flex justify-between text-text-secondary"><span>Privacy</span><span className="text-accent-success">Full</span></div>
+              <div className="flex justify-between text-text-secondary"><span>Program</span><span className="font-mono text-[10px]">dara_dark_pool_v1</span></div>
+            </div>
+          </div>
+          <div className="rounded-xl glass-panel p-5">
+            <h3 className="font-headline text-sm text-primary mb-2">Sealed-Bid Auctions</h3>
+            <p className="text-xs text-text-muted mb-3">Anti-MEV liquidation auctions with commitment scheme</p>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between text-text-secondary"><span>Transitions</span><span>10</span></div>
+              <div className="flex justify-between text-text-secondary"><span>Privacy</span><span className="text-accent-success">Full</span></div>
+              <div className="flex justify-between text-text-secondary"><span>Program</span><span className="font-mono text-[10px]">dara_auction_v1</span></div>
+            </div>
+          </div>
+          <div className="rounded-xl glass-panel p-5">
+            <h3 className="font-headline text-sm text-primary mb-2">Flash Loans</h3>
+            <p className="text-xs text-text-muted mb-3">Instant collateral-backed flash lending at 0.09% fee</p>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between text-text-secondary"><span>Transitions</span><span>11</span></div>
+              <div className="flex justify-between text-text-secondary"><span>Privacy</span><span className="text-accent-success">Full</span></div>
+              <div className="flex justify-between text-text-secondary"><span>Program</span><span className="font-mono text-[10px]">dara_flash_v1</span></div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

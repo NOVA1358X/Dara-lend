@@ -9,6 +9,9 @@ import priceRouter from './routes/price.js';
 import oracleRouter from './routes/oracle.js';
 import analyticsRouter from './routes/analytics.js';
 import governanceRouter from './routes/governance.js';
+import darkpoolRouter from './routes/darkpool.js';
+import auctionRouter from './routes/auction.js';
+import flashRouter from './routes/flash.js';
 
 export function createServer() {
   const app = express();
@@ -34,13 +37,16 @@ export function createServer() {
   app.use('/api/oracle', oracleRouter);
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/governance', governanceRouter);
+  app.use('/api/darkpool', darkpoolRouter);
+  app.use('/api/auction', auctionRouter);
+  app.use('/api/flash', flashRouter);
 
   app.get('/', (_req, res) => {
     res.json({
       name: 'DARA Lend API',
-      version: '3.0.0',
-      programs: [config.programId, config.vaultProgramId, config.creditsProgramId, config.govProgramId],
-      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info'],
+      version: '4.0.0',
+      programs: [config.programId, config.vaultProgramId, config.creditsProgramId, config.govProgramId, config.darkpoolProgramId, config.auctionProgramId, config.flashProgramId],
+      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info', '/api/darkpool/epoch', '/api/darkpool/stats', '/api/auction/active', '/api/auction/stats', '/api/flash/stats', '/api/flash/available'],
     });
   });
 

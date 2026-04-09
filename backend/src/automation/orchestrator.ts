@@ -3,9 +3,12 @@ import { runOracleBotCycle, getOracleBotStatus } from '../oracle/oracleBot.js';
 import { runLiquidationBotCycle, getLiquidationBotStatus } from '../liquidation/liquidationBot.js';
 import { runInterestBotCycle, getInterestBotStatus } from './interestBot.js';
 import { runYieldBotCycle, getYieldBotStatus } from './yieldBot.js';
+import { runDarkPoolBotCycle, getDarkPoolBotStatus } from './darkpoolBot.js';
+import { runAuctionBotCycle, getAuctionBotStatus } from './auctionBot.js';
+import { runFlashOracleBotCycle, getFlashOracleBotStatus } from './flashOracleBot.js';
 import { getRecentSubmissions } from '../utils/transactionBuilder.js';
 
-type BotPhase = 'idle' | 'oracle' | 'liquidation' | 'interest' | 'yield' | 'cooldown';
+type BotPhase = 'idle' | 'oracle' | 'liquidation' | 'interest' | 'yield' | 'darkpool' | 'auction' | 'flash-oracle' | 'cooldown';
 
 interface OrchestratorState {
   phase: BotPhase;
@@ -16,6 +19,9 @@ interface OrchestratorState {
   lastLiquidationResult: boolean;
   lastInterestResult: boolean;
   lastYieldResult: boolean;
+  lastDarkPoolResult: boolean;
+  lastAuctionResult: boolean;
+  lastFlashOracleResult: boolean;
   errors: string[];
 }
 
@@ -28,6 +34,9 @@ const state: OrchestratorState = {
   lastLiquidationResult: false,
   lastInterestResult: false,
   lastYieldResult: false,
+  lastDarkPoolResult: false,
+  lastAuctionResult: false,
+  lastFlashOracleResult: false,
   errors: [],
 };
 
@@ -55,12 +64,18 @@ export function getOrchestratorHealth() {
       liquidation: state.lastLiquidationResult,
       interest: state.lastInterestResult,
       yield: state.lastYieldResult,
+      darkpool: state.lastDarkPoolResult,
+      auction: state.lastAuctionResult,
+      flashOracle: state.lastFlashOracleResult,
     },
     bots: {
       oracle: getOracleBotStatus(),
       liquidation: getLiquidationBotStatus(),
       interest: getInterestBotStatus(),
       yield: getYieldBotStatus(),
+      darkpool: getDarkPoolBotStatus(),
+      auction: getAuctionBotStatus(),
+      flashOracle: getFlashOracleBotStatus(),
     },
     recentTransactions: getRecentSubmissions().slice(0, 10),
     errors: state.errors,
@@ -115,6 +130,33 @@ async function tick(): Promise<void> {
     // Phase 4: Yield distribution
     state.phase = 'yield';
     state.lastYieldResult = await runYieldBotCycle();
+
+    if (state.lastYieldResult) {
+      state.phase = 'cooldown';
+      await sleep(15_000);
+    }
+
+    // Phase 5: Dark pool epoch settlement
+    state.phase = 'darkpool';
+    state.lastDarkPoolResult = await runDarkPoolBotCycle();
+
+    if (state.lastDarkPoolResult) {
+      state.phase = 'cooldown';
+      await sleep(15_000);
+    }
+
+    // Phase 6: Auction settlement
+    state.phase = 'auction';
+    state.lastAuctionResult = await runAuctionBotCycle();
+
+    if (state.lastAuctionResult) {
+      state.phase = 'cooldown';
+      await sleep(15_000);
+    }
+
+    // Phase 7: Flash loan oracle price update
+    state.phase = 'flash-oracle';
+    state.lastFlashOracleResult = await runFlashOracleBotCycle();
 
   } catch (err) {
     const msg = `Tick ${state.tickCount} failed: ${err}`;

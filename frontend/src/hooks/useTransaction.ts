@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, CREDITS_TRANSITIONS, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, CREDITS_TRANSITIONS, DARKPOOL_TRANSITIONS, DARKPOOL_PROGRAM_ID, AUCTION_TRANSITIONS, AUCTION_PROGRAM_ID, FLASH_TRANSITIONS, FLASH_PROGRAM_ID, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import { saveTxToHistory } from '@/components/app/TransactionHistory';
@@ -790,6 +790,188 @@ export function useTransaction(wallet: WalletExecute) {
     [executeVaultTransaction],
   );
 
+  // ── Dark Pool Transactions ──
+
+  const submitBuyIntent = useCallback(
+    async (usdcxRecord: string, amount: number, epoch: number, nonce: number) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.SUBMIT_BUY_INTENT, [
+        usdcxRecord,
+        FREEZE_LIST_PROOF,
+        microCreditsToU128Input(amount),
+        `${epoch}u64`,
+        `${nonce}field`,
+      ], TX_FEE_HIGH, DARKPOOL_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const submitSellIntent = useCallback(
+    async (creditsRecord: string, amount: number, epoch: number, nonce: number) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.SUBMIT_SELL_INTENT, [
+        creditsRecord,
+        microCreditsToInput(amount),
+        `${epoch}u64`,
+        `${nonce}field`,
+      ], TX_FEE_HIGH, DARKPOOL_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const claimBuyFill = useCallback(
+    async (intentRecord: string) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_BUY_FILL, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const claimSellFill = useCallback(
+    async (intentRecord: string) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_SELL_FILL, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const cancelBuy = useCallback(
+    async (intentRecord: string) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CANCEL_BUY, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const cancelSell = useCallback(
+    async (intentRecord: string) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CANCEL_SELL, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  // ── Auction Transactions ──
+
+  const submitSealedBid = useCallback(
+    async (usdcxRecord: string, auctionId: number, amount: number, secret: string) => {
+      return executeTransaction(AUCTION_TRANSITIONS.SUBMIT_SEALED_BID, [
+        usdcxRecord,
+        FREEZE_LIST_PROOF,
+        `${auctionId}u64`,
+        microCreditsToU128Input(amount),
+        `${secret}field`,
+      ], TX_FEE_HIGH, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const revealBid = useCallback(
+    async (sealedBidRecord: string, auctionId: number, actualBid: number, secret: string) => {
+      return executeTransaction(AUCTION_TRANSITIONS.REVEAL_BID, [
+        sealedBidRecord,
+        `${auctionId}u64`,
+        microCreditsToU128Input(actualBid),
+        `${secret}field`,
+      ], TX_FEE, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const claimAuctionCollateral = useCallback(
+    async (auctionWinRecord: string, auctionId: number) => {
+      return executeTransaction(AUCTION_TRANSITIONS.CLAIM_COLLATERAL, [
+        auctionWinRecord,
+        `${auctionId}u64`,
+      ], TX_FEE, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const redeemAuctionCollateral = useCallback(
+    async (auctionWinRecord: string) => {
+      return executeTransaction(AUCTION_TRANSITIONS.REDEEM_COLLATERAL, [
+        auctionWinRecord,
+      ], TX_FEE, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const refundBid = useCallback(
+    async (refundRecord: string) => {
+      return executeTransaction(AUCTION_TRANSITIONS.REFUND_BID, [
+        refundRecord,
+      ], TX_FEE, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  // ── Flash Loan Transactions ──
+
+  const flashBorrowUsdcx = useCallback(
+    async (creditsRecord: string, collateralAmount: number) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_BORROW_USDCX, [
+        creditsRecord,
+        microCreditsToInput(collateralAmount),
+      ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const flashClaimUsdcx = useCallback(
+    async (receiptRecord: string) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_CLAIM_USDCX, [receiptRecord], TX_FEE, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const flashRepayUsdcx = useCallback(
+    async (usdcxRecord: string, receiptRecord: string) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_REPAY_USDCX, [
+        usdcxRecord,
+        FREEZE_LIST_PROOF,
+        receiptRecord,
+      ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const flashWithdrawAleo = useCallback(
+    async (repayRecord: string) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_WITHDRAW_ALEO, [repayRecord], TX_FEE, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const flashBorrowAleo = useCallback(
+    async (usdcxRecord: string, collateralAmount: number) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_BORROW_ALEO, [
+        usdcxRecord,
+        FREEZE_LIST_PROOF,
+        microCreditsToU128Input(collateralAmount),
+      ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const flashClaimAleo = useCallback(
+    async (receiptRecord: string) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_CLAIM_ALEO, [receiptRecord], TX_FEE, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const flashRepayAleo = useCallback(
+    async (creditsRecord: string, receiptRecord: string) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_REPAY_ALEO, [
+        creditsRecord,
+        receiptRecord,
+      ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const flashWithdrawUsdcx = useCallback(
+    async (repayRecord: string) => {
+      return executeTransaction(FLASH_TRANSITIONS.FLASH_WITHDRAW_USDCX, [repayRecord], TX_FEE, FLASH_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
   return {
     executeTransaction,
     executeVaultTransaction,
@@ -830,6 +1012,28 @@ export function useTransaction(wallet: WalletExecute) {
     distributeYield,
     pauseVault,
     resumeVault,
+    // Dark Pool operations
+    submitBuyIntent,
+    submitSellIntent,
+    claimBuyFill,
+    claimSellFill,
+    cancelBuy,
+    cancelSell,
+    // Auction operations
+    submitSealedBid,
+    revealBid,
+    claimAuctionCollateral,
+    redeemAuctionCollateral,
+    refundBid,
+    // Flash Loan operations
+    flashBorrowUsdcx,
+    flashClaimUsdcx,
+    flashRepayUsdcx,
+    flashWithdrawAleo,
+    flashBorrowAleo,
+    flashClaimAleo,
+    flashRepayAleo,
+    flashWithdrawUsdcx,
     resetTransaction,
   };
 }

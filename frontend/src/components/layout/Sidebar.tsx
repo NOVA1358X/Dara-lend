@@ -29,6 +29,9 @@ const navItems = [
   { path: '/app/admin', label: 'Admin', icon: KeyIcon, end: false },
   { path: '/app/governance', label: 'Governance', icon: ShieldIcon, end: false },
   { path: '/app/rates', label: 'Rate Curve', icon: ChartIcon, end: false },
+  { path: '/app/darkpool', label: 'Dark Pool', icon: EyeOffIcon, end: false },
+  { path: '/app/auctions', label: 'Auctions', icon: ZapIcon, end: false },
+  { path: '/app/flash', label: 'Flash Loans', icon: LinkIcon, end: false },
 ];
 
 export function Sidebar() {
