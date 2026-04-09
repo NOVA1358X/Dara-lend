@@ -115,8 +115,22 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
   const handleClaimFill = async (intent: typeof parsedIntents[0]) => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    const price = parseInt(epochData?.epochPrice || '0', 10);
+
+    // Fetch the settlement price for this intent's epoch (may differ from current epoch)
+    let price = 0;
+    try {
+      const epochRes = await fetch(`${BACKEND_API}/darkpool/epoch/${intent.epoch}`).then(r => r.json());
+      price = parseInt(epochRes?.price || '0', 10);
+      if (!epochRes?.settled) {
+        toast.error(`Epoch #${intent.epoch} is not settled yet. Wait for the bot to settle it.`);
+        return;
+      }
+    } catch {
+      // Fallback to current epoch price
+      price = parseInt(epochData?.epochPrice || '0', 10);
+    }
     if (!price) { toast.error('Epoch price not available yet. Wait for settlement.'); return; }
+
     try {
       if (intent.intentType === 0) {
         // Buy intent: fill_aleo = amount * SCALE / price

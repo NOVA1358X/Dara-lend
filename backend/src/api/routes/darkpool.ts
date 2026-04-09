@@ -71,4 +71,40 @@ router.get('/stats', async (_req, res) => {
   }
 });
 
+// GET /api/darkpool/epoch/:id — fetch specific epoch data (price, settled, volume)
+router.get('/epoch/:id', async (req, res) => {
+  try {
+    const apiUrl = config.aleoApiUrl;
+    const programId = config.darkpoolProgramId;
+    const epochId = parseInt(req.params.id, 10);
+    if (!epochId || epochId < 1) {
+      res.status(400).json({ error: 'Invalid epoch id' });
+      return;
+    }
+
+    const cleanAleo = (raw: string): string => raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
+    const safeParse = (raw: string | undefined): string => {
+      if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
+      return cleanAleo(raw) || '0';
+    };
+
+    const [priceRaw, settledRaw, buyVolRaw, sellVolRaw] = await Promise.all([
+      fetch(`${apiUrl}/program/${programId}/mapping/epoch_price/${epochId}u64`).then(r => r.text()).catch(() => ''),
+      fetch(`${apiUrl}/program/${programId}/mapping/epoch_settled/${epochId}u64`).then(r => r.text()).catch(() => ''),
+      fetch(`${apiUrl}/program/${programId}/mapping/epoch_buy_volume/${epochId}u64`).then(r => r.text()).catch(() => ''),
+      fetch(`${apiUrl}/program/${programId}/mapping/epoch_sell_volume/${epochId}u64`).then(r => r.text()).catch(() => ''),
+    ]);
+
+    res.json({
+      epoch: epochId,
+      price: safeParse(priceRaw),
+      settled: settledRaw?.includes('true') || false,
+      buyVolume: safeParse(buyVolRaw),
+      sellVolume: safeParse(sellVolRaw),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch epoch data' });
+  }
+});
+
 export default router;
