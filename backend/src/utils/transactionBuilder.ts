@@ -12,6 +12,27 @@ interface DpsResult {
 let cachedJwt: string | null = null;
 let jwtExpiry = 0;
 
+// SDK module cache — WASM initializes once at startup, not per-request
+let sdkCache: typeof import('@provablehq/sdk') | null = null;
+
+async function getSdk(): Promise<typeof import('@provablehq/sdk')> {
+  if (!sdkCache) {
+    sdkCache = await import('@provablehq/sdk');
+    console.log('[tx-builder] Provable SDK loaded and cached');
+  }
+  return sdkCache;
+}
+
+/** Pre-warm the SDK (call at server startup to avoid cold-start on first request). */
+export async function warmupSdk(): Promise<void> {
+  try {
+    await getSdk();
+    console.log('[tx-builder] SDK warmup complete');
+  } catch (err) {
+    console.warn('[tx-builder] SDK warmup failed (non-fatal):', err);
+  }
+}
+
 /**
  * Issue a JWT from the Provable auth service and cache it.
  * JWT lives in the `authorization` response header.
@@ -97,25 +118,37 @@ async function executeDps(
   try {
     console.log(`[dps] Building proving request for ${programId}/${transition}...`);
 
-    const sdk = await import('@provablehq/sdk');
+    const sdk = await getSdk();
     const account = new sdk.Account({ privateKey: config.privateKey });
     const networkClient = new sdk.AleoNetworkClient(config.aleoRpcUrl);
-    const pm = new sdk.ProgramManager(config.aleoRpcUrl, undefined, undefined);
-    pm.setAccount(account);
 
-    // Build the proving request locally (fast, ~1s)
-    const provingRequest = await (pm as any).provingRequest({
-      programName: programId,
-      functionName: transition,
-      inputs,
-      priorityFee: fee,
-      privateFee: false,
-      useFeeMaster: config.useFeeMaster,
-      broadcast: true,
-    });
+    // Build the proving request — retry once on cold-start failure
+    let provingRequest: unknown = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const pm = new sdk.ProgramManager(config.aleoRpcUrl, undefined, undefined);
+      pm.setAccount(account);
+      try {
+        provingRequest = await (pm as any).provingRequest({
+          programName: programId,
+          functionName: transition,
+          inputs,
+          priorityFee: fee,
+          privateFee: false,
+          useFeeMaster: config.useFeeMaster,
+          broadcast: true,
+        });
+      } catch (e) {
+        console.warn(`[dps] provingRequest attempt ${attempt} threw:`, e);
+      }
+      if (provingRequest) break;
+      if (attempt < 2) {
+        console.warn(`[dps] provingRequest returned null on attempt ${attempt}, retrying...`);
+        await sleep(1500);
+      }
+    }
 
     if (!provingRequest) {
-      console.error(`[dps] Failed to build proving request for ${transition}`);
+      console.error(`[dps] Failed to build proving request for ${transition} after 2 attempts`);
       recordSubmission(programId, transition, 'failed', null);
       return null;
     }
@@ -229,7 +262,7 @@ async function executeLocal(
   fee: number,
 ): Promise<string | null> {
   try {
-    const sdk = await import('@provablehq/sdk');
+    const sdk = await getSdk();
     const account = new sdk.Account({ privateKey: config.privateKey });
     const pm = new sdk.ProgramManager(config.aleoRpcUrl, undefined, undefined);
     pm.setAccount(account);
