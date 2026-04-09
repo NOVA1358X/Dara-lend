@@ -99,7 +99,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       try {
         const [aleoRaw, usdcxRaw] = await Promise.all([
           fetch(`${ALEO_TESTNET_API}/program/${CREDITS_PROGRAM}/mapping/account/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
-          fetch(`${ALEO_TESTNET_API}/program/${USDCX_PROGRAM}/mapping/account/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
+          fetch(`${ALEO_TESTNET_API}/program/${USDCX_PROGRAM}/mapping/balances/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
         ]);
         const parseVal = (raw: string) => {
           if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return 0;
@@ -143,13 +143,9 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
     // Fetch the settlement price for this intent's epoch (may differ from current epoch)
     let price = 0;
-    let epochBuyVol = 0;
-    let epochSellVol = 0;
     try {
       const epochRes = await fetch(`${BACKEND_API}/darkpool/epoch/${intent.epoch}`).then(r => r.json());
       price = parseInt(epochRes?.price || '0', 10);
-      epochBuyVol = parseInt(epochRes?.buyVolume || '0', 10);
-      epochSellVol = parseInt(epochRes?.sellVolume || '0', 10);
       if (!epochRes?.settled) {
         toast.error(`Epoch #${intent.epoch} is not settled yet. Wait for the bot to settle it.`);
         return;
@@ -160,15 +156,28 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     }
     if (!price) { toast.error('Epoch price not available yet. Wait for settlement.'); return; }
 
-    // Check counterparty volume — pool must hold the output token
-    if (intent.intentType === 0 && epochSellVol === 0) {
-      toast.error(`Epoch #${intent.epoch} had no sell volume — the pool has no ALEO to fill your buy. Contact admin to fund the pool or wait.`);
-      return;
-    }
-    if (intent.intentType === 1 && epochBuyVol === 0) {
-      toast.error(`Epoch #${intent.epoch} had no buy volume — the pool has no USDCx to fill your sell. Contact admin to fund the pool or wait.`);
-      return;
-    }
+    // Check actual pool balance — pool must hold the output token (admin may have funded it)
+    try {
+      const [aleoRaw, usdcxRaw] = await Promise.all([
+        fetch(`${ALEO_TESTNET_API}/program/${CREDITS_PROGRAM}/mapping/account/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
+        fetch(`${ALEO_TESTNET_API}/program/${USDCX_PROGRAM}/mapping/balances/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
+      ]);
+      const parseVal = (raw: string) => {
+        if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return 0;
+        const cleaned = raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
+        return parseInt(cleaned, 10) || 0;
+      };
+      const liveAleo = parseVal(aleoRaw);
+      const liveUsdcx = parseVal(usdcxRaw);
+      if (intent.intentType === 0 && liveAleo === 0) {
+        toast.error('The dark pool has no ALEO balance to fill your buy. Contact admin to fund the pool.');
+        return;
+      }
+      if (intent.intentType === 1 && liveUsdcx === 0) {
+        toast.error('The dark pool has no USDCx balance to fill your sell. Contact admin to fund the pool.');
+        return;
+      }
+    } catch { /* proceed anyway */ }
 
     try {
       if (intent.intentType === 0) {
