@@ -603,7 +603,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
               } else {
                 await fundProtocolAleo(microAmount);
               }
-              setTimeout(fetchLiquidity, 10_000);
+              setTimeout(fetchLiquidity, 3000);
             }}
             disabled={transactionPending}
             className="w-full py-3 rounded-lg btn-signature font-label uppercase tracking-[0.1em] text-sm disabled:opacity-40 disabled:cursor-not-allowed focus-ring"

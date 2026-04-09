@@ -9,6 +9,8 @@ import {
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { TransactionFlow } from '@/components/shared/TransactionFlow';
+import { useAppStore } from '@/stores/appStore';
 import toast from 'react-hot-toast';
 
 interface FlashLoanProps {
@@ -39,8 +41,10 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const {
     flashBorrowUsdcx, flashClaimUsdcx, flashRepayUsdcx, flashWithdrawAleo,
     flashBorrowAleo, flashClaimAleo, flashRepayAleo, flashWithdrawUsdcx,
+    resetTransaction,
   } = useTransaction(wallet as any);
   const { creditsRecords, usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
+  const { transactionStep, transactionId, transactionPending } = useAppStore();
   const [stats, setStats] = useState<FlashStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [direction, setDirection] = useState<'borrow_usdcx' | 'borrow_aleo'>('borrow_usdcx');
@@ -142,7 +146,7 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
 
       toast.success('Flash loan initiated! Proceed to Claim.');
       setStep('claim');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Borrow failed');
     }
@@ -170,7 +174,7 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
       }
       toast.success('Tokens claimed! Proceed to Repay.');
       setStep('repay');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Claim failed');
     }
@@ -210,7 +214,7 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
       }
       toast.success('Loan repaid! Proceed to Withdraw collateral.');
       setStep('withdraw');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Repay failed');
     }
@@ -240,7 +244,7 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
       setStep('borrow');
       setAmount('');
       setBorrowAmount('');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Withdraw failed');
     }
@@ -264,11 +268,19 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
               Instant collateral-backed flash lending — 0.09% fee, 102% collateral ratio
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${stats?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
-            <span className="text-text-muted text-xs font-label uppercase tracking-wider">
-              {stats?.paused ? 'Paused' : 'Active'}
-            </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { fetchStats(); refetchRecords(); }}
+              className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
+            >
+              Refresh
+            </button>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${stats?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
+              <span className="text-text-muted text-xs font-label uppercase tracking-wider">
+                {stats?.paused ? 'Paused' : 'Active'}
+              </span>
+            </div>
           </div>
         </div>
       </FadeInView>
@@ -327,6 +339,15 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
           ))}
         </div>
       </FadeInView>
+
+      {/* Transaction Flow */}
+      {transactionPending && (
+        <FadeInView delay={0.18}>
+          <SpotlightCard className="p-6">
+            <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+          </SpotlightCard>
+        </FadeInView>
+      )}
 
       {/* Flash Loan Form */}
       <FadeInView delay={0.2}>
@@ -408,10 +429,10 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
 
                 <button
                   onClick={handleBorrow}
-                  disabled={!wallet.connected || !amount || !borrowAmount}
+                  disabled={!wallet.connected || !amount || !borrowAmount || transactionPending}
                   className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {!wallet.connected ? 'Connect Wallet' : 'Lock Collateral & Borrow'}
+                  {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : 'Lock Collateral & Borrow'}
                 </button>
               </div>
             </>
@@ -423,10 +444,10 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
               <p className="text-text-muted text-sm">Your collateral is locked. Claim your borrowed tokens now.</p>
               <button
                 onClick={handleClaim}
-                disabled={!wallet.connected}
+                disabled={!wallet.connected || transactionPending}
                 className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-accent-success/10 text-accent-success border border-accent-success/20 hover:bg-accent-success/20 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Claim {direction === 'borrow_usdcx' ? 'USDCx' : 'ALEO'} Tokens
+                {transactionPending ? 'Processing...' : `Claim ${direction === 'borrow_usdcx' ? 'USDCx' : 'ALEO'} Tokens`}
               </button>
             </div>
           )}
@@ -437,10 +458,10 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
               <p className="text-text-muted text-sm">Return the borrowed tokens plus 0.09% fee to unlock your collateral.</p>
               <button
                 onClick={handleRepay}
-                disabled={!wallet.connected}
+                disabled={!wallet.connected || transactionPending}
                 className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-accent-warning/10 text-accent-warning border border-accent-warning/20 hover:bg-accent-warning/20 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Repay {direction === 'borrow_usdcx' ? 'USDCx' : 'ALEO'} + Fee
+                {transactionPending ? 'Processing...' : `Repay ${direction === 'borrow_usdcx' ? 'USDCx' : 'ALEO'} + Fee`}
               </button>
             </div>
           )}
@@ -451,10 +472,10 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
               <p className="text-text-muted text-sm">Loan repaid! Withdraw your collateral back to your wallet.</p>
               <button
                 onClick={handleWithdraw}
-                disabled={!wallet.connected}
+                disabled={!wallet.connected || transactionPending}
                 className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Withdraw {direction === 'borrow_usdcx' ? 'ALEO' : 'USDCx'} Collateral
+                {transactionPending ? 'Processing...' : `Withdraw ${direction === 'borrow_usdcx' ? 'ALEO' : 'USDCx'} Collateral`}
               </button>
             </div>
           )}

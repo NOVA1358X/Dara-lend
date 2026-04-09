@@ -155,7 +155,7 @@ export function SupplyForm({ wallet }: SupplyFormProps) {
       const txId = await convertCreditsToPrivate(convertAmount);
       if (txId) {
         toast.success('Credits converted! They will appear as private records shortly.');
-        setTimeout(() => refetch(), 10_000);
+        setTimeout(() => refetch(), 3000);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Conversion failed';

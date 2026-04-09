@@ -10,6 +10,8 @@ import { formatCredits } from '@/utils/formatting';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { TransactionFlow } from '@/components/shared/TransactionFlow';
+import { useAppStore } from '@/stores/appStore';
 import toast from 'react-hot-toast';
 
 interface DarkPoolProps {
@@ -37,8 +39,9 @@ interface EpochData {
 }
 
 export function DarkPool({ wallet }: DarkPoolProps) {
-  const { submitBuyIntent, submitSellIntent, claimBuyFill, claimSellFill, cancelBuy, cancelSell, fundDarkPoolAleo, fundDarkPoolUsdcx } = useTransaction(wallet as any);
+  const { submitBuyIntent, submitSellIntent, claimBuyFill, claimSellFill, cancelBuy, cancelSell, fundDarkPoolAleo, fundDarkPoolUsdcx, resetTransaction } = useTransaction(wallet as any);
   const { creditsRecords, usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
+  const { transactionStep, transactionId, transactionPending } = useAppStore();
   const [epochData, setEpochData] = useState<EpochData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
@@ -194,7 +197,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         await claimSellFill(intent.plaintext, fillUsdcx);
         toast.success(`Sell fill claimed! Receiving ~${(fillUsdcx / PRECISION).toFixed(2)} USDCx privately. Transaction confirming...`);
       }
-      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 3000);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Claim failed';
       if (errMsg.includes('rejected') || errMsg.includes('REJECTED')) {
@@ -214,7 +217,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         await cancelSell(intent.plaintext);
       }
       toast.success('Intent cancelled! Funds returned.');
-      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Cancel failed');
     }
@@ -263,7 +266,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       } else {
         toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} intent submitted to Epoch #${epoch}! Waiting for ${tab === 'buy' ? 'sellers' : 'buyers'} to match. Settlement happens once both sides have orders.`);
       }
-      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 3000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Transaction failed';
       toast.error(msg);
@@ -326,11 +329,19 @@ export function DarkPool({ wallet }: DarkPoolProps) {
               Private epoch-based batch trading — intents are encrypted, settlement at oracle mid-price
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${epochData?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
-            <span className="text-text-muted text-xs font-label uppercase tracking-wider">
-              {epochData?.paused ? 'Paused' : 'Active'}
-            </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { fetchEpochData(); refetchRecords(); }}
+              className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
+            >
+              Refresh
+            </button>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${epochData?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
+              <span className="text-text-muted text-xs font-label uppercase tracking-wider">
+                {epochData?.paused ? 'Paused' : 'Active'}
+              </span>
+            </div>
           </div>
         </div>
       </FadeInView>
@@ -463,13 +474,29 @@ export function DarkPool({ wallet }: DarkPoolProps) {
               </div>
             </div>
 
+            {/* Transaction Flow */}
+            {transactionPending && (
+              <div className="mb-2">
+                <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+              </div>
+            )}
+
             <button
               onClick={handleSubmitIntent}
-              disabled={!wallet.connected || !amount}
+              disabled={!wallet.connected || !amount || transactionPending}
               className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {!wallet.connected ? 'Connect Wallet' : `Submit ${tab === 'buy' ? 'Buy' : 'Sell'} Intent`}
+              {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : `Submit ${tab === 'buy' ? 'Buy' : 'Sell'} Intent`}
             </button>
+
+            {transactionStep === 'confirmed' && (
+              <button
+                onClick={resetTransaction}
+                className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                New Intent
+              </button>
+            )}
           </div>
         </SpotlightCard>
       </FadeInView>
@@ -628,7 +655,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                     await fundDarkPoolUsdcx(micro);
                   }
                   setFundAmount('');
-                  setTimeout(() => refetchRecords(), 5000);
+                  setTimeout(() => refetchRecords(), 3000);
                 }}
                 disabled={!wallet.connected || !fundAmount}
                 className="px-6 py-3 rounded-lg font-label text-xs uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"

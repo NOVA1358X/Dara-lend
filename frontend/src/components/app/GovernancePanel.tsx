@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { TransactionFlow } from '@/components/shared/TransactionFlow';
+import { useAppStore } from '@/stores/appStore';
 import {
   GOV_PROGRAM_ID,
   ALEO_TESTNET_API,
@@ -113,6 +115,7 @@ function formatProposalDescription(p: Proposal): string {
 }
 
 export function GovernancePanel({ wallet }: GovernanceProps) {
+  const { transactionStep, transactionId, transactionPending, setTransactionPending, setTransactionStep, setTransactionId, resetTransaction } = useAppStore();
   const [proposalCount, setProposalCount] = useState(0);
   const [votingPower, setVotingPower] = useState(0);
   const [tokenSupply, setTokenSupply] = useState(0);
@@ -260,7 +263,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
       }
 
       toast.success(data.message || 'Tokens claimed!');
-      setTimeout(fetchGovernanceData, 10_000);
+      setTimeout(fetchGovernanceData, 3000);
     } catch (err: any) {
       toast.error(err?.message || 'Network error — is backend running?');
     } finally {
@@ -286,6 +289,8 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
 
     try {
       setTxPending(true);
+      setTransactionPending(true);
+      setTransactionStep('encrypting');
       const tx = {
         program: GOV_PROGRAM_ID,
         function: GOV_TRANSITIONS.MINT_GOVERNANCE_TOKENS,
@@ -293,17 +298,23 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         fee: 500_000,
         privateFee: false,
       };
+      setTransactionStep('proving');
       const result = await wallet.requestTransaction(tx);
       if (result?.transactionId) {
+        setTransactionId(result.transactionId);
+        setTransactionStep('broadcasting');
         toast.success(`Minted ${amount} GOV tokens: ${result.transactionId.slice(0, 16)}...`);
         setMintAmount('');
         setMintRecipient('');
-        setTimeout(fetchGovernanceData, 10_000);
+        setTransactionStep('confirmed');
+        setTimeout(fetchGovernanceData, 3000);
       }
     } catch (err: any) {
+      setTransactionStep('failed');
       toast.error(err?.message || 'Mint failed');
     } finally {
       setTxPending(false);
+      setTransactionPending(false);
     }
   };
 
@@ -324,6 +335,8 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
 
     try {
       setTxPending(true);
+      setTransactionPending(true);
+      setTransactionStep('encrypting');
       const descHash = '0field';
       const tx = {
         program: GOV_PROGRAM_ID,
@@ -332,17 +345,23 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         fee: 500_000,
         privateFee: false,
       };
+      setTransactionStep('proving');
       const result = await wallet.requestTransaction(tx);
       if (result?.transactionId) {
+        setTransactionId(result.transactionId);
+        setTransactionStep('broadcasting');
         toast.success(`Proposal created: ${result.transactionId.slice(0, 16)}...`);
         setParamValue('');
         setActiveTab('overview');
-        setTimeout(fetchGovernanceData, 10_000);
+        setTransactionStep('confirmed');
+        setTimeout(fetchGovernanceData, 3000);
       }
     } catch (err: any) {
+      setTransactionStep('failed');
       toast.error(err?.message || 'Creating proposal failed');
     } finally {
       setTxPending(false);
+      setTransactionPending(false);
     }
   };
 
@@ -360,6 +379,8 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
 
     try {
       setTxPending(true);
+      setTransactionPending(true);
+      setTransactionStep('encrypting');
 
       // Step 1: Private vote — NO finalize, shows as PRIVATE in wallet
       const tx = {
@@ -369,14 +390,18 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         fee: 500_000,
         privateFee: false,
       };
+      setTransactionStep('proving');
       const result = await wallet.requestTransaction(tx);
       if (!result?.transactionId) {
         toast('Vote transaction sent — check wallet activity for confirmation');
         return;
       }
 
+      setTransactionId(result.transactionId);
+      setTransactionStep('broadcasting');
       const supportLabel = support === 1 ? 'For' : support === 0 ? 'Against' : 'Abstain';
       toast.success(`Private vote ${supportLabel} submitted! TX: ${result.transactionId.slice(0, 16)}...`);
+      setTransactionStep('confirmed');
 
       // Step 2: Send tally request to backend (admin tallies on-chain without revealing voter)
       try {
@@ -397,11 +422,13 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         toast('Private vote recorded! Backend may be offline — tally will sync when backend is up.');
       }
 
-      setTimeout(fetchGovernanceData, 30_000);
+      setTimeout(fetchGovernanceData, 3000);
     } catch (err: any) {
+      setTransactionStep('failed');
       toast.error(err?.message || 'Voting failed');
     } finally {
       setTxPending(false);
+      setTransactionPending(false);
     }
   };
 
@@ -412,6 +439,8 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
     }
     try {
       setTxPending(true);
+      setTransactionPending(true);
+      setTransactionStep('encrypting');
       const tx = {
         program: GOV_PROGRAM_ID,
         function: GOV_TRANSITIONS.EXECUTE_PROPOSAL,
@@ -419,15 +448,21 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         fee: 500_000,
         privateFee: false,
       };
+      setTransactionStep('proving');
       const result = await wallet.requestTransaction(tx);
       if (result?.transactionId) {
+        setTransactionId(result.transactionId);
+        setTransactionStep('broadcasting');
         toast.success(`Proposal executed: ${result.transactionId.slice(0, 16)}...`);
-        setTimeout(fetchGovernanceData, 10_000);
+        setTransactionStep('confirmed');
+        setTimeout(fetchGovernanceData, 3000);
       }
     } catch (err: any) {
+      setTransactionStep('failed');
       toast.error(err?.message || 'Execution failed');
     } finally {
       setTxPending(false);
+      setTransactionPending(false);
     }
   };
 
@@ -451,6 +486,8 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
     }
     try {
       setTxPending(true);
+      setTransactionPending(true);
+      setTransactionStep('encrypting');
       const tx = {
         program: GOV_PROGRAM_ID,
         function: GOV_TRANSITIONS.DELEGATE_VOTES,
@@ -458,18 +495,24 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         fee: 500_000,
         privateFee: false,
       };
+      setTransactionStep('proving');
       const result = await wallet.requestTransaction(tx);
       if (result?.transactionId) {
+        setTransactionId(result.transactionId);
+        setTransactionStep('broadcasting');
         toast.success(`Delegated ${amount} votes: ${result.transactionId.slice(0, 16)}...`);
         setDelegateTo('');
         setDelegateAmount('');
         setActiveTab('overview');
-        setTimeout(fetchGovernanceData, 10_000);
+        setTransactionStep('confirmed');
+        setTimeout(fetchGovernanceData, 3000);
       }
     } catch (err: any) {
+      setTransactionStep('failed');
       toast.error(err?.message || 'Delegation failed');
     } finally {
       setTxPending(false);
+      setTransactionPending(false);
     }
   };
 
@@ -479,6 +522,17 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
 
   return (
     <div className="space-y-6">
+      {/* Refresh Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={fetchGovernanceData}
+          disabled={loading}
+          className="text-xs text-gray-400 hover:text-white transition-colors font-medium uppercase tracking-wider"
+        >
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
+      </div>
+
       {/* Header Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <motion.div
@@ -525,6 +579,32 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
           <p className="text-[10px] text-gray-500 mt-0.5">20% of supply required</p>
         </motion.div>
       </div>
+
+      {/* Transaction Flow */}
+      {transactionPending && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/5 rounded-xl p-5 border border-white/10"
+        >
+          <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+        </motion.div>
+      )}
+
+      {transactionStep === 'confirmed' && !transactionPending && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex justify-center"
+        >
+          <button
+            onClick={resetTransaction}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Dismiss
+          </button>
+        </motion.div>
+      )}
 
       {/* Claim GOV Tokens — visible to ALL connected users */}
       {wallet.connected && (

@@ -8,6 +8,8 @@ import {
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
+import { TransactionFlow } from '@/components/shared/TransactionFlow';
+import { useAppStore } from '@/stores/appStore';
 import toast from 'react-hot-toast';
 
 interface AuctionsProps {
@@ -29,8 +31,9 @@ interface AuctionStats {
 }
 
 export function Auctions({ wallet }: AuctionsProps) {
-  const { startAuction, submitSealedBid, revealBid, claimAuctionCollateral } = useTransaction(wallet as any);
+  const { startAuction, submitSealedBid, revealBid, claimAuctionCollateral, resetTransaction } = useTransaction(wallet as any);
   const { usdcxRecords, creditsRecords, refetch: refetchRecords } = useWalletRecords(wallet);
+  const { transactionStep, transactionId, transactionPending } = useAppStore();
   const [stats, setStats] = useState<AuctionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'bid' | 'reveal' | 'claim'>('bid');
@@ -118,7 +121,7 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.success('Auction started!');
       setAdminCollateral('');
       setAdminMinBid('');
-      setTimeout(fetchStats, 5000);
+      setTimeout(fetchStats, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start auction');
     }
@@ -160,7 +163,7 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.success('Sealed bid submitted! Save your secret — you need it to reveal.');
       setBidAmount('');
       setAuctionId('');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Bid submission failed');
     }
@@ -189,7 +192,7 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.success('Bid revealed! Wait for settlement to claim.');
       setBidAmount('');
       setSecret('');
-      setTimeout(fetchStats, 5000);
+      setTimeout(fetchStats, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Reveal failed');
     }
@@ -213,7 +216,7 @@ export function Auctions({ wallet }: AuctionsProps) {
       await claimAuctionCollateral(revealedPlaintext);
       toast.success('Collateral claimed!');
       setAuctionId('');
-      setTimeout(fetchStats, 5000);
+      setTimeout(fetchStats, 3000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Claim failed');
     }
@@ -231,11 +234,19 @@ export function Auctions({ wallet }: AuctionsProps) {
               Privacy-preserving liquidation auctions — sealed bids prevent MEV and front-running
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${stats?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
-            <span className="text-text-muted text-xs font-label uppercase tracking-wider">
-              {stats?.paused ? 'Paused' : 'Active'}
-            </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { fetchStats(); refetchRecords(); }}
+              className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
+            >
+              Refresh
+            </button>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${stats?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
+              <span className="text-text-muted text-xs font-label uppercase tracking-wider">
+                {stats?.paused ? 'Paused' : 'Active'}
+              </span>
+            </div>
           </div>
         </div>
       </FadeInView>
@@ -433,13 +444,29 @@ export function Auctions({ wallet }: AuctionsProps) {
               )}
             </div>
 
+            {/* Transaction Flow */}
+            {transactionPending && (
+              <div className="mb-2">
+                <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+              </div>
+            )}
+
             <button
               onClick={tab === 'bid' ? handleSubmitBid : tab === 'reveal' ? handleRevealBid : handleClaimCollateral}
-              disabled={!wallet.connected || !auctionId}
+              disabled={!wallet.connected || !auctionId || transactionPending}
               className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {!wallet.connected ? 'Connect Wallet' : tab === 'bid' ? 'Submit Sealed Bid' : tab === 'reveal' ? 'Reveal Bid' : 'Claim Collateral'}
+              {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : tab === 'bid' ? 'Submit Sealed Bid' : tab === 'reveal' ? 'Reveal Bid' : 'Claim Collateral'}
             </button>
+
+            {transactionStep === 'confirmed' && (
+              <button
+                onClick={resetTransaction}
+                className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                New Action
+              </button>
+            )}
           </div>
         </SpotlightCard>
       </FadeInView>
