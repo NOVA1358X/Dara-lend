@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { PROGRAM_ID, CREDITS_PROGRAM, USDCX_PROGRAM, USAD_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, CREDITS_PROGRAM_ID, CREDITS_PROGRAM, USDCX_PROGRAM, USAD_PROGRAM } from '@/utils/constants';
 import { parseRecord, DaraRecord, filterRecordsByType, getConsumedSet, CollateralReceiptRecord, DebtPositionRecord, RepaymentReceiptRecord, LiquidationAuthRecord, LiquidationReceiptRecord } from '@/utils/records';
 
 interface WalletHook {
@@ -31,8 +31,13 @@ export function useWalletRecords(wallet: WalletHook) {
     queryFn: async () => {
       if (!wallet.connected || !wallet.requestRecords) return [];
       try {
-        // Phase 1: Fetch records (with plaintext if supported)
-        const rawRecords = await wallet.requestRecords(PROGRAM_ID, true);
+        // Fetch records from both programs — CollateralReceipt for USDCx/USAD
+        // is issued by dara_lend_v8_credits.aleo, while ALEO collateral is in dara_lend_v8.aleo
+        const [mainRaw, creditsRaw] = await Promise.all([
+          wallet.requestRecords(PROGRAM_ID, true).catch(() => [] as unknown[]),
+          wallet.requestRecords(CREDITS_PROGRAM_ID, true).catch(() => [] as unknown[]),
+        ]);
+        const rawRecords = [...mainRaw, ...creditsRaw];
         console.log('[DARA] Raw records from wallet:', JSON.stringify(rawRecords, null, 2));
 
         const parsed: DaraRecord[] = [];
