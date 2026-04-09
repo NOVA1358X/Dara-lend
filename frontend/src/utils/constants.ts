@@ -84,6 +84,7 @@ export const CREDITS_MAPPINGS = {
   LOAN_COUNT: 'loan_count',
   ACTIVE_LOANS: 'active_loans',
   ORACLE_PRICE: 'oracle_price',
+  PRICE_ROUND: 'price_round',
   CREDITS_ADMIN: 'credits_admin',
   CREDITS_PAUSED: 'credits_paused',
   TOTAL_FEES_COLLECTED: 'total_fees_collected',

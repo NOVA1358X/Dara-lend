@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTransaction } from '@/hooks/useTransaction';
@@ -8,7 +8,7 @@ import { useAleoClient } from '@/hooks/useAleoClient';
 import { useMarketPrice } from '@/hooks/useMarketPrice';
 import { useAppStore } from '@/stores/appStore';
 import { formatCredits, calculateHealthFactor, calculateLiquidationPrice, calculateMaxBorrow } from '@/utils/formatting';
-import { PRECISION, MAPPINGS, TOKEN_LABELS, TOKEN_TYPES } from '@/utils/constants';
+import { PRECISION, MAPPINGS, CREDITS_MAPPINGS, CREDITS_PROGRAM_ID, TOKEN_LABELS, TOKEN_TYPES } from '@/utils/constants';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
 import { HealthFactorGauge } from '@/components/shared/HealthFactorGauge';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -44,6 +44,24 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
   const { data: oraclePrice } = useOraclePrice();
   const { getMappingValue } = useAleoClient();
   const { price: livePrice } = useMarketPrice();
+
+  // Credits contract has its OWN oracle_price mapping — must match exactly on-chain
+  const [creditsAleoPrice, setCreditsAleoPrice] = useState<number>(0);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCreditsOracle = async () => {
+      try {
+        const raw = await getMappingValue(CREDITS_MAPPINGS.ORACLE_PRICE, '0u8', CREDITS_PROGRAM_ID);
+        const price = parseInt((raw || '0').replace(/u64|["']/g, ''), 10);
+        if (!cancelled && price > 0) setCreditsAleoPrice(price);
+      } catch { /* silent */ }
+    };
+    if (wallet.connected) {
+      fetchCreditsOracle();
+      const id = setInterval(fetchCreditsOracle, 30_000);
+      return () => { cancelled = true; clearInterval(id); };
+    }
+  }, [wallet.connected, getMappingValue]);
 
   const selectedCollateral = collateralReceipts[selectedCollateralIdx];
   const tokenType = selectedCollateral?.tokenType ?? TOKEN_TYPES.ALEO;
@@ -158,7 +176,12 @@ export function BorrowForm({ wallet }: BorrowFormProps) {
         txId = await borrowUsad(collateralRecord, borrowAmount, oraclePrice, orchestratorAddress);
       } else {
         // Borrow ALEO credits against stablecoin collateral
-        txId = await borrowCredits(collateralRecord, borrowAmount, stablecoinPrice, currentOraclePrice, orchestratorAddress);
+        // Prices MUST match dara_lend_v8_credits.aleo's oracle_price mapping exactly
+        if (!creditsAleoPrice) {
+          toast.error('Credits oracle price not loaded — please wait and try again');
+          return;
+        }
+        txId = await borrowCredits(collateralRecord, borrowAmount, stablecoinPrice, creditsAleoPrice, orchestratorAddress);
       }
       if (txId) {
         setTimeout(() => refetch(), 3000);

@@ -78,7 +78,7 @@ export async function runOracleBotCycle(): Promise<boolean> {
       return false;
     }
 
-    // 5. Push ALEO price (token_id = 0)
+    // 5. Push ALEO price (token_id = 0) to main contract
     const nextRound = onChainRound + 1;
     const reason = isStale ? 'stale' : `delta ${(priceDelta * 100).toFixed(3)}%`;
     console.log(
@@ -100,6 +100,27 @@ export async function runOracleBotCycle(): Promise<boolean> {
       state.pushCount++;
       state.lastError = null;
       console.log(`[oracle-bot] Price pushed → ${txId}`);
+
+      // Also push ALEO price to credits contract (it has its own oracle_price mapping)
+      // borrow_credits finalize asserts current_aleo_price == credits oracle_price[0u8]
+      try {
+        const creditsRoundRaw = await getMappingValue('price_round', '0u8', config.creditsProgramId);
+        const creditsRound = parseAleoU64(creditsRoundRaw) + 1;
+        const creditsTxId = await buildAndBroadcastTransaction(
+          config.creditsProgramId,
+          'update_oracle_price',
+          [`0u8`, `${newPriceMicro}u64`, `${creditsRound}u64`],
+          500_000,
+        );
+        if (creditsTxId) {
+          console.log(`[oracle-bot] Credits contract price synced → ${creditsTxId}`);
+        } else {
+          console.warn('[oracle-bot] Credits oracle push returned null (non-fatal)');
+        }
+      } catch (creditsErr) {
+        console.warn('[oracle-bot] Credits oracle push failed (non-fatal):', creditsErr);
+      }
+
       return true;
     }
 
