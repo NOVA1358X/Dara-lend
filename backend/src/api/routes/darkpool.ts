@@ -25,13 +25,18 @@ router.get('/epoch', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/epoch_price/${currentEpoch}u64`).then(r => r.text()).catch(() => ''),
     ]);
 
+    const safeParse = (raw: string | undefined, re: RegExp): string => {
+      if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
+      return raw.replace(re, '') || '0';
+    };
+
     res.json({
       currentEpoch,
       paused,
-      buyVolume: buyVolRaw?.replace(/["\su128]/g, '') || '0',
-      sellVolume: sellVolRaw?.replace(/["\su128]/g, '') || '0',
+      buyVolume: safeParse(buyVolRaw, /["\su128]/g),
+      sellVolume: safeParse(sellVolRaw, /["\su128]/g),
       settled: settledRaw?.includes('true') || false,
-      price: priceRaw?.replace(/["\su64]/g, '') || '0',
+      price: safeParse(priceRaw, /["\su64]/g),
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch dark pool epoch data' });
@@ -49,9 +54,14 @@ router.get('/stats', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/total_volume/0u8`).then(r => r.text()).catch(() => ''),
     ]);
 
+    const safeParse = (raw: string | undefined, re: RegExp): string => {
+      if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
+      return raw.replace(re, '') || '0';
+    };
+
     res.json({
-      totalTrades: tradesRaw?.replace(/["\su64]/g, '') || '0',
-      totalVolume: volumeRaw?.replace(/["\su128]/g, '') || '0',
+      totalTrades: safeParse(tradesRaw, /["\su64]/g),
+      totalVolume: safeParse(volumeRaw, /["\su128]/g),
       programId: config.darkpoolProgramId,
     });
   } catch (err) {

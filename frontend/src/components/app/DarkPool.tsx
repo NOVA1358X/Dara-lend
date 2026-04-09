@@ -119,10 +119,10 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     setTimeout(fetchEpochData, 5000);
   };
 
-  const buyVol = Number(epochData?.buyVolume || 0) / PRECISION;
-  const sellVol = Number(epochData?.sellVolume || 0) / PRECISION;
-  const totalTrades = Number(epochData?.totalTrades || 0);
-  const totalVolume = Number(epochData?.totalVolume || 0) / PRECISION;
+  const buyVol = (Number(epochData?.buyVolume) || 0) / PRECISION;
+  const sellVol = (Number(epochData?.sellVolume) || 0) / PRECISION;
+  const totalTrades = Number(epochData?.totalTrades) || 0;
+  const totalVolume = (Number(epochData?.totalVolume) || 0) / PRECISION;
 
   return (
     <div className="space-y-6">

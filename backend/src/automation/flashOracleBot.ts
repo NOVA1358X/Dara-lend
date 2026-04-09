@@ -70,7 +70,7 @@ export async function runFlashOracleBotCycle(): Promise<boolean> {
     const tx = await buildAndBroadcastTransaction(
       programId,
       'update_oracle_price',
-      [`${newPriceMicro}u64`, `${nextRound}u64`],
+      [`0u8`, `${newPriceMicro}u64`, `${nextRound}u64`],
     );
 
     if (tx) {
