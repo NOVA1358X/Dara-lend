@@ -14,7 +14,8 @@ router.get('/epoch', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/darkpool_paused/0u8`).then(r => r.text()).catch(() => ''),
     ]);
 
-    const currentEpoch = epochRaw ? parseInt(epochRaw.replace(/["\su64]/g, ''), 10) || 1 : 1;
+    const cleanAleo = (raw: string): string => raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
+    const currentEpoch = epochRaw ? parseInt(cleanAleo(epochRaw), 10) || 1 : 1;
     const paused = pausedRaw?.includes('true') || false;
 
     // Fetch volume for current epoch
@@ -25,18 +26,18 @@ router.get('/epoch', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/epoch_price/${currentEpoch}u64`).then(r => r.text()).catch(() => ''),
     ]);
 
-    const safeParse = (raw: string | undefined, re: RegExp): string => {
+    const safeParse = (raw: string | undefined): string => {
       if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
-      return raw.replace(re, '') || '0';
+      return cleanAleo(raw) || '0';
     };
 
     res.json({
       currentEpoch,
       paused,
-      buyVolume: safeParse(buyVolRaw, /["\su128]/g),
-      sellVolume: safeParse(sellVolRaw, /["\su128]/g),
+      buyVolume: safeParse(buyVolRaw),
+      sellVolume: safeParse(sellVolRaw),
       settled: settledRaw?.includes('true') || false,
-      price: safeParse(priceRaw, /["\su64]/g),
+      price: safeParse(priceRaw),
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch dark pool epoch data' });
@@ -54,14 +55,15 @@ router.get('/stats', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/total_volume/0u8`).then(r => r.text()).catch(() => ''),
     ]);
 
-    const safeParse = (raw: string | undefined, re: RegExp): string => {
+    const cleanAleo = (raw: string): string => raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
+    const safeParse = (raw: string | undefined): string => {
       if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
-      return raw.replace(re, '') || '0';
+      return cleanAleo(raw) || '0';
     };
 
     res.json({
-      totalTrades: safeParse(tradesRaw, /["\su64]/g),
-      totalVolume: safeParse(volumeRaw, /["\su128]/g),
+      totalTrades: safeParse(tradesRaw),
+      totalVolume: safeParse(volumeRaw),
       programId: config.darkpoolProgramId,
     });
   } catch (err) {

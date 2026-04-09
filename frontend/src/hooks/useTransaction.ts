@@ -818,15 +818,15 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const claimBuyFill = useCallback(
-    async (intentRecord: string) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_BUY_FILL, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
+    async (intentRecord: string, fillAleo: number) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_BUY_FILL, [intentRecord, microCreditsToInput(fillAleo)], TX_FEE, DARKPOOL_PROGRAM_ID);
     },
     [executeTransaction],
   );
 
   const claimSellFill = useCallback(
-    async (intentRecord: string) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_SELL_FILL, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
+    async (intentRecord: string, fillUsdcx: number) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_SELL_FILL, [intentRecord, microCreditsToU128Input(fillUsdcx)], TX_FEE, DARKPOOL_PROGRAM_ID);
     },
     [executeTransaction],
   );
@@ -846,6 +846,19 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   // ── Auction Transactions ──
+
+  const startAuction = useCallback(
+    async (creditsRecord: string, collateralAmount: number, minBid: number, bidBlocks: number, revealBlocks: number) => {
+      return executeTransaction(AUCTION_TRANSITIONS.START_AUCTION, [
+        creditsRecord,
+        microCreditsToInput(collateralAmount),
+        microCreditsToU128Input(minBid),
+        `${bidBlocks}u32`,
+        `${revealBlocks}u32`,
+      ], TX_FEE_HIGH, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
 
   const submitSealedBid = useCallback(
     async (usdcxRecord: string, auctionIdField: string, commitmentField: string, deposit: number, nonce: number) => {
@@ -1026,6 +1039,7 @@ export function useTransaction(wallet: WalletExecute) {
     cancelBuy,
     cancelSell,
     // Auction operations
+    startAuction,
     submitSealedBid,
     revealBid,
     claimAuctionCollateral,

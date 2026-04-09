@@ -3,7 +3,7 @@ import { useTransaction } from '@/hooks/useTransaction';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
   AUCTION_PROGRAM_ID, AUCTION_TRANSITIONS, AUCTION_MAPPINGS,
-  BACKEND_API, PRECISION, TX_FEE, TX_FEE_HIGH,
+  BACKEND_API, PRECISION, TX_FEE, TX_FEE_HIGH, ADMIN_ADDRESS,
 } from '@/utils/constants';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
@@ -29,8 +29,8 @@ interface AuctionStats {
 }
 
 export function Auctions({ wallet }: AuctionsProps) {
-  const { submitSealedBid, revealBid, claimAuctionCollateral } = useTransaction(wallet as any);
-  const { usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
+  const { startAuction, submitSealedBid, revealBid, claimAuctionCollateral } = useTransaction(wallet as any);
+  const { usdcxRecords, creditsRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const [stats, setStats] = useState<AuctionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'bid' | 'reveal' | 'claim'>('bid');
@@ -38,12 +38,26 @@ export function Auctions({ wallet }: AuctionsProps) {
   const [bidAmount, setBidAmount] = useState('');
   const [secret, setSecret] = useState('');
   const [auctionRecords, setAuctionRecords] = useState<any[]>([]);
+  // Admin state
+  const isAdmin = wallet.address === ADMIN_ADDRESS;
+  const [adminCollateral, setAdminCollateral] = useState('');
+  const [adminMinBid, setAdminMinBid] = useState('');
+  const [adminBidBlocks, setAdminBidBlocks] = useState('100');
+  const [adminRevealBlocks, setAdminRevealBlocks] = useState('50');
 
   // Parse USDCx records for bidding
   const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
     const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
     const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
     const match = str.match(/amount\s*:\s*(\d+)u128/);
+    return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
+  }).filter(Boolean) as { amount: number; plaintext: string }[];
+
+  // Parse credits records for admin start auction
+  const parsedCredits = (creditsRecords || []).filter((r: any) => !r.spent).map((r: any) => {
+    const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
+    const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
+    const match = str.match(/microcredits\s*:\s*(\d+)u64/);
     return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
   }).filter(Boolean) as { amount: number; plaintext: string }[];
 
@@ -79,6 +93,36 @@ export function Auctions({ wallet }: AuctionsProps) {
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, [fetchStats]);
+
+  const handleStartAuction = async () => {
+    if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    if (!isAdmin) { toast.error('Only admin can start auctions'); return; }
+    const collateral = parseFloat(adminCollateral);
+    const minBid = parseFloat(adminMinBid);
+    const bidBlocks = parseInt(adminBidBlocks, 10);
+    const revealBlocks = parseInt(adminRevealBlocks, 10);
+    if (!collateral || collateral <= 0) { toast.error('Enter valid collateral amount'); return; }
+    if (!minBid || minBid <= 0) { toast.error('Enter valid minimum bid'); return; }
+    if (!bidBlocks || bidBlocks <= 0) { toast.error('Enter valid bid window'); return; }
+    if (!revealBlocks || revealBlocks <= 0) { toast.error('Enter valid reveal window'); return; }
+
+    const microCollateral = Math.floor(collateral * PRECISION);
+    const microMinBid = Math.floor(minBid * PRECISION);
+    const record = parsedCredits.find(r => r.amount >= microCollateral);
+    if (!record) {
+      toast.error(`No ALEO record with enough balance. Need ${collateral} ALEO.`);
+      return;
+    }
+    try {
+      await startAuction(record.plaintext, microCollateral, microMinBid, bidBlocks, revealBlocks);
+      toast.success('Auction started!');
+      setAdminCollateral('');
+      setAdminMinBid('');
+      setTimeout(fetchStats, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start auction');
+    }
+  };
 
   const handleSubmitBid = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
@@ -219,6 +263,77 @@ export function Auctions({ wallet }: AuctionsProps) {
           </SpotlightCard>
         </div>
       </FadeInView>
+
+      {/* Admin: Start Auction */}
+      {isAdmin && (
+        <FadeInView delay={0.15}>
+          <SpotlightCard className="p-6">
+            <h3 className="font-headline text-lg text-text-primary mb-4">
+              Admin — Start New Auction
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                  ALEO Collateral
+                </label>
+                <input
+                  type="number"
+                  value={adminCollateral}
+                  onChange={(e) => setAdminCollateral(e.target.value)}
+                  placeholder="ALEO to auction"
+                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                />
+                <span className="text-text-muted text-xs mt-1 block">
+                  Balance: {parsedCredits.length > 0 ? (parsedCredits.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(6) : '0'} ALEO
+                </span>
+              </div>
+              <div>
+                <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                  Min Bid (USDCx)
+                </label>
+                <input
+                  type="number"
+                  value={adminMinBid}
+                  onChange={(e) => setAdminMinBid(e.target.value)}
+                  placeholder="Minimum bid"
+                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                  Bid Window (blocks)
+                </label>
+                <input
+                  type="number"
+                  value={adminBidBlocks}
+                  onChange={(e) => setAdminBidBlocks(e.target.value)}
+                  placeholder="100"
+                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                  Reveal Window (blocks)
+                </label>
+                <input
+                  type="number"
+                  value={adminRevealBlocks}
+                  onChange={(e) => setAdminRevealBlocks(e.target.value)}
+                  placeholder="50"
+                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleStartAuction}
+              disabled={!wallet.connected || !adminCollateral || !adminMinBid}
+              className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-accent-warning/10 text-accent-warning border border-accent-warning/20 hover:bg-accent-warning/20 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Start Auction
+            </button>
+          </SpotlightCard>
+        </FadeInView>
+      )}
 
       {/* Action Tabs */}
       <FadeInView delay={0.2}>
