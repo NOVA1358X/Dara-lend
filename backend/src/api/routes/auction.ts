@@ -38,9 +38,14 @@ router.get('/stats', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/total_bid_volume/0u8`).then(r => r.text()).catch(() => ''),
     ]);
 
+    const safeParse = (raw: string | undefined, re: RegExp): string => {
+      if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
+      return raw.replace(re, '') || '0';
+    };
+
     res.json({
-      totalAuctions: totalRaw?.replace(/["\su64]/g, '') || '0',
-      totalBidVolume: volumeRaw?.replace(/["\su128]/g, '') || '0',
+      totalAuctions: safeParse(totalRaw, /["\su64]/g),
+      totalBidVolume: safeParse(volumeRaw, /["\su128]/g),
       programId: config.auctionProgramId,
     });
   } catch (err) {

@@ -3,8 +3,8 @@ import { useTransaction } from '@/hooks/useTransaction';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
   DARKPOOL_PROGRAM_ID, DARKPOOL_TRANSITIONS, DARKPOOL_MAPPINGS,
-  ALEO_TESTNET_API, BACKEND_API, PRECISION,
-  TX_FEE, TX_FEE_HIGH,
+  ALEO_TESTNET_API, BACKEND_API, PRECISION, CREDITS_PROGRAM,
+  TX_FEE, TX_FEE_HIGH, USDCX_PROGRAM,
 } from '@/utils/constants';
 import { formatCredits } from '@/utils/formatting';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
@@ -36,11 +36,27 @@ interface EpochData {
 }
 
 export function DarkPool({ wallet }: DarkPoolProps) {
-  const tx = useTransaction(wallet as any);
+  const { submitBuyIntent, submitSellIntent } = useTransaction(wallet as any);
+  const { creditsRecords, usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const [epochData, setEpochData] = useState<EpochData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('');
+
+  // Parse wallet records
+  const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
+    const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
+    const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
+    const match = str.match(/amount\s*:\s*(\d+)u128/);
+    return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
+  }).filter(Boolean) as { amount: number; plaintext: string }[];
+
+  const parsedCredits = (creditsRecords || []).filter((r: any) => !r.spent).map((r: any) => {
+    const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
+    const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
+    const match = str.match(/microcredits\s*:\s*(\d+)u64/);
+    return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
+  }).filter(Boolean) as { amount: number; plaintext: string }[];
 
   const fetchEpochData = useCallback(async () => {
     try {
@@ -82,41 +98,37 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     }
 
     const epoch = epochData?.currentEpoch ?? 1;
-    const nonce = Math.floor(Math.random() * 1_000_000_000);
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
+    const microAmount = Math.floor(parsedAmount * PRECISION);
 
-    if (tab === 'buy') {
-      // Submit buy intent — deposit USDCx to buy ALEO
-      const microAmount = Math.floor(parsedAmount * PRECISION);
-      await tx.executeTransaction(
-        DARKPOOL_TRANSITIONS.SUBMIT_BUY_INTENT,
-        [
-          'usdcx_record_placeholder',
-          FREEZE_LIST_PROOF,
-          `${microAmount}u128`,
-          `${epoch}u64`,
-          `${nonce}field`,
-        ],
-        TX_FEE_HIGH,
-        DARKPOOL_PROGRAM_ID,
-      );
-    } else {
-      // Submit sell intent — deposit ALEO to sell
-      const microAmount = Math.floor(parsedAmount * PRECISION);
-      await tx.executeTransaction(
-        DARKPOOL_TRANSITIONS.SUBMIT_SELL_INTENT,
-        [
-          'credits_record_placeholder',
-          `${microAmount}u64`,
-          `${epoch}u64`,
-          `${nonce}field`,
-        ],
-        TX_FEE_HIGH,
-        DARKPOOL_PROGRAM_ID,
-      );
+    try {
+      if (tab === 'buy') {
+        // Find USDCx record with sufficient balance
+        const record = parsedUsdcx.find(r => r.amount >= microAmount);
+        if (!record) {
+          toast.error(`No USDCx record with enough balance. Largest: ${parsedUsdcx.length > 0 ? (parsedUsdcx[0].amount / PRECISION).toFixed(2) : '0'} USDCx`);
+          return;
+        }
+        await submitBuyIntent(record.plaintext, microAmount, epoch, nonce);
+      } else {
+        // Find credits record with sufficient balance
+        const record = parsedCredits.find(r => r.amount >= microAmount);
+        if (!record) {
+          toast.error(`No ALEO record with enough balance. Largest: ${parsedCredits.length > 0 ? (parsedCredits[0].amount / PRECISION).toFixed(6) : '0'} ALEO`);
+          return;
+        }
+        await submitSellIntent(record.plaintext, microAmount, epoch, nonce);
+      }
+
+      setAmount('');
+      toast.success('Intent submitted! Waiting for epoch settlement.');
+      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 5000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
+      toast.error(msg);
     }
-
-    setAmount('');
-    setTimeout(fetchEpochData, 5000);
   };
 
   const buyVol = (Number(epochData?.buyVolume) || 0) / PRECISION;
@@ -197,9 +209,17 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
           <div className="space-y-4">
             <div>
-              <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                {tab === 'buy' ? 'USDCx Amount' : 'ALEO Amount'}
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-text-muted text-xs font-label uppercase tracking-wider">
+                  {tab === 'buy' ? 'USDCx Amount' : 'ALEO Amount'}
+                </label>
+                <span className="text-text-muted text-xs">
+                  {tab === 'buy'
+                    ? `Balance: ${parsedUsdcx.length > 0 ? (parsedUsdcx.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(2) : '0.00'} USDCx (${parsedUsdcx.length} records)`
+                    : `Balance: ${parsedCredits.length > 0 ? (parsedCredits.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(6) : '0.000000'} ALEO (${parsedCredits.length} records)`
+                  }
+                </span>
+              </div>
               <input
                 type="number"
                 value={amount}

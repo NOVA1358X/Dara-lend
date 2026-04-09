@@ -848,23 +848,23 @@ export function useTransaction(wallet: WalletExecute) {
   // ── Auction Transactions ──
 
   const submitSealedBid = useCallback(
-    async (usdcxRecord: string, auctionId: number, amount: number, secret: string) => {
+    async (usdcxRecord: string, auctionIdField: string, commitmentField: string, deposit: number, nonce: number) => {
       return executeTransaction(AUCTION_TRANSITIONS.SUBMIT_SEALED_BID, [
         usdcxRecord,
         FREEZE_LIST_PROOF,
-        `${auctionId}u64`,
-        microCreditsToU128Input(amount),
-        `${secret}field`,
+        auctionIdField,
+        commitmentField,
+        microCreditsToU128Input(deposit),
+        `${nonce}field`,
       ], TX_FEE_HIGH, AUCTION_PROGRAM_ID);
     },
     [executeTransaction],
   );
 
   const revealBid = useCallback(
-    async (sealedBidRecord: string, auctionId: number, actualBid: number, secret: string) => {
+    async (sealedBidRecord: string, actualBid: number, secret: string) => {
       return executeTransaction(AUCTION_TRANSITIONS.REVEAL_BID, [
         sealedBidRecord,
-        `${auctionId}u64`,
         microCreditsToU128Input(actualBid),
         `${secret}field`,
       ], TX_FEE, AUCTION_PROGRAM_ID);
@@ -873,19 +873,19 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const claimAuctionCollateral = useCallback(
-    async (auctionWinRecord: string, auctionId: number) => {
+    async (revealedBidRecord: string) => {
       return executeTransaction(AUCTION_TRANSITIONS.CLAIM_COLLATERAL, [
-        auctionWinRecord,
-        `${auctionId}u64`,
+        revealedBidRecord,
       ], TX_FEE, AUCTION_PROGRAM_ID);
     },
     [executeTransaction],
   );
 
   const redeemAuctionCollateral = useCallback(
-    async (auctionWinRecord: string) => {
+    async (auctionWinRecord: string, collateralAmount: number) => {
       return executeTransaction(AUCTION_TRANSITIONS.REDEEM_COLLATERAL, [
         auctionWinRecord,
+        microCreditsToInput(collateralAmount),
       ], TX_FEE, AUCTION_PROGRAM_ID);
     },
     [executeTransaction],
@@ -903,10 +903,13 @@ export function useTransaction(wallet: WalletExecute) {
   // ── Flash Loan Transactions ──
 
   const flashBorrowUsdcx = useCallback(
-    async (creditsRecord: string, collateralAmount: number) => {
+    async (creditsRecord: string, collateralAmount: number, borrowAmount: number, currentPrice: number, nonce: number) => {
       return executeTransaction(FLASH_TRANSITIONS.FLASH_BORROW_USDCX, [
         creditsRecord,
         microCreditsToInput(collateralAmount),
+        microCreditsToU128Input(borrowAmount),
+        `${currentPrice}u64`,
+        `${nonce}field`,
       ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
     },
     [executeTransaction],
@@ -920,11 +923,11 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const flashRepayUsdcx = useCallback(
-    async (usdcxRecord: string, receiptRecord: string) => {
+    async (receiptRecord: string, usdcxRecord: string) => {
       return executeTransaction(FLASH_TRANSITIONS.FLASH_REPAY_USDCX, [
+        receiptRecord,
         usdcxRecord,
         FREEZE_LIST_PROOF,
-        receiptRecord,
       ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
     },
     [executeTransaction],
@@ -938,11 +941,14 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const flashBorrowAleo = useCallback(
-    async (usdcxRecord: string, collateralAmount: number) => {
+    async (usdcxRecord: string, collateralAmount: number, borrowAmount: number, currentPrice: number, nonce: number) => {
       return executeTransaction(FLASH_TRANSITIONS.FLASH_BORROW_ALEO, [
         usdcxRecord,
         FREEZE_LIST_PROOF,
         microCreditsToU128Input(collateralAmount),
+        microCreditsToInput(borrowAmount),
+        `${currentPrice}u64`,
+        `${nonce}field`,
       ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
     },
     [executeTransaction],
@@ -956,10 +962,10 @@ export function useTransaction(wallet: WalletExecute) {
   );
 
   const flashRepayAleo = useCallback(
-    async (creditsRecord: string, receiptRecord: string) => {
+    async (receiptRecord: string, creditsRecord: string) => {
       return executeTransaction(FLASH_TRANSITIONS.FLASH_REPAY_ALEO, [
-        creditsRecord,
         receiptRecord,
+        creditsRecord,
       ], TX_FEE_HIGH, FLASH_PROGRAM_ID);
     },
     [executeTransaction],

@@ -16,11 +16,16 @@ router.get('/stats', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/active_flash_count/0u8`).then(r => r.text()).catch(() => ''),
     ]);
 
+    const safeParse = (raw: string | undefined, re: RegExp): string => {
+      if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
+      return raw.replace(re, '') || '0';
+    };
+
     res.json({
-      totalFlashLoans: loansRaw?.replace(/["\su64]/g, '') || '0',
-      totalVolume: volumeRaw?.replace(/["\su128]/g, '') || '0',
-      totalFeesEarned: feesRaw?.replace(/["\su128]/g, '') || '0',
-      activeFlashLoans: activeRaw?.replace(/["\su64]/g, '') || '0',
+      totalFlashLoans: safeParse(loansRaw, /["\su64]/g),
+      totalVolume: safeParse(volumeRaw, /["\su128]/g),
+      totalFeesEarned: safeParse(feesRaw, /["\su128]/g),
+      activeFlashLoans: safeParse(activeRaw, /["\su64]/g),
       programId: config.flashProgramId,
     });
   } catch (err) {
@@ -39,8 +44,13 @@ router.get('/available', async (_req, res) => {
       fetch(`${apiUrl}/program/${programId}/mapping/flash_paused/0u8`).then(r => r.text()).catch(() => ''),
     ]);
 
+    const safeParse = (raw: string | undefined, re: RegExp): string => {
+      if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return '0';
+      return raw.replace(re, '') || '0';
+    };
+
     res.json({
-      oraclePrice: priceRaw?.replace(/["\su64]/g, '') || '0',
+      oraclePrice: safeParse(priceRaw, /["\su64]/g),
       paused: pausedRaw?.includes('true') || false,
       feeBps: 9,
       collateralRatioBps: 10200,

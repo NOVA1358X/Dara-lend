@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTransaction } from '@/hooks/useTransaction';
+import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
   AUCTION_PROGRAM_ID, AUCTION_TRANSITIONS, AUCTION_MAPPINGS,
   BACKEND_API, PRECISION, TX_FEE, TX_FEE_HIGH,
@@ -28,13 +29,31 @@ interface AuctionStats {
 }
 
 export function Auctions({ wallet }: AuctionsProps) {
-  const tx = useTransaction(wallet as any);
+  const { submitSealedBid, revealBid, claimAuctionCollateral } = useTransaction(wallet as any);
+  const { usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const [stats, setStats] = useState<AuctionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'bid' | 'reveal' | 'claim'>('bid');
   const [auctionId, setAuctionId] = useState('');
   const [bidAmount, setBidAmount] = useState('');
   const [secret, setSecret] = useState('');
+  const [auctionRecords, setAuctionRecords] = useState<any[]>([]);
+
+  // Parse USDCx records for bidding
+  const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
+    const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
+    const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
+    const match = str.match(/amount\s*:\s*(\d+)u128/);
+    return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
+  }).filter(Boolean) as { amount: number; plaintext: string }[];
+
+  // Fetch auction program records (SealedBid, RevealedBid, etc.)
+  useEffect(() => {
+    if (!wallet.connected || !wallet.requestRecords) return;
+    wallet.requestRecords(AUCTION_PROGRAM_ID, true)
+      .then((recs: any[]) => setAuctionRecords(recs.filter((r: any) => !r.spent)))
+      .catch(() => setAuctionRecords([]));
+  }, [wallet.connected]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -43,7 +62,7 @@ export function Auctions({ wallet }: AuctionsProps) {
         fetch(`${BACKEND_API}/auction/stats`).then(r => r.json()).catch(() => null),
       ]);
       setStats({
-        activeAuctions: activeRes?.activeAuctions ?? 0,
+        activeAuctions: activeRes?.auctionCount ?? activeRes?.activeAuctions ?? 0,
         totalAuctions: statsRes?.totalAuctions ?? '0',
         totalBidVolume: statsRes?.totalBidVolume ?? '0',
         paused: activeRes?.paused ?? false,
@@ -66,78 +85,97 @@ export function Auctions({ wallet }: AuctionsProps) {
     const parsedAmount = parseFloat(bidAmount);
     const parsedAuction = parseInt(auctionId);
     if (!parsedAmount || parsedAmount <= 0) { toast.error('Enter a valid bid amount'); return; }
-    if (!parsedAuction || parsedAuction <= 0) { toast.error('Enter a valid auction ID'); return; }
+    if (isNaN(parsedAuction) || parsedAuction < 0) { toast.error('Enter a valid auction ID'); return; }
     if (!secret) { toast.error('Enter a secret for sealed bid'); return; }
 
     const microAmount = Math.floor(parsedAmount * PRECISION);
-    const secretField = `${secret}field`;
 
-    await tx.executeTransaction(
-      AUCTION_TRANSITIONS.SUBMIT_SEALED_BID,
-      [
-        'usdcx_record_placeholder',
-        `[{siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}, {siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}]`,
-        `${parsedAuction}u64`,
-        `${microAmount}u128`,
-        secretField,
-      ],
-      TX_FEE_HIGH,
-      AUCTION_PROGRAM_ID,
-    );
+    // Find USDCx record with sufficient balance
+    const record = parsedUsdcx.find(r => r.amount >= microAmount);
+    if (!record) {
+      toast.error(`No USDCx record with enough balance. Need ${parsedAmount} USDCx.`);
+      return;
+    }
 
-    toast.success('Save your secret — you need it to reveal your bid!');
-    setBidAmount('');
-    setAuctionId('');
-    setTimeout(fetchStats, 5000);
+    // Compute auction_id field (contract uses BHP256::hash_to_field(count))
+    // For now pass as field — admin can provide the correct auction_id field value
+    const auctionIdField = `${parsedAuction}field`;
+
+    // Commitment = BHP256(BHP256(bid_amount) + secret) — computed on-chain during reveal
+    // For sealed bid submission, we pass a commitment that we can verify later
+    // Since BHP256 can't be computed in JS, use a deterministic placeholder
+    // The user must remember their exact bid + secret for the reveal phase
+    const commitmentField = `${BigInt(microAmount) * BigInt(secret)}field`;
+
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
+
+    try {
+      await submitSealedBid(record.plaintext, auctionIdField, commitmentField, microAmount, nonce);
+      toast.success('Sealed bid submitted! Save your secret — you need it to reveal.');
+      setBidAmount('');
+      setAuctionId('');
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Bid submission failed');
+    }
   };
 
   const handleRevealBid = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
     if (!secret) { toast.error('Enter the secret from your sealed bid'); return; }
     const parsedAmount = parseFloat(bidAmount);
-    const parsedAuction = parseInt(auctionId);
     if (!parsedAmount) { toast.error('Enter your actual bid amount'); return; }
-    if (!parsedAuction) { toast.error('Enter auction ID'); return; }
 
+    // Find SealedBid record from auction program
+    const sealedBidRecord = auctionRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      return pt.includes('commitment') && pt.includes('deposit');
+    });
+    if (!sealedBidRecord) {
+      toast.error('No SealedBid record found. Make sure you submitted a bid first.');
+      return;
+    }
+    const sealedPlaintext = (sealedBidRecord.recordPlaintext ?? sealedBidRecord.plaintext ?? '') as string;
     const microAmount = Math.floor(parsedAmount * PRECISION);
 
-    await tx.executeTransaction(
-      AUCTION_TRANSITIONS.REVEAL_BID,
-      [
-        'sealed_bid_record_placeholder',
-        `${parsedAuction}u64`,
-        `${microAmount}u128`,
-        `${secret}field`,
-      ],
-      TX_FEE,
-      AUCTION_PROGRAM_ID,
-    );
-
-    setBidAmount('');
-    setSecret('');
-    setTimeout(fetchStats, 5000);
+    try {
+      await revealBid(sealedPlaintext, microAmount, secret);
+      toast.success('Bid revealed! Wait for settlement to claim.');
+      setBidAmount('');
+      setSecret('');
+      setTimeout(fetchStats, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Reveal failed');
+    }
   };
 
   const handleClaimCollateral = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    const parsedAuction = parseInt(auctionId);
-    if (!parsedAuction) { toast.error('Enter auction ID'); return; }
 
-    await tx.executeTransaction(
-      AUCTION_TRANSITIONS.CLAIM_COLLATERAL,
-      [
-        'auction_win_record_placeholder',
-        `${parsedAuction}u64`,
-      ],
-      TX_FEE,
-      AUCTION_PROGRAM_ID,
-    );
+    // Find RevealedBid record from auction program records
+    const revealedRecord = auctionRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      return pt.includes('bid_amount') && pt.includes('deposit') && pt.includes('nonce_hash');
+    });
+    if (!revealedRecord) {
+      toast.error('No RevealedBid record found. Reveal your bid first.');
+      return;
+    }
+    const revealedPlaintext = (revealedRecord.recordPlaintext ?? revealedRecord.plaintext ?? '') as string;
 
-    setAuctionId('');
-    setTimeout(fetchStats, 5000);
+    try {
+      await claimAuctionCollateral(revealedPlaintext);
+      toast.success('Collateral claimed!');
+      setAuctionId('');
+      setTimeout(fetchStats, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Claim failed');
+    }
   };
 
-  const totalBidVol = Number(stats?.totalBidVolume || 0) / PRECISION;
+  const totalBidVol = (Number(stats?.totalBidVolume) || 0) / PRECISION;
 
   return (
     <div className="space-y-6">

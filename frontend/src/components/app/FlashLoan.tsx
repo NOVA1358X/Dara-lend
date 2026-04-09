@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTransaction } from '@/hooks/useTransaction';
+import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
   FLASH_PROGRAM_ID, FLASH_TRANSITIONS, FLASH_MAPPINGS,
   BACKEND_API, PRECISION, TX_FEE, TX_FEE_HIGH,
+  ALEO_TESTNET_API,
 } from '@/utils/constants';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
@@ -34,12 +36,41 @@ interface FlashStats {
 const FREEZE_LIST_PROOF = `[{siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}, {siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}]`;
 
 export function FlashLoan({ wallet }: FlashLoanProps) {
-  const tx = useTransaction(wallet as any);
+  const {
+    flashBorrowUsdcx, flashClaimUsdcx, flashRepayUsdcx, flashWithdrawAleo,
+    flashBorrowAleo, flashClaimAleo, flashRepayAleo, flashWithdrawUsdcx,
+  } = useTransaction(wallet as any);
+  const { creditsRecords, usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const [stats, setStats] = useState<FlashStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [direction, setDirection] = useState<'borrow_usdcx' | 'borrow_aleo'>('borrow_usdcx');
   const [amount, setAmount] = useState('');
+  const [borrowAmount, setBorrowAmount] = useState('');
   const [step, setStep] = useState<'borrow' | 'claim' | 'repay' | 'withdraw'>('borrow');
+  const [flashRecords, setFlashRecords] = useState<any[]>([]);
+
+  // Parse wallet records
+  const parsedCredits = (creditsRecords || []).filter((r: any) => !r.spent).map((r: any) => {
+    const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
+    const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
+    const match = str.match(/microcredits\s*:\s*(\d+)u64/);
+    return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
+  }).filter(Boolean) as { amount: number; plaintext: string }[];
+
+  const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
+    const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
+    const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
+    const match = str.match(/amount\s*:\s*(\d+)u128/);
+    return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
+  }).filter(Boolean) as { amount: number; plaintext: string }[];
+
+  // Fetch flash loan program records (FlashLoanReceipt, FlashRepayReceipt)
+  useEffect(() => {
+    if (!wallet.connected || !wallet.requestRecords) return;
+    wallet.requestRecords(FLASH_PROGRAM_ID, true)
+      .then((recs: any[]) => setFlashRecords(recs.filter((r: any) => !r.spent)))
+      .catch(() => setFlashRecords([]));
+  }, [wallet.connected, step]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -48,10 +79,10 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
         fetch(`${BACKEND_API}/flash/available`).then(r => r.json()).catch(() => null),
       ]);
       setStats({
-        totalLoans: statsRes?.totalLoans ?? '0',
+        totalLoans: statsRes?.totalFlashLoans ?? statsRes?.totalLoans ?? '0',
         totalVolume: statsRes?.totalVolume ?? '0',
-        totalFees: statsRes?.totalFees ?? '0',
-        activeLoans: statsRes?.activeLoans ?? '0',
+        totalFees: statsRes?.totalFeesEarned ?? statsRes?.totalFees ?? '0',
+        activeLoans: statsRes?.activeFlashLoans ?? statsRes?.activeLoans ?? '0',
         oraclePrice: availRes?.oraclePrice ?? '0',
         paused: availRes?.paused ?? false,
         feeBps: availRes?.feeBps ?? 9,
@@ -73,105 +104,153 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const handleBorrow = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
     const parsedAmount = parseFloat(amount);
-    if (!parsedAmount || parsedAmount <= 0) { toast.error('Enter a valid amount'); return; }
+    const parsedBorrow = parseFloat(borrowAmount);
+    if (!parsedAmount || parsedAmount <= 0) { toast.error('Enter a valid collateral amount'); return; }
+    if (!parsedBorrow || parsedBorrow <= 0) { toast.error('Enter a valid borrow amount'); return; }
 
-    const microAmount = Math.floor(parsedAmount * PRECISION);
+    const microCollateral = Math.floor(parsedAmount * PRECISION);
+    const microBorrow = Math.floor(parsedBorrow * PRECISION);
 
-    if (direction === 'borrow_usdcx') {
-      // Borrow USDCx — lock ALEO as collateral
-      await tx.executeTransaction(
-        FLASH_TRANSITIONS.FLASH_BORROW_USDCX,
-        ['credits_record_placeholder', `${microAmount}u64`],
-        TX_FEE_HIGH,
-        FLASH_PROGRAM_ID,
-      );
-    } else {
-      // Borrow ALEO — lock USDCx as collateral
-      await tx.executeTransaction(
-        FLASH_TRANSITIONS.FLASH_BORROW_ALEO,
-        [
-          'usdcx_record_placeholder',
-          FREEZE_LIST_PROOF,
-          `${microAmount}u128`,
-        ],
-        TX_FEE_HIGH,
-        FLASH_PROGRAM_ID,
-      );
+    // Fetch current oracle price from flash contract
+    const oraclePriceRaw = stats?.oraclePrice || '0';
+    const oraclePrice = parseInt(oraclePriceRaw) || 0;
+    if (oraclePrice <= 0) {
+      toast.error('Oracle price not available. Flash oracle bot may not have pushed yet.');
+      return;
     }
 
-    setStep('claim');
-    setTimeout(fetchStats, 5000);
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
+
+    try {
+      if (direction === 'borrow_usdcx') {
+        const record = parsedCredits.find(r => r.amount >= microCollateral);
+        if (!record) {
+          toast.error(`No ALEO record with enough balance. Need ${parsedAmount} ALEO.`);
+          return;
+        }
+        await flashBorrowUsdcx(record.plaintext, microCollateral, microBorrow, oraclePrice, nonce);
+      } else {
+        const record = parsedUsdcx.find(r => r.amount >= microCollateral);
+        if (!record) {
+          toast.error(`No USDCx record with enough balance. Need ${parsedAmount} USDCx.`);
+          return;
+        }
+        await flashBorrowAleo(record.plaintext, microCollateral, microBorrow, oraclePrice, nonce);
+      }
+
+      toast.success('Flash loan initiated! Proceed to Claim.');
+      setStep('claim');
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Borrow failed');
+    }
   };
 
   const handleClaim = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
 
-    const transition = direction === 'borrow_usdcx'
-      ? FLASH_TRANSITIONS.FLASH_CLAIM_USDCX
-      : FLASH_TRANSITIONS.FLASH_CLAIM_ALEO;
+    // Find FlashLoanReceipt record
+    const receipt = flashRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      return pt.includes('borrow_amount') && pt.includes('borrow_token') && pt.includes('fee_amount');
+    });
+    if (!receipt) {
+      toast.error('No FlashLoanReceipt found. Complete the borrow step first.');
+      return;
+    }
+    const receiptPlaintext = (receipt.recordPlaintext ?? receipt.plaintext ?? '') as string;
 
-    await tx.executeTransaction(
-      transition,
-      ['flash_loan_receipt_placeholder'],
-      TX_FEE,
-      FLASH_PROGRAM_ID,
-    );
-
-    setStep('repay');
-    setTimeout(fetchStats, 5000);
+    try {
+      if (direction === 'borrow_usdcx') {
+        await flashClaimUsdcx(receiptPlaintext);
+      } else {
+        await flashClaimAleo(receiptPlaintext);
+      }
+      toast.success('Tokens claimed! Proceed to Repay.');
+      setStep('repay');
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Claim failed');
+    }
   };
 
   const handleRepay = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
 
-    if (direction === 'borrow_usdcx') {
-      await tx.executeTransaction(
-        FLASH_TRANSITIONS.FLASH_REPAY_USDCX,
-        [
-          'usdcx_record_placeholder',
-          FREEZE_LIST_PROOF,
-          'flash_loan_receipt_placeholder',
-        ],
-        TX_FEE_HIGH,
-        FLASH_PROGRAM_ID,
-      );
-    } else {
-      await tx.executeTransaction(
-        FLASH_TRANSITIONS.FLASH_REPAY_ALEO,
-        ['credits_record_placeholder', 'flash_loan_receipt_placeholder'],
-        TX_FEE_HIGH,
-        FLASH_PROGRAM_ID,
-      );
+    // Find the FlashLoanReceipt (returned from claim step)
+    const receipt = flashRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      return pt.includes('borrow_amount') && pt.includes('fee_amount');
+    });
+    if (!receipt) {
+      toast.error('No FlashLoanReceipt found.');
+      return;
     }
+    const receiptPlaintext = (receipt.recordPlaintext ?? receipt.plaintext ?? '') as string;
 
-    setStep('withdraw');
-    setTimeout(fetchStats, 5000);
+    try {
+      if (direction === 'borrow_usdcx') {
+        // Repay USDCx: need receipt + USDCx token record
+        const usdcxRecord = parsedUsdcx[0];
+        if (!usdcxRecord) {
+          toast.error('No USDCx record available for repayment.');
+          return;
+        }
+        await flashRepayUsdcx(receiptPlaintext, usdcxRecord.plaintext);
+      } else {
+        // Repay ALEO: need receipt + credits record
+        const creditsRecord = parsedCredits[0];
+        if (!creditsRecord) {
+          toast.error('No ALEO record available for repayment.');
+          return;
+        }
+        await flashRepayAleo(receiptPlaintext, creditsRecord.plaintext);
+      }
+      toast.success('Loan repaid! Proceed to Withdraw collateral.');
+      setStep('withdraw');
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Repay failed');
+    }
   };
 
   const handleWithdraw = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
 
-    const transition = direction === 'borrow_usdcx'
-      ? FLASH_TRANSITIONS.FLASH_WITHDRAW_ALEO
-      : FLASH_TRANSITIONS.FLASH_WITHDRAW_USDCX;
+    // Find FlashRepayReceipt record
+    const repayReceipt = flashRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      return pt.includes('amount_repaid') && pt.includes('collateral_returned');
+    });
+    if (!repayReceipt) {
+      toast.error('No FlashRepayReceipt found. Complete the repay step first.');
+      return;
+    }
+    const repayPlaintext = (repayReceipt.recordPlaintext ?? repayReceipt.plaintext ?? '') as string;
 
-    await tx.executeTransaction(
-      transition,
-      ['flash_repay_receipt_placeholder'],
-      TX_FEE,
-      FLASH_PROGRAM_ID,
-    );
-
-    setStep('borrow');
-    setAmount('');
-    setTimeout(fetchStats, 5000);
+    try {
+      if (direction === 'borrow_usdcx') {
+        await flashWithdrawAleo(repayPlaintext);
+      } else {
+        await flashWithdrawUsdcx(repayPlaintext);
+      }
+      toast.success('Collateral withdrawn! Flash loan complete.');
+      setStep('borrow');
+      setAmount('');
+      setBorrowAmount('');
+      setTimeout(() => { fetchStats(); refetchRecords(); }, 5000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Withdraw failed');
+    }
   };
 
   const fee = parseFloat(amount || '0') * (stats?.feeBps ?? 9) / 10000;
-  const oraclePrice = Number(stats?.oraclePrice || 0) / PRECISION;
-  const totalVol = Number(stats?.totalVolume || 0) / PRECISION;
-  const totalFees = Number(stats?.totalFees || 0) / PRECISION;
-  const activeLoans = Number(stats?.activeLoans || 0);
+  const oraclePrice = (Number(stats?.oraclePrice) || 0) / PRECISION;
+  const totalVol = (Number(stats?.totalVolume) || 0) / PRECISION;
+  const totalFees = (Number(stats?.totalFees) || 0) / PRECISION;
+  const activeLoans = Number(stats?.activeLoans) || 0;
 
   const stepLabels = ['borrow', 'claim', 'repay', 'withdraw'] as const;
 
@@ -275,14 +354,35 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                    {direction === 'borrow_usdcx' ? 'ALEO Collateral Amount' : 'USDCx Collateral Amount'}
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-text-muted text-xs font-label uppercase tracking-wider">
+                      {direction === 'borrow_usdcx' ? 'ALEO Collateral Amount' : 'USDCx Collateral Amount'}
+                    </label>
+                    <span className="text-text-muted text-xs">
+                      {direction === 'borrow_usdcx'
+                        ? `Balance: ${parsedCredits.length > 0 ? (parsedCredits.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(6) : '0'} ALEO`
+                        : `Balance: ${parsedUsdcx.length > 0 ? (parsedUsdcx.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(2) : '0'} USDCx`
+                      }
+                    </span>
+                  </div>
                   <input
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder={direction === 'borrow_usdcx' ? 'ALEO to lock as collateral' : 'USDCx to lock as collateral'}
+                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                    {direction === 'borrow_usdcx' ? 'USDCx Borrow Amount' : 'ALEO Borrow Amount'}
+                  </label>
+                  <input
+                    type="number"
+                    value={borrowAmount}
+                    onChange={(e) => setBorrowAmount(e.target.value)}
+                    placeholder={direction === 'borrow_usdcx' ? 'USDCx amount to borrow' : 'ALEO amount to borrow'}
                     className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
                   />
                 </div>
@@ -308,7 +408,7 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
 
                 <button
                   onClick={handleBorrow}
-                  disabled={!wallet.connected || !amount}
+                  disabled={!wallet.connected || !amount || !borrowAmount}
                   className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {!wallet.connected ? 'Connect Wallet' : 'Lock Collateral & Borrow'}
