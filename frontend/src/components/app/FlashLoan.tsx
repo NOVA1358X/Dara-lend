@@ -469,22 +469,22 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">1</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Lock Collateral</h4>
-              <p className="text-text-muted text-xs">Deposit 102% collateral. Locked in contract until full repayment.</p>
+              <p className="text-text-muted text-xs">Deposit 102% collateral (ALEO for USDCx loans, USDCx for ALEO loans). Price from dedicated flash oracle — auto-updated by backend bot every 60s when deviation exceeds 0.5%.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">2</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Claim Tokens</h4>
-              <p className="text-text-muted text-xs">Receive borrowed tokens as private records. Use for arbitrage or liquidation.</p>
+              <p className="text-text-muted text-xs">Receive borrowed tokens (USDCx or ALEO) as private records. Use for arbitrage, liquidation, or any DeFi strategy — all within the same session.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">3</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Repay + Fee</h4>
-              <p className="text-text-muted text-xs">Return the tokens plus 0.09% fee. Contract verifies exact repayment.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Repay + 0.09% Fee</h4>
+              <p className="text-text-muted text-xs">Return the exact borrowed amount plus 0.09% fee (9 BPS). Contract verifies the full repayment on-chain before releasing collateral.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">4</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Get Collateral Back</h4>
-              <p className="text-text-muted text-xs">Withdraw your collateral privately. Complete cycle in 4 transactions.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Withdraw Collateral</h4>
+              <p className="text-text-muted text-xs">After successful repayment, withdraw your full collateral privately. Complete the entire flash loan cycle in 4 sequential transactions — all with ZK privacy.</p>
             </div>
           </div>
         </SpotlightCard>

@@ -452,22 +452,22 @@ export function Auctions({ wallet }: AuctionsProps) {
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">1</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Auction Created</h4>
-              <p className="text-text-muted text-xs">Liquidated collateral is listed. Minimum bid is set by the protocol.</p>
+              <p className="text-text-muted text-xs">Admin lists liquidated ALEO collateral for auction. Sets minimum bid (USDCx), bid window, and reveal window in blocks. Collateral is locked in contract.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">2</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Sealed Bidding</h4>
-              <p className="text-text-muted text-xs">Bid privately using a cryptographic commitment. Nobody can see your bid.</p>
+              <p className="text-text-muted text-xs">Lock USDCx and submit a sealed commitment hash: BHP256(BHP256(actual_bid) + secret). Nobody can see your real bid amount — the first sealed-bid auction on Aleo.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">3</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Reveal Phase</h4>
-              <p className="text-text-muted text-xs">Reveal your bid. Contract verifies commitment matches. Highest bid tracked on-chain.</p>
+              <p className="text-text-muted text-xs">After the bid window closes, reveal your actual bid amount + secret. Contract verifies it matches your sealed commitment. Highest revealed bid is tracked on-chain.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">4</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Settlement</h4>
-              <p className="text-text-muted text-xs">Winner claims collateral. Losers get automatic refunds. All private records.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Settlement</h4>
+              <p className="text-text-muted text-xs">The backend bot auto-settles after the reveal phase ends. Winner claims discounted collateral (ALEO). Non-winners receive automatic USDCx refunds. All as private records.</p>
             </div>
           </div>
         </SpotlightCard>

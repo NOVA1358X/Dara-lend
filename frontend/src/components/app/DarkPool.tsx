@@ -376,21 +376,26 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       <FadeInView delay={0.3}>
         <SpotlightCard className="p-6">
           <h3 className="font-headline text-lg text-text-primary mb-4">How It Works</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">1</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Submit Intent</h4>
-              <p className="text-text-muted text-xs">Lock tokens privately. Your intent amount and identity are encrypted in a ZK record.</p>
+              <p className="text-text-muted text-xs">Lock USDCx (buy) or ALEO (sell) into the current epoch. Your intent amount and identity are encrypted in a ZK record — only aggregate volume is visible on-chain.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">2</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Epoch Settlement</h4>
-              <p className="text-text-muted text-xs">Admin settles epoch using 5-source oracle mid-price. Only aggregate volume is on-chain.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Settlement Bot</h4>
+              <p className="text-text-muted text-xs">The backend bot checks every 60 seconds. Once the epoch has volume, it automatically settles using 5-source oracle mid-price (Binance, Coinbase, CoinGecko, CoinMarketCap, CryptoCompare). No manual admin action needed.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">3</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Claim Fill</h4>
-              <p className="text-text-muted text-xs">Claim your traded tokens after settlement. Trade details remain private forever.</p>
+              <p className="text-text-muted text-xs">After settlement, your "Active Intents" section shows a Claim button. Buyers receive ALEO, sellers receive USDCx — calculated from the settlement price. Trade details remain private forever.</p>
+            </div>
+            <div className="bg-white/[0.02] rounded-lg p-4">
+              <div className="text-primary font-headline text-lg mb-2">4</div>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Cancel Anytime</h4>
+              <p className="text-text-muted text-xs">Before settlement, you can cancel your intent anytime using the Cancel button to get your full tokens back. After settlement, only Claim is available.</p>
             </div>
           </div>
         </SpotlightCard>
