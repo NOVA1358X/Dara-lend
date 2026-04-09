@@ -147,7 +147,10 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       const epochRes = await fetch(`${BACKEND_API}/darkpool/epoch/${intent.epoch}`).then(r => r.json());
       price = parseInt(epochRes?.price || '0', 10);
       if (!epochRes?.settled) {
-        toast.error(`Epoch #${intent.epoch} is not settled yet. Wait for the bot to settle it.`);
+        const bv = parseInt(epochRes?.buyVolume || '0', 10);
+        const sv = parseInt(epochRes?.sellVolume || '0', 10);
+        const waitingFor = bv === 0 && sv === 0 ? 'orders on both sides' : bv === 0 ? 'buy orders' : sv === 0 ? 'sell orders' : 'the bot to finalize';
+        toast.error(`Epoch #${intent.epoch} is not settled yet. Waiting for ${waitingFor}. You can cancel this intent if you don't want to wait.`);
         return;
       }
     } catch {
@@ -170,11 +173,11 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       const liveAleo = parseVal(aleoRaw);
       const liveUsdcx = parseVal(usdcxRaw);
       if (intent.intentType === 0 && liveAleo === 0) {
-        toast.error('The dark pool has no ALEO balance to fill your buy. Contact admin to fund the pool.');
+        toast.error('The dark pool currently has 0 ALEO. Your buy claim cannot be filled until the pool is funded with ALEO. You can cancel this intent to get your USDCx back.');
         return;
       }
       if (intent.intentType === 1 && liveUsdcx === 0) {
-        toast.error('The dark pool has no USDCx balance to fill your sell. Contact admin to fund the pool.');
+        toast.error('The dark pool currently has 0 USDCx. Your sell claim cannot be filled until the pool is funded with USDCx. You can cancel this intent to get your ALEO back.');
         return;
       }
     } catch { /* proceed anyway */ }
@@ -184,15 +187,21 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         // Buy intent: fill_aleo = amount * SCALE / price
         const fillAleo = Math.floor(Number(BigInt(intent.amount) * BigInt(PRECISION) / BigInt(price)));
         await claimBuyFill(intent.plaintext, fillAleo);
+        toast.success(`Buy fill claimed! Receiving ~${(fillAleo / PRECISION).toFixed(6)} ALEO privately. Transaction confirming...`);
       } else {
         // Sell intent: fill_usdcx = amount * price / SCALE
         const fillUsdcx = Math.floor(Number(BigInt(intent.amount) * BigInt(price) / BigInt(PRECISION)));
         await claimSellFill(intent.plaintext, fillUsdcx);
+        toast.success(`Sell fill claimed! Receiving ~${(fillUsdcx / PRECISION).toFixed(2)} USDCx privately. Transaction confirming...`);
       }
-      toast.success('Fill claimed!');
       setTimeout(() => { fetchEpochData(); refetchRecords(); }, 5000);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Claim failed');
+      const errMsg = err instanceof Error ? err.message : 'Claim failed';
+      if (errMsg.includes('rejected') || errMsg.includes('REJECTED')) {
+        toast.error('Claim transaction was rejected. The pool may not have enough balance for your fill. Try again or contact admin.');
+      } else {
+        toast.error(errMsg);
+      }
     }
   };
 
@@ -248,7 +257,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       }
 
       setAmount('');
-      toast.success('Intent submitted! Waiting for epoch settlement.');
+      const otherSideVol = tab === 'buy' ? (Number(epochData?.sellVolume) || 0) : (Number(epochData?.buyVolume) || 0);
+      if (otherSideVol > 0) {
+        toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} intent submitted to Epoch #${epoch}! Both sides have volume — the bot will settle automatically.`);
+      } else {
+        toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} intent submitted to Epoch #${epoch}! Waiting for ${tab === 'buy' ? 'sellers' : 'buyers'} to match. Settlement happens once both sides have orders.`);
+      }
       setTimeout(() => { fetchEpochData(); refetchRecords(); }, 5000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Transaction failed';
@@ -260,6 +274,47 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   const sellVol = (Number(epochData?.sellVolume) || 0) / PRECISION;
   const totalTrades = Number(epochData?.totalTrades) || 0;
   const totalVolume = (Number(epochData?.totalVolume) || 0) / PRECISION;
+
+  // Epoch matching state — tells users what's happening
+  const epochMatchState: 'settled' | 'matched' | 'buy-only' | 'sell-only' | 'empty' = (() => {
+    if (!epochData || epochData.settled) return 'settled';
+    const bv = Number(epochData.buyVolume) || 0;
+    const sv = Number(epochData.sellVolume) || 0;
+    if (bv === 0 && sv === 0) return 'empty';
+    if (bv > 0 && sv > 0) return 'matched';
+    if (bv > 0) return 'buy-only';
+    return 'sell-only';
+  })();
+
+  const epochStatusConfig = {
+    settled: { color: 'bg-accent-success', text: 'Settled — claim your fills', textColor: 'text-accent-success' },
+    matched: { color: 'bg-primary', text: 'Both sides matched — settlement in progress', textColor: 'text-primary' },
+    'buy-only': { color: 'bg-accent-warning', text: 'Buy orders waiting — needs sellers to settle', textColor: 'text-accent-warning' },
+    'sell-only': { color: 'bg-accent-warning', text: 'Sell orders waiting — needs buyers to settle', textColor: 'text-accent-warning' },
+    empty: { color: 'bg-white/20', text: 'No orders yet — submit an intent to start', textColor: 'text-text-muted' },
+  };
+
+  const getIntentStatus = (intent: typeof parsedIntents[0]) => {
+    if (epochData && intent.epoch < epochData.currentEpoch) {
+      return { label: 'Settled', detail: 'Ready to claim your fill', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canClaim: true, canCancel: false };
+    }
+    if (epochData?.settled && intent.epoch === epochData.currentEpoch) {
+      return { label: 'Settled', detail: 'Ready to claim your fill', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canClaim: true, canCancel: false };
+    }
+    // Current epoch, not settled
+    const bv = Number(epochData?.buyVolume) || 0;
+    const sv = Number(epochData?.sellVolume) || 0;
+    if (bv > 0 && sv > 0) {
+      return { label: 'Matching', detail: 'Both sides have volume — bot will settle soon', color: 'text-primary', bgColor: 'bg-primary/10', canClaim: false, canCancel: true };
+    }
+    if (intent.intentType === 0 && sv === 0) {
+      return { label: 'Waiting', detail: 'Waiting for sellers to match your buy order', color: 'text-accent-warning', bgColor: 'bg-accent-warning/10', canClaim: false, canCancel: true };
+    }
+    if (intent.intentType === 1 && bv === 0) {
+      return { label: 'Waiting', detail: 'Waiting for buyers to match your sell order', color: 'text-accent-warning', bgColor: 'bg-accent-warning/10', canClaim: false, canCancel: true };
+    }
+    return { label: 'Open', detail: 'Epoch collecting intents — cancel or wait', color: 'text-text-muted', bgColor: 'bg-white/[0.04]', canClaim: false, canCancel: true };
+  };
 
   return (
     <div className="space-y-6">
@@ -308,6 +363,45 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             )}
           </SpotlightCard>
         </div>
+      </FadeInView>
+
+      {/* Pool Liquidity & Epoch Status — visible to all users */}
+      <FadeInView delay={0.15}>
+        <SpotlightCard className="p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Pool ALEO</p>
+                <p className="text-sm font-headline text-accent-success">{(poolBalance.aleo / PRECISION).toFixed(4)}</p>
+              </div>
+              <div className="h-6 w-px bg-white/[0.06]" />
+              <div>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Pool USDCx</p>
+                <p className="text-sm font-headline text-primary">{(poolBalance.usdcx / PRECISION).toFixed(2)}</p>
+              </div>
+              <div className="h-6 w-px bg-white/[0.06]" />
+              <div>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Epoch #{epochData?.currentEpoch ?? '—'}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${epochStatusConfig[epochMatchState].color}`} />
+                  <span className={`text-xs ${epochStatusConfig[epochMatchState].textColor}`}>
+                    {epochStatusConfig[epochMatchState].text}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {(epochMatchState === 'buy-only' || epochMatchState === 'sell-only') && (
+            <p className="text-text-muted text-[10px] mt-2 border-t border-white/[0.04] pt-2">
+              The dark pool requires both buy and sell orders in the same epoch before settlement. The bot automatically settles once both sides have volume. You can cancel your intent anytime before settlement.
+            </p>
+          )}
+          {epochMatchState === 'matched' && (
+            <p className="text-text-muted text-[10px] mt-2 border-t border-white/[0.04] pt-2">
+              Both buy and sell orders are matched. The settlement bot will execute within 60 seconds using the 5-source oracle mid-price.
+            </p>
+          )}
+        </SpotlightCard>
       </FadeInView>
 
       {/* Trade Form */}
@@ -388,48 +482,47 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             <div className="space-y-3">
               {parsedIntents.map((intent, i) => {
                 const isBuy = intent.intentType === 0;
-                const intentEpochSettled = epochData?.settled && intent.epoch === epochData.currentEpoch;
-                // For past epochs, check if epoch < current (always settled)
-                const pastEpochSettled = epochData && intent.epoch < epochData.currentEpoch;
-                const isSettled = intentEpochSettled || pastEpochSettled;
+                const status = getIntentStatus(intent);
                 return (
-                  <div key={i} className="flex items-center justify-between bg-white/[0.02] rounded-lg p-3">
-                    <div>
-                      <span className={`text-xs font-label uppercase tracking-wider ${isBuy ? 'text-accent-success' : 'text-accent-warning'}`}>
-                        {isBuy ? 'BUY' : 'SELL'}
-                      </span>
-                      <span className="text-text-primary text-sm ml-2">
-                        {(intent.amount / PRECISION).toFixed(2)} {isBuy ? 'USDCx' : 'ALEO'}
-                      </span>
-                      <span className="text-text-muted text-xs ml-2">Epoch #{intent.epoch}</span>
+                  <div key={i} className="bg-white/[0.02] rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-label uppercase tracking-wider px-2 py-0.5 rounded ${isBuy ? 'bg-accent-success/10 text-accent-success' : 'bg-accent-warning/10 text-accent-warning'}`}>
+                          {isBuy ? 'BUY' : 'SELL'}
+                        </span>
+                        <span className="text-text-primary text-sm font-medium">
+                          {(intent.amount / PRECISION).toFixed(isBuy ? 2 : 6)} {isBuy ? 'USDCx' : 'ALEO'}
+                        </span>
+                        <span className="text-text-muted text-xs">Epoch #{intent.epoch}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        {status.canClaim && (
+                          <button
+                            onClick={() => handleClaimFill(intent)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-label uppercase tracking-wider bg-accent-success/10 text-accent-success border border-accent-success/20 hover:bg-accent-success/20 transition-all"
+                          >
+                            Claim Fill
+                          </button>
+                        )}
+                        {status.canCancel && (
+                          <button
+                            onClick={() => handleCancelIntent(intent)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-label uppercase tracking-wider bg-white/[0.04] text-text-muted border border-white/[0.06] hover:bg-white/[0.08] transition-all"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      {isSettled ? (
-                        <button
-                          onClick={() => handleClaimFill(intent)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-label uppercase tracking-wider bg-accent-success/10 text-accent-success border border-accent-success/20 hover:bg-accent-success/20"
-                        >
-                          Claim Fill
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleCancelIntent(intent)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-label uppercase tracking-wider bg-accent-warning/10 text-accent-warning border border-accent-warning/20 hover:bg-accent-warning/20"
-                        >
-                          Cancel
-                        </button>
-                      )}
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1.5 h-1.5 rounded-full ${status.bgColor}`} />
+                      <span className={`text-[11px] ${status.color}`}>{status.label}</span>
+                      <span className="text-text-muted text-[10px]">— {status.detail}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            {epochData?.settled && (
-              <p className="text-accent-success text-xs mt-3">Epoch #{epochData?.currentEpoch} is settled. You can claim your fills.</p>
-            )}
-            {!epochData?.settled && (
-              <p className="text-text-muted text-xs mt-3">Epoch #{epochData?.currentEpoch} is collecting intents. Cancel before settlement or wait to claim after.</p>
-            )}
           </SpotlightCard>
         </FadeInView>
       )}
@@ -438,26 +531,31 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       <FadeInView delay={0.3}>
         <SpotlightCard className="p-6">
           <h3 className="font-headline text-lg text-text-primary mb-4">How It Works</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">1</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Submit Intent</h4>
-              <p className="text-text-muted text-xs">Lock USDCx (buy) or ALEO (sell) into the current epoch. Your intent amount and identity are encrypted in a ZK record — only aggregate volume is visible on-chain.</p>
+              <p className="text-text-muted text-xs">Choose Buy ALEO (pay with USDCx) or Sell ALEO (receive USDCx). Your intent is encrypted in a ZK record — no one can see your amount or identity. Only aggregate epoch volume is visible on-chain.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">2</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Settlement Bot</h4>
-              <p className="text-text-muted text-xs">The backend bot checks every 60 seconds. Once the epoch has volume, it automatically settles using 5-source oracle mid-price (Binance, Coinbase, CoinGecko, CoinMarketCap, CryptoCompare). No manual admin action needed.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Wait for Match</h4>
+              <p className="text-text-muted text-xs">The epoch needs <strong className="text-text-secondary">both buy and sell orders</strong> before it can settle. If only one side has volume, the status shows "Waiting for buyers/sellers". You can cancel anytime while waiting.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">3</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Claim Fill</h4>
-              <p className="text-text-muted text-xs">After settlement, your "Active Intents" section shows a Claim button. Buyers receive ALEO, sellers receive USDCx — calculated from the settlement price. Trade details remain private forever.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Settlement</h4>
+              <p className="text-text-muted text-xs">Once both sides have orders, the bot settles automatically within 60 seconds using the 5-source oracle mid-price (Binance, Coinbase, CoinGecko, CoinMarketCap, CryptoCompare). No manual action needed.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">4</div>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Claim Fill</h4>
+              <p className="text-text-muted text-xs">After settlement, click "Claim Fill" on your intent. Buyers receive private ALEO, sellers receive private USDCx — calculated from the settlement price. Your trade details remain private forever.</p>
+            </div>
+            <div className="bg-white/[0.02] rounded-lg p-4">
+              <div className="text-primary font-headline text-lg mb-2">5</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Cancel Anytime</h4>
-              <p className="text-text-muted text-xs">Before settlement, you can cancel your intent anytime using the Cancel button to get your full tokens back. After settlement, only Claim is available.</p>
+              <p className="text-text-muted text-xs">Before settlement, you can cancel your intent at any time using the Cancel button to get your full tokens back. After settlement, only Claim is available — your tokens have been matched.</p>
             </div>
           </div>
         </SpotlightCard>
