@@ -315,6 +315,8 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
 
     try {
       setTxPending(true);
+
+      // Step 1: Private vote — NO finalize, shows as PRIVATE in wallet
       const tx = {
         program: GOV_PROGRAM_ID,
         function: GOV_TRANSITIONS.VOTE,
@@ -323,13 +325,27 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         privateFee: false,
       };
       const result = await wallet.requestTransaction(tx);
-      if (result?.transactionId) {
-        const supportLabel = support === 1 ? 'For' : support === 0 ? 'Against' : 'Abstain';
-        toast.success(`Vote ${supportLabel} submitted! TX: ${result.transactionId.slice(0, 16)}... (refresh in ~30s to see votes)`);
-        setTimeout(fetchGovernanceData, 15_000);
-      } else {
+      if (!result?.transactionId) {
         toast('Vote transaction sent — check wallet activity for confirmation');
+        return;
       }
+
+      const supportLabel = support === 1 ? 'For' : support === 0 ? 'Against' : 'Abstain';
+      toast.success(`Private vote ${supportLabel} submitted! TX: ${result.transactionId.slice(0, 16)}...`);
+
+      // Step 2: Send tally request to backend (admin tallies on-chain without revealing voter)
+      try {
+        await fetch(`${BACKEND_API}/governance/tally`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ proposal_id: proposalId, support, amount }),
+        });
+        toast.success('Vote tally submitted — on-chain count will update in ~30s');
+      } catch {
+        toast('Private vote recorded! Tally will sync shortly.');
+      }
+
+      setTimeout(fetchGovernanceData, 15_000);
     } catch (err: any) {
       toast.error(err?.message || 'Voting failed');
     } finally {

@@ -66,6 +66,56 @@ router.post('/claim', async (req, res) => {
 });
 
 /**
+ * POST /api/governance/tally
+ * Admin-only: tallies a private vote on-chain via tally_vote transition.
+ * Called automatically by the frontend after a user casts a private vote.
+ * Voter identity is never included in the on-chain transaction.
+ */
+router.post('/tally', async (req, res) => {
+  try {
+    const { proposal_id, support, amount } = req.body;
+
+    if (!proposal_id || typeof proposal_id !== 'string' || !proposal_id.endsWith('field')) {
+      return res.status(400).json({ error: 'Valid proposal_id (field) required' });
+    }
+    if (typeof support !== 'number' || support < 0 || support > 2) {
+      return res.status(400).json({ error: 'support must be 0 (against), 1 (for), or 2 (abstain)' });
+    }
+    if (typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ error: 'amount must be positive' });
+    }
+
+    if (!config.privateKey) {
+      return res.status(503).json({ error: 'Admin key not configured on backend' });
+    }
+
+    console.log(`[gov] Tallying vote: proposal=${proposal_id.slice(0, 16)}... support=${support} amount=${amount}`);
+
+    const txId = await buildAndBroadcastTransaction(
+      GOV_PROGRAM,
+      'tally_vote',
+      [proposal_id, `${support}u8`, `${amount}u64`],
+      500_000,
+    );
+
+    if (!txId) {
+      return res.status(500).json({ error: 'Tally transaction broadcast failed' });
+    }
+
+    console.log(`[gov] Tally TX: ${txId}`);
+
+    return res.json({
+      success: true,
+      txId,
+      message: 'Vote tally submitted. On-chain count will update in ~30s.',
+    });
+  } catch (err: any) {
+    console.error('[gov] Tally failed:', err);
+    return res.status(500).json({ error: err?.message || 'Tally failed' });
+  }
+});
+
+/**
  * GET /api/governance/info
  * Returns governance on-chain stats (fetched from API).
  */

@@ -1,7 +1,7 @@
 export const PROGRAM_ID = 'dara_lend_v8.aleo';
 export const VAULT_PROGRAM_ID = 'dara_lend_v8_vault.aleo';
 export const CREDITS_PROGRAM_ID = 'dara_lend_v8_credits.aleo';
-export const GOV_PROGRAM_ID = 'dara_lend_v8_gov.aleo';
+export const GOV_PROGRAM_ID = 'dara_lend_v8_gov_v2.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 export const USAD_PROGRAM = 'test_usad_stablecoin.aleo';
@@ -149,6 +149,7 @@ export const GOV_TRANSITIONS = {
   BURN_GOVERNANCE_TOKENS: 'burn_governance_tokens',
   CREATE_PROPOSAL: 'create_proposal',
   VOTE: 'vote',
+  TALLY_VOTE: 'tally_vote',
   EXECUTE_PROPOSAL: 'execute_proposal',
   DELEGATE_VOTES: 'delegate_votes',
   UNDELEGATE_VOTES: 'undelegate_votes',

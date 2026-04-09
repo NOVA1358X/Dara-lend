@@ -68,7 +68,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           v8 introduces a four-program architecture: <strong className="text-text-primary">dara_lend_v8.aleo</strong> (ALEO-collateral lending, 12 transitions),{' '}
           <strong className="text-text-primary">dara_lend_v8_credits.aleo</strong> (stablecoin-collateral lending, 12 transitions),{' '}
           <strong className="text-text-primary">dara_lend_v8_vault.aleo</strong> (yield vault + private transfers, 10 transitions), and{' '}
-          <strong className="text-text-primary">dara_lend_v8_gov.aleo</strong> (governance + voting, 11 transitions).
+          <strong className="text-text-primary">dara_lend_v8_gov_v2.aleo</strong> (governance + private voting, 12 transitions).
           Users supply ALEO, USDCx, or USAD, borrow against them, earn yield on stablecoin deposits,
           govern the protocol via proposals, and transfer tokens with zero on-chain traceability.
         </p>
@@ -118,11 +118,11 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             {' · '}
             <strong className="text-primary">Gov:</strong>{' '}
             <a
-              href="https://testnet.explorer.provable.com/program/dara_lend_v8_gov.aleo"
+              href="https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v2.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-primary hover:underline"
-            >dara_lend_v8_gov.aleo</a>
+            >dara_lend_v8_gov_v2.aleo</a>
             {' · '}
             <strong className="text-text-primary">Network:</strong> Aleo Testnet
             {' · '}
@@ -323,12 +323,12 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           >dara_lend_v8_vault.aleo</a>
           {' '}(10 transitions — yield vault, private transfers), and{' '}
           <a
-            href="https://testnet.explorer.provable.com/program/dara_lend_v8_gov.aleo"
+            href="https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v2.aleo"
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono text-primary hover:underline"
-          >dara_lend_v8_gov.aleo</a>
-          {' '}(11 transitions — governance, voting, proposals). Combined 45 transitions
+          >dara_lend_v8_gov_v2.aleo</a>
+          {' '}(12 transitions — governance, private voting, proposals). Combined 46 transitions
           managing multi-collateral lending, yield pools, private transfers, governance, interest rate accrual, and emergency controls.
         </p>
 
@@ -762,7 +762,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             {
               phase: 'Wave 5 — Current Release (v8)',
               items: [
-                'Four-program architecture — dara_lend_v8.aleo (12) + dara_lend_v8_credits.aleo (12) + dara_lend_v8_vault.aleo (10) + dara_lend_v8_gov.aleo (11)',
+                'Four-program architecture — dara_lend_v8.aleo (12) + dara_lend_v8_credits.aleo (12) + dara_lend_v8_vault.aleo (10) + dara_lend_v8_gov_v2.aleo (12)',
                 'Governance — GovernanceToken minting/burning, proposals, delegation, voting, execution',
                 'Credits contract — stablecoin collateral supply, ALEO borrow against stablecoins',
                 'Yield Vault — deposit USDCx/USAD stablecoins, earn protocol fees, redeem PoolShare records',
@@ -849,7 +849,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'What network is DARA Lend deployed on?',
-              a: 'Currently on Aleo Testnet. Main: dara_lend_v8.aleo (TX: at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg). Credits: dara_lend_v8_credits.aleo (TX: at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp). Vault: dara_lend_v8_vault.aleo (TX: at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t). Gov: dara_lend_v8_gov.aleo (TX: at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d). Mainnet deployment planned after audits.',
+              a: 'Currently on Aleo Testnet. Main: dara_lend_v8.aleo (TX: at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg). Credits: dara_lend_v8_credits.aleo (TX: at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp). Vault: dara_lend_v8_vault.aleo (TX: at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t). Gov: dara_lend_v8_gov_v2.aleo (TX: at1zlxgc9khd7syn0t4tapwdjnngx8he9cqzfrdqw670lu4af38qvysxy3xdf). Mainnet deployment planned after audits.',
             },
             {
               q: 'What is the Yield Vault?',

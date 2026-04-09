@@ -12,7 +12,7 @@ export const config = {
   programId: 'dara_lend_v8.aleo',
   vaultProgramId: 'dara_lend_v8_vault.aleo',
   creditsProgramId: 'dara_lend_v8_credits.aleo',
-  govProgramId: 'dara_lend_v8_gov.aleo',
+  govProgramId: 'dara_lend_v8_gov_v2.aleo',
   precision: 1_000_000,
   oracleUpdateCron: '*/2 * * * *',
   priceChangeThreshold: 0.001,

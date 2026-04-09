@@ -14,7 +14,7 @@ Supply ALEO, USDCx, or USAD as collateral — borrow against them — earn yield
 
 **Aleo Privacy Buildathon — Wave 5**
 
-[Live App](https://dara-lend.vercel.app) · [API](https://dara-lend-api.onrender.com/api/health) · [Main Contract](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) · [Credits Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) · [Vault Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) · [Gov Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_gov.aleo) · [Docs](https://dara-lend.vercel.app/docs)
+[Live App](https://dara-lend.vercel.app) · [API](https://dara-lend-api.onrender.com/api/health) · [Main Contract](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) · [Credits Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) · [Vault Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) · [Gov Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v2.aleo) · [Docs](https://dara-lend.vercel.app/docs)
 
 </div>
 
@@ -28,7 +28,7 @@ On transparent chains, lending protocols expose every user's **collateral**, **d
 
 **DARA Lend** is a fully functional, privacy-first lending protocol built on Aleo's zero-knowledge architecture. Every position — collateral, debt, liquidation price, and borrower identity — is encrypted inside ZK proofs. The protocol remains publicly verifiable for solvency while keeping individual positions invisible.
 
-Built from scratch across Wave 4–5 with **4 deployed programs, 45 transitions, ~3.5M compiled variables**, a complete frontend app, backend sentinel, 5-source oracle, governance system, and a luxury "Obsidian Ledger" design system.
+Built from scratch across Wave 4–5 with **5 deployed programs, 46 transitions, ~3.5M compiled variables**, a complete frontend app, backend sentinel, 5-source oracle, governance system, and a luxury "Obsidian Ledger" design system.
 
 ---
 
@@ -41,11 +41,11 @@ Built from scratch across Wave 4–5 with **4 deployed programs, 45 transitions,
 | **Lending Core (ALEO)** | [`dara_lend_v8.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) — 12 transitions, 1,029,787 vars |
 | **Lending Core (Stablecoin)** | [`dara_lend_v8_credits.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) — 12 transitions, 1,307,183 vars |
 | **Vault Companion** | [`dara_lend_v8_vault.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) — 10 transitions, ~822K vars |
-| **Governance** | [`dara_lend_v8_gov.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_gov.aleo) — 11 transitions, 380,435 vars |
+| **Governance** | [`dara_lend_v8_gov_v2.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v2.aleo) — 12 transitions, 401,328 vars |
 | **Main Deploy TX** | [`at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg`](https://testnet.explorer.provable.com/transaction/at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg) |
 | **Credits Deploy TX** | [`at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp`](https://testnet.explorer.provable.com/transaction/at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp) |
 | **Vault Deploy TX** | [`at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t`](https://testnet.explorer.provable.com/transaction/at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t) |
-| **Gov Deploy TX** | [`at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d`](https://testnet.explorer.provable.com/transaction/at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d) |
+| **Gov Deploy TX** | [`at1zlxgc9khd7syn0t4tapwdjnngx8he9cqzfrdqw670lu4af38qvysxy3xdf`](https://testnet.explorer.provable.com/transaction/at1zlxgc9khd7syn0t4tapwdjnngx8he9cqzfrdqw670lu4af38qvysxy3xdf) |
 
 ---
 
@@ -155,14 +155,14 @@ The borrower's address is hashed (BHP256) inside `LiquidationAuth` — the proto
 | **Yield** | `provide_usdcx_capital`, `provide_usad_capital`, `redeem_usdcx_capital`, `redeem_usad_capital`, `distribute_yield` | 5 |
 | **Privacy** | `private_transfer_usdcx`, `private_transfer_usad` | 2 |
 
-### Program 4: `dara_lend_v8_gov.aleo` — Governance
-**Leo 4.0.0** · **11 transitions** · **380,435 variables** · **223 statements**
-**Deploy cost:** 17.37 credits
+### Program 4: `dara_lend_v8_gov_v2.aleo` — Governance (Private Voting)
+**Leo 4.0.0** · **12 transitions** · **401,328 variables** · **214 statements**
+**Deploy cost:** 18.15 credits
 
 | Category | Transitions | Count |
 |----------|-------------|-------|
 | **Tokens** | `mint_governance_tokens`, `burn_governance_tokens` | 2 |
-| **Proposals** | `create_proposal`, `vote`, `execute_proposal` | 3 |
+| **Proposals** | `create_proposal`, `vote`, `tally_vote`, `execute_proposal` | 4 |
 | **Delegation** | `delegate_votes`, `undelegate_votes` | 2 |
 | **Admin** | `set_lending_protocol`, `set_gov_admin`, `pause_governance`, `resume_governance` | 4 |
 
@@ -287,8 +287,8 @@ All features have been tested and verified on Aleo Testnet:
 │  dara_lend_v8_vault.aleo (Vault · 10 transitions)            │
 │  Yield pool · private transfer relay · PoolShare records     │
 ├──────────────────────────────────────────────────────────┤
-│  dara_lend_v8_gov.aleo (Governance · 11 transitions)         │
-│  Proposals · voting · delegation · GovernanceToken            │
+│  dara_lend_v8_gov_v2.aleo (Governance · 12 transitions)       │
+│  Proposals · private voting · delegation · GovernanceToken    │
 ├──────────────────────────────────────────────────────────┤
 │  credits.aleo · test_usdcx_stablecoin.aleo               │
 │  test_usad_stablecoin.aleo · merkle_tree.aleo             │
