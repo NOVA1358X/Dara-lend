@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, CREDITS_TRANSITIONS, DARKPOOL_TRANSITIONS, DARKPOOL_PROGRAM_ID, AUCTION_TRANSITIONS, AUCTION_PROGRAM_ID, FLASH_TRANSITIONS, FLASH_PROGRAM_ID, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, VAULT_PROGRAM_ID, CREDITS_PROGRAM_ID, TX_FEE, TX_FEE_HIGH, TRANSITIONS, VAULT_TRANSITIONS, CREDITS_TRANSITIONS, DARKPOOL_TRANSITIONS, DARKPOOL_PROGRAM_ID, DARKPOOL_ADDRESS, AUCTION_TRANSITIONS, AUCTION_PROGRAM_ID, FLASH_TRANSITIONS, FLASH_PROGRAM_ID, USDCX_PROGRAM, USAD_PROGRAM, PROTOCOL_ADDRESS, CREDITS_PROTOCOL_ADDRESS, CREDITS_PROGRAM } from '@/utils/constants';
 import { microCreditsToInput, microCreditsToU128Input, fieldToInput } from '@/utils/formatting';
 import { useAppStore } from '@/stores/appStore';
 import { saveTxToHistory } from '@/components/app/TransactionHistory';
@@ -845,6 +845,98 @@ export function useTransaction(wallet: WalletExecute) {
     [executeTransaction],
   );
 
+  /** Fund dark pool with ALEO credits (for buy intent fills) */
+  const fundDarkPoolAleo = useCallback(
+    async (amountMicro: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+        const tx = createAleoTransaction(
+          CREDITS_PROGRAM,
+          'transfer_public',
+          [DARKPOOL_ADDRESS, `${amountMicro}u64`],
+          TX_FEE,
+        );
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Fund dark pool ALEO transaction submitted');
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Dark pool funded with ALEO credits!');
+        } else if (pollResult.confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Fund transaction rejected. Check your ALEO balance.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Fund transaction broadcast. Check explorer: ${txId}`);
+        }
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        toast.error(error instanceof Error ? error.message : 'Fund transaction failed');
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
+  /** Fund dark pool with USDCx (for sell intent fills) */
+  const fundDarkPoolUsdcx = useCallback(
+    async (amountMicro: number) => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+        const tx = createAleoTransaction(
+          USDCX_PROGRAM,
+          'transfer_public',
+          [DARKPOOL_ADDRESS, `${amountMicro}u128`],
+          TX_FEE,
+        );
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Fund dark pool USDCx transaction submitted');
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Dark pool funded with USDCx!');
+        } else if (pollResult.confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Fund transaction rejected. Check your USDCx balance.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Fund transaction broadcast. Check explorer: ${txId}`);
+        }
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        toast.error(error instanceof Error ? error.message : 'Fund transaction failed');
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
   // ── Auction Transactions ──
 
   const startAuction = useCallback(
@@ -1038,6 +1130,8 @@ export function useTransaction(wallet: WalletExecute) {
     claimSellFill,
     cancelBuy,
     cancelSell,
+    fundDarkPoolAleo,
+    fundDarkPoolUsdcx,
     // Auction operations
     startAuction,
     submitSealedBid,
