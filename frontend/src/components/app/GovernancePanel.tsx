@@ -335,17 +335,24 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
 
       // Step 2: Send tally request to backend (admin tallies on-chain without revealing voter)
       try {
-        await fetch(`${BACKEND_API}/governance/tally`, {
+        const tallyRes = await fetch(`${BACKEND_API}/governance/tally`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ proposal_id: proposalId, support, amount }),
         });
-        toast.success('Vote tally submitted — on-chain count will update in ~30s');
-      } catch {
-        toast('Private vote recorded! Tally will sync shortly.');
+        if (tallyRes.ok) {
+          toast.success('Vote tally submitted — on-chain count will update in ~30s');
+        } else {
+          const err = await tallyRes.json().catch(() => ({ error: 'Unknown' }));
+          console.error('[gov] Tally error:', err);
+          toast.error(`Tally failed: ${err.error || tallyRes.status}. Vote is still private — admin will sync later.`);
+        }
+      } catch (e) {
+        console.error('[gov] Tally network error:', e);
+        toast('Private vote recorded! Backend may be offline — tally will sync when backend is up.');
       }
 
-      setTimeout(fetchGovernanceData, 15_000);
+      setTimeout(fetchGovernanceData, 30_000);
     } catch (err: any) {
       toast.error(err?.message || 'Voting failed');
     } finally {
