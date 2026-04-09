@@ -118,9 +118,13 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
     // Fetch the settlement price for this intent's epoch (may differ from current epoch)
     let price = 0;
+    let epochBuyVol = 0;
+    let epochSellVol = 0;
     try {
       const epochRes = await fetch(`${BACKEND_API}/darkpool/epoch/${intent.epoch}`).then(r => r.json());
       price = parseInt(epochRes?.price || '0', 10);
+      epochBuyVol = parseInt(epochRes?.buyVolume || '0', 10);
+      epochSellVol = parseInt(epochRes?.sellVolume || '0', 10);
       if (!epochRes?.settled) {
         toast.error(`Epoch #${intent.epoch} is not settled yet. Wait for the bot to settle it.`);
         return;
@@ -130,6 +134,16 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       price = parseInt(epochData?.epochPrice || '0', 10);
     }
     if (!price) { toast.error('Epoch price not available yet. Wait for settlement.'); return; }
+
+    // Check counterparty volume — pool must hold the output token
+    if (intent.intentType === 0 && epochSellVol === 0) {
+      toast.error(`Epoch #${intent.epoch} had no sell volume — the pool has no ALEO to fill your buy. Contact admin to fund the pool or wait.`);
+      return;
+    }
+    if (intent.intentType === 1 && epochBuyVol === 0) {
+      toast.error(`Epoch #${intent.epoch} had no buy volume — the pool has no USDCx to fill your sell. Contact admin to fund the pool or wait.`);
+      return;
+    }
 
     try {
       if (intent.intentType === 0) {

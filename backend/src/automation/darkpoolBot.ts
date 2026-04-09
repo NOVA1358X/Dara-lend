@@ -94,6 +94,13 @@ export async function runDarkPoolBotCycle(): Promise<boolean> {
       return false;
     }
 
+    // Both sides must have volume — otherwise there's no counterparty match
+    // and claim_buy_fill / claim_sell_fill will fail (pool has no tokens to distribute)
+    if (buyVol === 0 || sellVol === 0) {
+      console.log(`[darkpool-bot] Epoch ${currentEpoch} has one-sided volume (buy: ${buyVol}, sell: ${sellVol}), waiting for both sides`);
+      return false;
+    }
+
     // Get oracle price from aggregator
     const aggregated = await aggregatePrices();
     if (!aggregated.medianPrice || aggregated.medianPrice <= 0) {
