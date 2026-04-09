@@ -161,6 +161,8 @@ async function executeDps(
     if (result.txId) {
       console.log(`[dps] ${programId}/${transition} → ${result.txId} (${result.status})`);
       recordSubmission(programId, transition, result.status, result.txId);
+      // Invalidate JWT after successful use — Provable DPS may issue single-use tokens
+      cachedJwt = null;
       return result.txId;
     }
 

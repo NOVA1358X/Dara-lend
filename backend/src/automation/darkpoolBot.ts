@@ -65,19 +65,22 @@ export async function runDarkPoolBotCycle(): Promise<boolean> {
     // Check epoch start block and current block height to determine if epoch is mature
     const epochStartRaw = await getMappingValue('epoch_start_block', `${currentEpoch}u64`, programId);
     const epochStartBlock = parseAleoU64(epochStartRaw);
-    const currentBlock = await getLatestBlockHeight();
-
-    if (!currentBlock) return false;
 
     // epoch_start_block is only written by settle_epoch for the NEXT epoch.
     // The very first epoch (epoch 1) has no start_block — treat it as immediately
     // mature once it has volume, because the constructor didn't set it.
-    if (epochStartBlock > 0 && currentBlock - epochStartBlock < EPOCH_DURATION_BLOCKS) {
-      console.log(`[darkpool-bot] Epoch ${currentEpoch} not mature yet (block ${currentBlock}, started ${epochStartBlock}, need ${EPOCH_DURATION_BLOCKS})`);
-      return false;
-    }
     if (epochStartBlock === 0) {
       console.log(`[darkpool-bot] Epoch ${currentEpoch} has no start_block (first epoch) — treating as mature`);
+    } else {
+      const currentBlock = await getLatestBlockHeight();
+      if (!currentBlock) {
+        console.warn('[darkpool-bot] Cannot fetch block height, skipping');
+        return false;
+      }
+      if (currentBlock - epochStartBlock < EPOCH_DURATION_BLOCKS) {
+        console.log(`[darkpool-bot] Epoch ${currentEpoch} not mature yet (block ${currentBlock}, started ${epochStartBlock}, need ${EPOCH_DURATION_BLOCKS})`);
+        return false;
+      }
     }
 
     // Check if there's volume to settle

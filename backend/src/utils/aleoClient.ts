@@ -30,7 +30,8 @@ export async function getTransaction(txId: string): Promise<Record<string, unkno
 }
 
 export async function getLatestBlockHeight(): Promise<number | null> {
-  const url = `${config.aleoApiUrl}/latest/height`;
+  // Provable API v2 uses /block/height/latest (not /latest/height)
+  const url = `${config.aleoApiUrl}/block/height/latest`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
