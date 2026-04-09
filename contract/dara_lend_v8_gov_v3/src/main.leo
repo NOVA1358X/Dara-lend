@@ -1,15 +1,16 @@
 import credits.aleo;
 
-program dara_lend_v8_gov_v2.aleo {
+program dara_lend_v8_gov_v3.aleo {
 
     // ═══════════════════════════════════════════════════
     // CONSTANTS
     // ═══════════════════════════════════════════════════
 
     const MIN_PROPOSAL_POWER: u64 = 100u64;
-    const VOTING_PERIOD_BLOCKS: u32 = 200u32;
-    const TIMELOCK_BLOCKS: u32 = 100u32;
-    const QUORUM_BPS: u64 = 2_000u64;
+    const MIN_VOTING_BLOCKS: u32 = 8_640u32;      // 1 day minimum (~10s/block)
+    const MAX_VOTING_BLOCKS: u32 = 259_200u32;     // 30 days maximum
+    const MIN_TIMELOCK_BLOCKS: u32 = 8_640u32;     // 1 day minimum timelock
+    const QUORUM_BPS: u64 = 2_000u64;              // 20% quorum
     const BPS: u64 = 10_000u64;
 
     // ═══════════════════════════════════════════════════
@@ -153,7 +154,9 @@ program dara_lend_v8_gov_v2.aleo {
     }
 
     // ═══════════════════════════════════════════════════
-    // 4. CREATE PROPOSAL
+    // 4. CREATE PROPOSAL — Configurable voting duration
+    //    Proposer selects voting_blocks (1 day – 30 days).
+    //    Timelock is 25% of voting period (min 1 day).
     // ═══════════════════════════════════════════════════
 
     fn create_proposal(
@@ -161,9 +164,17 @@ program dara_lend_v8_gov_v2.aleo {
         param_key: u8,
         param_value: u64,
         description_hash: field,
+        voting_blocks: u32,
     ) -> Final {
         assert(proposal_type <= 4u8);
+        assert(voting_blocks >= MIN_VOTING_BLOCKS);
+        assert(voting_blocks <= MAX_VOTING_BLOCKS);
         let caller: address = self.caller;
+
+        // Timelock = 25% of voting period, minimum 1 day
+        let computed_timelock: u32 = voting_blocks / 4u32;
+        let timelock: u32 = computed_timelock > MIN_TIMELOCK_BLOCKS ? computed_timelock : MIN_TIMELOCK_BLOCKS;
+
         return final {
             let paused: bool = Mapping::get_or_use(gov_paused, 0u8, false);
             assert(!paused);
@@ -181,8 +192,8 @@ program dara_lend_v8_gov_v2.aleo {
                 param_value: param_value,
                 description_hash: description_hash,
                 start_block: block.height,
-                end_block: block.height + VOTING_PERIOD_BLOCKS,
-                timelock_end: block.height + VOTING_PERIOD_BLOCKS + TIMELOCK_BLOCKS,
+                end_block: block.height + voting_blocks,
+                timelock_end: block.height + voting_blocks + timelock,
             };
 
             Mapping::set(proposals, proposal_id, proposal);

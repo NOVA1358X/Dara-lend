@@ -18,6 +18,8 @@ contract/dara_lend_v1/
 contract/dara_lend_v2/
 contract/dara_lend_v7_vault/
 contract/dara_pool_v2/
+contract/dara_lend_v8_gov/
+contract/dara_lend_v8_gov_v2/
 
 # Leo contract build artifacts
 contract/*/build/

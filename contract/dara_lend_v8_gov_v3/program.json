@@ -1,7 +1,7 @@
 {
-  "program": "dara_lend_v8_gov_v2.aleo",
+  "program": "dara_lend_v8_gov_v3.aleo",
   "version": "1.0.0",
-  "description": "DARA Lend Governance v2 — truly private voting (no finalize on vote), admin-tallied results",
+  "description": "DARA Lend Governance v3 — private voting, configurable proposal duration, production-ready",
   "license": "MIT",
   "dependencies": [
     {

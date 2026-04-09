@@ -39,6 +39,40 @@ const RATE_PARAM_LABELS = ['Base Rate', 'Slope 1', 'Slope 2', 'Optimal Utilizati
 const LTV_LABELS = ['LTV Ratio'];
 const LIQ_LABELS = ['Liquidation Threshold'];
 
+// Block-to-time helpers (~10 seconds per block on Aleo testnet)
+const SECONDS_PER_BLOCK = 10;
+
+const DURATION_OPTIONS = [
+  { label: '1 Day', blocks: 8_640 },
+  { label: '3 Days', blocks: 25_920 },
+  { label: '1 Week', blocks: 60_480 },
+  { label: '2 Weeks', blocks: 120_960 },
+  { label: '1 Month', blocks: 259_200 },
+] as const;
+
+function blocksToDate(blockHeight: number, currentBlock: number): Date {
+  const blockDiff = blockHeight - currentBlock;
+  const secondsDiff = blockDiff * SECONDS_PER_BLOCK;
+  return new Date(Date.now() + secondsDiff * 1000);
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function formatTimeRemaining(targetBlock: number, currentBlock: number): string {
+  if (currentBlock >= targetBlock) return 'Ended';
+  const seconds = (targetBlock - currentBlock) * SECONDS_PER_BLOCK;
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h remaining`;
+  if (hours > 0) return `${hours}h ${minutes}m remaining`;
+  return `${minutes}m remaining`;
+}
+
 async function fetchMapping(mapping: string, key: string): Promise<string | null> {
   try {
     const res = await fetch(`${ALEO_TESTNET_API}/program/${GOV_PROGRAM_ID}/mapping/${mapping}/${key}`);
@@ -87,11 +121,13 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
   const [txPending, setTxPending] = useState(false);
   const [claimPending, setClaimPending] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'propose' | 'delegate'>('overview');
+  const [currentBlock, setCurrentBlock] = useState(0);
 
   // New proposal form
   const [proposalType, setProposalType] = useState(0);
   const [paramKey, setParamKey] = useState(0);
   const [paramValue, setParamValue] = useState('');
+  const [votingDuration, setVotingDuration] = useState<number>(DURATION_OPTIONS[1].blocks); // Default: 3 days
 
   // Delegation form
   const [delegateTo, setDelegateTo] = useState('');
@@ -106,6 +142,15 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
   const fetchGovernanceData = useCallback(async () => {
     setLoading(true);
     try {
+      // Fetch current block height
+      try {
+        const blockRes = await fetch(`${ALEO_TESTNET_API}/block/latest`);
+        if (blockRes.ok) {
+          const blockData = await blockRes.json();
+          setCurrentBlock(blockData?.header?.metadata?.height ?? 0);
+        }
+      } catch { /* non-critical */ }
+
       const [countRaw, supplyRaw, powerRaw] = await Promise.all([
         fetchMapping(GOV_MAPPINGS.PROPOSAL_COUNT, '0u8'),
         fetchMapping(GOV_MAPPINGS.GOVERNANCE_TOKEN_SUPPLY, '0u8'),
@@ -283,7 +328,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
       const tx = {
         program: GOV_PROGRAM_ID,
         function: GOV_TRANSITIONS.CREATE_PROPOSAL,
-        inputs: [`${proposalType}u8`, `${paramKey}u8`, `${value}u64`, descHash],
+        inputs: [`${proposalType}u8`, `${paramKey}u8`, `${value}u64`, descHash, `${votingDuration}u32`],
         fee: 500_000,
         privateFee: false,
       };
@@ -637,11 +682,31 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
                         {p.executed && (
                           <span className="text-xs bg-green-500/20 text-green-300 px-2 py-0.5 rounded">Executed</span>
                         )}
-                        <span className="text-[10px] text-gray-500">
-                          Proposer: {p.proposer.slice(0, 8)}...{p.proposer.slice(-4)}
-                        </span>
+                        {!p.executed && currentBlock > 0 && currentBlock < p.endBlock && (
+                          <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded">
+                            {formatTimeRemaining(p.endBlock, currentBlock)}
+                          </span>
+                        )}
+                        {!p.executed && currentBlock > 0 && currentBlock >= p.endBlock && currentBlock < p.timelockEnd && (
+                          <span className="text-xs bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded">
+                            Timelock — {formatTimeRemaining(p.timelockEnd, currentBlock)}
+                          </span>
+                        )}
+                        {!p.executed && currentBlock > 0 && currentBlock >= p.timelockEnd && (
+                          <span className="text-xs bg-green-500/20 text-green-300 px-2 py-0.5 rounded">Ready to Execute</span>
+                        )}
                       </div>
-                      <span className="text-xs text-gray-500">Blocks {p.startBlock} &mdash; {p.endBlock}</span>
+                      <div className="text-right">
+                        {currentBlock > 0 ? (
+                          <div>
+                            <span className="text-xs text-gray-400">
+                              {currentBlock < p.endBlock ? 'Voting ends ' : 'Ended '}{formatDate(blocksToDate(p.endBlock, currentBlock))}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500">Blocks {p.startBlock} &mdash; {p.endBlock}</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Description */}
@@ -729,8 +794,8 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
           >
             <h3 className="text-lg font-semibold text-white mb-1">Create New Proposal</h3>
             <p className="text-xs text-gray-400 mb-5">
-              Propose changes to protocol parameters. Requires &gt;100 voting power. After the voting period (200 blocks),
-              proposals meeting quorum (20%) with majority approval can be executed.
+              Propose changes to protocol parameters. Requires &gt;100 voting power. Choose a voting duration,
+              then after voting ends a timelock period follows before execution.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -775,6 +840,32 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* Voting Duration Selector */}
+            <div className="mb-4">
+              <label className="text-xs text-gray-400 block mb-2 font-medium">Voting Duration</label>
+              <div className="flex flex-wrap gap-2">
+                {DURATION_OPTIONS.map(opt => (
+                  <button
+                    key={opt.blocks}
+                    type="button"
+                    onClick={() => setVotingDuration(opt.blocks)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                      votingDuration === opt.blocks
+                        ? 'bg-blue-600/20 border-blue-500/50 text-blue-300'
+                        : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-500 mt-2">
+                Voting: {DURATION_OPTIONS.find(o => o.blocks === votingDuration)?.label ?? `${votingDuration} blocks`}
+                {' · '}Timelock: {Math.max(1, Math.round(votingDuration / 4 / 8640))}d after voting ends
+                {' · '}Quorum: 20% of token supply
+              </p>
             </div>
 
             <div className="flex items-center justify-between">
@@ -875,10 +966,10 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">How Governance Works</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { step: '1', title: 'Claim Tokens', desc: 'Get GOV tokens for free on testnet. Each claim gives 1,000 voting power.' },
-            { step: '2', title: 'Create Proposal', desc: 'Need 100+ voting power. Propose changes to rates, LTV, or thresholds.' },
-            { step: '3', title: 'Vote Privately', desc: 'Cast ZK-private votes. Nobody sees who voted \u2014 only the totals.' },
-            { step: '4', title: 'Execute', desc: 'After 200 blocks + timelock, anyone can execute a passing proposal.' },
+            { step: '1', title: 'Claim Tokens', desc: 'Get GOV tokens to participate. Each claim gives 1,000 voting power.' },
+            { step: '2', title: 'Create Proposal', desc: 'Need 100+ voting power. Choose a voting duration (1 day to 1 month) and propose parameter changes.' },
+            { step: '3', title: 'Vote Privately', desc: 'Cast ZK-private votes. Nobody sees who voted \u2014 only aggregated totals appear on-chain.' },
+            { step: '4', title: 'Execute', desc: 'After voting ends + timelock, anyone can execute a passing proposal with 20% quorum and majority.' },
           ].map(item => (
             <div key={item.step} className="flex gap-3">
               <div className="shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-300">

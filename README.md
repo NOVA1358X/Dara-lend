@@ -14,7 +14,7 @@ Supply ALEO, USDCx, or USAD as collateral — borrow against them — earn yield
 
 **Aleo Privacy Buildathon — Wave 5**
 
-[Live App](https://dara-lend.vercel.app) · [API](https://dara-lend-api.onrender.com/api/health) · [Main Contract](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) · [Credits Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) · [Vault Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) · [Gov Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v2.aleo) · [Docs](https://dara-lend.vercel.app/docs)
+[Live App](https://dara-lend.vercel.app) · [API](https://dara-lend-api.onrender.com/api/health) · [Main Contract](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) · [Credits Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) · [Vault Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) · [Gov Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v3.aleo) · [Docs](https://dara-lend.vercel.app/docs)
 
 </div>
 
@@ -41,11 +41,11 @@ Built from scratch across Wave 4–5 with **5 deployed programs, 46 transitions,
 | **Lending Core (ALEO)** | [`dara_lend_v8.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) — 12 transitions, 1,029,787 vars |
 | **Lending Core (Stablecoin)** | [`dara_lend_v8_credits.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) — 12 transitions, 1,307,183 vars |
 | **Vault Companion** | [`dara_lend_v8_vault.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) — 10 transitions, ~822K vars |
-| **Governance** | [`dara_lend_v8_gov_v2.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v2.aleo) — 12 transitions, 401,328 vars |
+| **Governance** | [`dara_lend_v8_gov_v3.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v3.aleo) — 12 transitions, 403,771 vars |
 | **Main Deploy TX** | [`at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg`](https://testnet.explorer.provable.com/transaction/at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg) |
 | **Credits Deploy TX** | [`at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp`](https://testnet.explorer.provable.com/transaction/at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp) |
 | **Vault Deploy TX** | [`at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t`](https://testnet.explorer.provable.com/transaction/at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t) |
-| **Gov Deploy TX** | [`at1zlxgc9khd7syn0t4tapwdjnngx8he9cqzfrdqw670lu4af38qvysxy3xdf`](https://testnet.explorer.provable.com/transaction/at1zlxgc9khd7syn0t4tapwdjnngx8he9cqzfrdqw670lu4af38qvysxy3xdf) |
+| **Gov Deploy TX** | [`at1azr6jrvyx807glrxydwuuf8wtx5m7h3y7jrax80v2m4gmteawcxqg5d4nr`](https://testnet.explorer.provable.com/transaction/at1azr6jrvyx807glrxydwuuf8wtx5m7h3y7jrax80v2m4gmteawcxqg5d4nr) |
 
 ---
 
@@ -155,9 +155,9 @@ The borrower's address is hashed (BHP256) inside `LiquidationAuth` — the proto
 | **Yield** | `provide_usdcx_capital`, `provide_usad_capital`, `redeem_usdcx_capital`, `redeem_usad_capital`, `distribute_yield` | 5 |
 | **Privacy** | `private_transfer_usdcx`, `private_transfer_usad` | 2 |
 
-### Program 4: `dara_lend_v8_gov_v2.aleo` — Governance (Private Voting)
-**Leo 4.0.0** · **12 transitions** · **401,328 variables** · **214 statements**
-**Deploy cost:** 18.15 credits
+### Program 4: `dara_lend_v8_gov_v3.aleo` — Governance (Private Voting)
+**Leo 4.0.0** · **12 transitions** · **403,771 variables** · **222 statements**
+**Deploy cost:** 18.25 credits
 
 | Category | Transitions | Count |
 |----------|-------------|-------|
@@ -287,7 +287,7 @@ All features have been tested and verified on Aleo Testnet:
 │  dara_lend_v8_vault.aleo (Vault · 10 transitions)            │
 │  Yield pool · private transfer relay · PoolShare records     │
 ├──────────────────────────────────────────────────────────┤
-│  dara_lend_v8_gov_v2.aleo (Governance · 12 transitions)       │
+│  dara_lend_v8_gov_v3.aleo (Governance · 12 transitions)       │
 │  Proposals · private voting · delegation · GovernanceToken    │
 ├──────────────────────────────────────────────────────────┤
 │  credits.aleo · test_usdcx_stablecoin.aleo               │
