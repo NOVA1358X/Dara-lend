@@ -65,13 +65,25 @@ export function Dashboard({ wallet }: DashboardProps) {
   const { collateralReceipts, debtPositions, isLoading: recordsLoading } =
     useWalletRecords(wallet);
 
-  // Separate ALEO and stablecoin collateral for correct USD value computation
-  const totalCollateralAleo = collateralReceipts
-    .filter(r => r.tokenType === TOKEN_TYPES.ALEO)
-    .reduce((sum, r) => sum + r.collateralAmount, 0);
-  const totalCollateralStable = collateralReceipts
-    .filter(r => r.tokenType === TOKEN_TYPES.USDCX || r.tokenType === TOKEN_TYPES.USAD)
-    .reduce((sum, r) => sum + r.collateralAmountU128, 0);
+  // Separate ALEO and stablecoin collateral for correct USD value computation.
+  // NOTE: After borrowing, CollateralReceipt records are consumed. The locked collateral
+  // is only represented inside DebtPosition records going forward.
+  // So we sum: unspent collateral receipts + collateral locked inside debt positions.
+  const totalCollateralAleo =
+    collateralReceipts
+      .filter(r => r.tokenType === TOKEN_TYPES.ALEO)
+      .reduce((sum, r) => sum + r.collateralAmount, 0)
+    + debtPositions
+      .filter(r => r.collateralToken === TOKEN_TYPES.ALEO)
+      .reduce((sum, r) => sum + r.collateralAmount, 0);
+
+  const totalCollateralStable =
+    collateralReceipts
+      .filter(r => r.tokenType === TOKEN_TYPES.USDCX || r.tokenType === TOKEN_TYPES.USAD)
+      .reduce((sum, r) => sum + r.collateralAmountU128, 0)
+    + debtPositions
+      .filter(r => r.collateralToken === TOKEN_TYPES.USDCX || r.collateralToken === TOKEN_TYPES.USAD)
+      .reduce((sum, r) => sum + r.collateralAmountU128, 0);
   const oraclePrice = stats?.oraclePrice || 0;
   const aleoPrice = oraclePrice || PRECISION;
 

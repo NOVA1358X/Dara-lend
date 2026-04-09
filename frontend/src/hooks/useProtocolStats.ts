@@ -26,7 +26,7 @@ export function useProtocolStats() {
       const [
         collateralAleoRaw, collateralUsdcxRaw, collateralUsadRaw,
         borrowedUsdcxRaw, borrowedUsadRaw, borrowedAleoRaw,
-        loansRaw, priceRaw,
+        loansRaw, creditsLoansRaw, priceRaw,
       ] = await Promise.all([
           getMappingValue(MAPPINGS.VAULT_COLLATERAL_ALEO),
           getMappingValue(CREDITS_MAPPINGS.VAULT_COLLATERAL_USDCX, '0u8', CREDITS_PROGRAM_ID),
@@ -35,6 +35,7 @@ export function useProtocolStats() {
           getMappingValue(MAPPINGS.POOL_TOTAL_BORROWED, '1u8'),
           getMappingValue(CREDITS_MAPPINGS.POOL_TOTAL_BORROWED, '0u8', CREDITS_PROGRAM_ID),
           getMappingValue(MAPPINGS.LOAN_COUNT),
+          getMappingValue(CREDITS_MAPPINGS.LOAN_COUNT, '0u8', CREDITS_PROGRAM_ID),
           getMappingValue(MAPPINGS.ORACLE_PRICE),
         ]);
 
@@ -45,7 +46,8 @@ export function useProtocolStats() {
       const totalBorrowedUsad = parseAleoU64(borrowedUsadRaw || '0');
       const totalBorrowedAleo = parseAleoU64(borrowedAleoRaw || '0');
       const oraclePrice = parseAleoU64(priceRaw || '0');
-      const loanCount = parseAleoU64(loansRaw || '0');
+      // Sum loan_count from both contracts (each has its own mapping)
+      const loanCount = parseAleoU64(loansRaw || '0') + parseAleoU64(creditsLoansRaw || '0');
 
       // Total collateral value in USD (microdollars): ALEO valued at oracle price, stablecoins at $1
       const aleoPrice = oraclePrice || PRECISION;
