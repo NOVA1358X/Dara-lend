@@ -121,12 +121,13 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
       try {
         const apiUrl = ALEO_TESTNET_API;
         const parseVal = (raw: string): number => {
+          if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return 0;
           const cleaned = raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
           return parseInt(cleaned, 10) || 0;
         };
         const [aleoRaw, usdcxRaw] = await Promise.all([
-          fetch(`${apiUrl}/program/credits.aleo/mapping/account/${FLASH_ADDRESS}`).then(r => r.text()).catch(() => '0'),
-          fetch(`${apiUrl}/program/test_usdcx_stablecoin.aleo/mapping/account/${FLASH_ADDRESS}`).then(r => r.text()).catch(() => '0'),
+          fetch(`${apiUrl}/program/credits.aleo/mapping/account/${FLASH_ADDRESS}`).then(r => r.text()).catch(() => ''),
+          fetch(`${apiUrl}/program/test_usdcx_stablecoin.aleo/mapping/balances/${FLASH_ADDRESS}`).then(r => r.text()).catch(() => ''),
         ]);
         setPoolBalance({ aleo: parseVal(aleoRaw), usdcx: parseVal(usdcxRaw) });
       } catch { /* silent */ }
