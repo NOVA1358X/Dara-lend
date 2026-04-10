@@ -188,8 +188,8 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const handleClaim = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
 
-    // Find FlashLoanReceipt record
-    const receipt = flashRecords.find((r: any) => {
+    // Find the LATEST FlashLoanReceipt (reverse to avoid picking an old spent one)
+    const receipt = [...flashRecords].reverse().find((r: any) => {
       const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
       return pt.includes('borrow_amount') && pt.includes('borrow_token') && pt.includes('fee_amount');
     });
@@ -217,31 +217,48 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const handleRepay = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
 
-    // Find the FlashLoanReceipt (returned from claim step)
-    const receipt = flashRecords.find((r: any) => {
+    // Find the LATEST FlashLoanReceipt — after claim, the new receipt is appended last.
+    // Reversing avoids accidentally picking the old (potentially spent) receipt from a prior borrow.
+    const receipt = [...flashRecords].reverse().find((r: any) => {
       const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
       return pt.includes('borrow_amount') && pt.includes('fee_amount');
     });
     if (!receipt) {
-      toast.error('No FlashLoanReceipt found.');
+      toast.error('No FlashLoanReceipt found. Refresh records and try again.');
       return;
     }
     const receiptPlaintext = (receipt.recordPlaintext ?? receipt.plaintext ?? '') as string;
 
+    // Parse repay amount from receipt (borrow_amount + fee_amount)
+    const borrowMatch = receiptPlaintext.match(/borrow_amount\s*:\s*(\d+)u128/);
+    const feeMatch = receiptPlaintext.match(/fee_amount\s*:\s*(\d+)u128/);
+    const borrowAmt = borrowMatch ? parseInt(borrowMatch[1], 10) : 0;
+    const feeAmt = feeMatch ? parseInt(feeMatch[1], 10) : 0;
+    const repayAmt = borrowAmt + feeAmt;
+
     try {
       if (direction === 'borrow_usdcx') {
-        // Repay USDCx: need receipt + USDCx token record
-        const usdcxRecord = parsedUsdcx[0];
+        // Need a USDCx token with amount >= repay_amount (borrow + fee)
+        const usdcxRecord = repayAmt > 0
+          ? parsedUsdcx.find(r => r.amount >= repayAmt)
+          : parsedUsdcx[0];
         if (!usdcxRecord) {
-          toast.error('No USDCx record available for repayment.');
+          const need = repayAmt / PRECISION;
+          const have = parsedUsdcx.reduce((s, r) => s + r.amount, 0) / PRECISION;
+          toast.error(`Need ${need.toFixed(6)} USDCx to repay (borrowed + fee). You have ${have.toFixed(6)} USDCx. Get more USDCx to cover the fee.`);
           return;
         }
         await flashRepayUsdcx(receiptPlaintext, usdcxRecord.plaintext);
       } else {
-        // Repay ALEO: need receipt + credits record
-        const creditsRecord = parsedCredits[0];
+        // Repay ALEO: need receipt + credits record with amount >= repay_amount
+        const borrowAleoMatch = receiptPlaintext.match(/borrow_amount\s*:\s*(\d+)u128/);
+        const feeAleoMatch = receiptPlaintext.match(/fee_amount\s*:\s*(\d+)u128/);
+        const repayAleoAmt = (borrowAleoMatch ? parseInt(borrowAleoMatch[1], 10) : 0) + (feeAleoMatch ? parseInt(feeAleoMatch[1], 10) : 0);
+        const creditsRecord = repayAleoAmt > 0
+          ? parsedCredits.find(r => r.amount >= repayAleoAmt)
+          : parsedCredits[0];
         if (!creditsRecord) {
-          toast.error('No ALEO record available for repayment.');
+          toast.error('No ALEO record with sufficient balance for repayment.');
           return;
         }
         await flashRepayAleo(receiptPlaintext, creditsRecord.plaintext);
@@ -258,8 +275,8 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const handleWithdraw = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
 
-    // Find FlashRepayReceipt record
-    const repayReceipt = flashRecords.find((r: any) => {
+    // Find the LATEST FlashRepayReceipt (reverse to get most recent)
+    const repayReceipt = [...flashRecords].reverse().find((r: any) => {
       const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
       return pt.includes('amount_repaid') && pt.includes('collateral_returned');
     });
