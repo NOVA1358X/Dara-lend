@@ -46,7 +46,7 @@ export function createServer() {
       name: 'DARA Lend API',
       version: '4.0.0',
       programs: [config.programId, config.vaultProgramId, config.creditsProgramId, config.govProgramId, config.darkpoolProgramId, config.auctionProgramId, config.flashProgramId],
-      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info', '/api/darkpool/epoch', '/api/darkpool/stats', '/api/auction/active', '/api/auction/stats', '/api/flash/stats', '/api/flash/available'],
+      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info', '/api/darkpool/epoch', '/api/darkpool/stats', '/api/auction/active', '/api/auction/stats', '/api/auction/list', '/api/auction/:index', '/api/flash/stats', '/api/flash/available'],
     });
   });
 

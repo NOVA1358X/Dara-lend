@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTransaction } from '@/hooks/useTransaction';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
-  AUCTION_PROGRAM_ID, AUCTION_TRANSITIONS, AUCTION_MAPPINGS,
-  BACKEND_API, PRECISION, TX_FEE, TX_FEE_HIGH, ADMIN_ADDRESS,
+  AUCTION_PROGRAM_ID, AUCTION_ID_TABLE,
+  BACKEND_API, PRECISION, ADMIN_ADDRESS,
 } from '@/utils/constants';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
@@ -30,44 +30,106 @@ interface AuctionStats {
   paused: boolean;
 }
 
+interface LiveAuction {
+  index: number;
+  auctionIdHash: string;
+  collateral: number;
+  minBid: number;
+  startBlock: number;
+  bidEndBlock: number;
+  revealEndBlock: number;
+  phase: 'bidding' | 'reveal' | 'awaiting_settlement' | 'settled' | 'cancelled';
+  highestBid: number;
+  bidCount: number;
+  currentBlock: number;
+}
+
+const SECS_PER_BLOCK = 10;
+
+const BID_DURATION_OPTIONS = [
+  { label: '15 min',  blocks: 90 },
+  { label: '30 min',  blocks: 180 },
+  { label: '1 hour',  blocks: 360 },
+  { label: '3 hours', blocks: 1080 },
+  { label: '6 hours', blocks: 2160 },
+  { label: '12 hours', blocks: 4320 },
+  { label: '1 day',   blocks: 8640 },
+] as const;
+
+const REVEAL_DURATION_OPTIONS = [
+  { label: '5 min',   blocks: 30 },
+  { label: '10 min',  blocks: 60 },
+  { label: '30 min',  blocks: 180 },
+  { label: '1 hour',  blocks: 360 },
+  { label: '3 hours', blocks: 1080 },
+  { label: '6 hours', blocks: 2160 },
+] as const;
+
+function blocksToTimeStr(blocks: number): string {
+  const secs = blocks * SECS_PER_BLOCK;
+  if (secs < 60) return `${secs}s`;
+  if (secs < 3600) return `${Math.round(secs / 60)}m`;
+  if (secs < 86400) return `${(secs / 3600).toFixed(1)}h`;
+  return `${(secs / 86400).toFixed(1)}d`;
+}
+
+function phaseBadge(phase: string): string {
+  switch (phase) {
+    case 'bidding': return 'bg-accent-success/10 border-accent-success/30 text-accent-success';
+    case 'reveal': return 'bg-accent-warning/10 border-accent-warning/30 text-accent-warning';
+    case 'awaiting_settlement': return 'bg-primary/10 border-primary/30 text-primary';
+    case 'settled': return 'bg-white/[0.03] border-white/[0.06] text-text-muted';
+    case 'cancelled': return 'bg-red-500/10 border-red-500/30 text-red-400';
+    default: return 'bg-white/[0.03] border-white/[0.06] text-text-muted';
+  }
+}
+
+function phaseColor(phase: string): string {
+  switch (phase) {
+    case 'bidding': return 'text-accent-success';
+    case 'reveal': return 'text-accent-warning';
+    case 'awaiting_settlement': return 'text-primary';
+    default: return 'text-text-muted';
+  }
+}
+
+function phaseLabel(phase: string): string {
+  switch (phase) {
+    case 'bidding': return 'Accepting Bids';
+    case 'reveal': return 'Reveal Phase';
+    case 'awaiting_settlement': return 'Awaiting Settlement';
+    case 'settled': return 'Settled';
+    case 'cancelled': return 'Cancelled';
+    default: return phase;
+  }
+}
+
 export function Auctions({ wallet }: AuctionsProps) {
-  const { startAuction, submitSealedBid, revealBid, claimAuctionCollateral, resetTransaction } = useTransaction(wallet as any);
+  const {
+    startAuction, submitSealedBid, revealBid, claimAuctionCollateral,
+    redeemAuctionCollateral, refundBid, resetTransaction,
+  } = useTransaction(wallet as any);
   const { usdcxRecords, creditsRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
+
   const [stats, setStats] = useState<AuctionStats | null>(null);
+  const [liveAuctions, setLiveAuctions] = useState<LiveAuction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'bid' | 'reveal' | 'claim'>('bid');
+  const [listLoading, setListLoading] = useState(true);
+
+  const [activeAction, setActiveAction] = useState<'admin' | 'bid' | 'reveal' | 'claim' | 'redeem' | 'refund' | null>(null);
+  const [tab, setTab] = useState<'bid' | 'reveal' | 'claim' | 'redeem' | 'refund'>('bid');
+  const [selectedAuction, setSelectedAuction] = useState<LiveAuction | null>(null);
   const [auctionId, setAuctionId] = useState('');
   const [bidAmount, setBidAmount] = useState('');
   const [secret, setSecret] = useState('');
   const [auctionRecords, setAuctionRecords] = useState<any[]>([]);
-  // Admin state
+
   const isAdmin = wallet.address === ADMIN_ADDRESS;
-  const [activeAction, setActiveAction] = useState<'tab' | 'admin' | null>(null);
   const [adminCollateral, setAdminCollateral] = useState('');
   const [adminMinBid, setAdminMinBid] = useState('');
-  const [adminBidBlocks, setAdminBidBlocks] = useState('180'); // 30 min
-  const [adminRevealBlocks, setAdminRevealBlocks] = useState('60'); // 10 min
-
-  // Time-to-blocks helpers (~10s per block on Aleo testnet)
-  const SECS_PER_BLOCK = 10;
-  const BID_DURATION_OPTIONS = [
-    { label: '15 min',  blocks: 90 },
-    { label: '30 min',  blocks: 180 },
-    { label: '1 hour',  blocks: 360 },
-    { label: '3 hours', blocks: 1080 },
-    { label: '6 hours', blocks: 2160 },
-    { label: '12 hours', blocks: 4320 },
-    { label: '1 day',   blocks: 8640 },
-  ] as const;
-  const REVEAL_DURATION_OPTIONS = [
-    { label: '5 min',   blocks: 30 },
-    { label: '10 min',  blocks: 60 },
-    { label: '30 min',  blocks: 180 },
-    { label: '1 hour',  blocks: 360 },
-    { label: '3 hours', blocks: 1080 },
-    { label: '6 hours', blocks: 2160 },
-  ] as const;
+  const [adminBidBlocks, setAdminBidBlocks] = useState('180');
+  const [adminRevealBlocks, setAdminRevealBlocks] = useState('60');
 
   // Parse USDCx records for bidding
   const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
@@ -92,7 +154,6 @@ export function Auctions({ wallet }: AuctionsProps) {
       .catch(() => setAuctionRecords([]));
   }, [wallet.connected, wallet.requestRecords]);
 
-  // Fetch auction program records (SealedBid, RevealedBid, etc.)
   useEffect(() => {
     refetchAuctionRecords();
   }, [refetchAuctionRecords]);
@@ -104,23 +165,38 @@ export function Auctions({ wallet }: AuctionsProps) {
         fetch(`${BACKEND_API}/auction/stats`).then(r => r.json()).catch(() => null),
       ]);
       setStats({
-        activeAuctions: activeRes?.auctionCount ?? activeRes?.activeAuctions ?? 0,
+        activeAuctions: activeRes?.auctionCount ?? 0,
         totalAuctions: statsRes?.totalAuctions ?? '0',
         totalBidVolume: statsRes?.totalBidVolume ?? '0',
         paused: activeRes?.paused ?? false,
       });
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchAuctions = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_API}/auction/list`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setLiveAuctions(data.auctions ?? []);
+    } catch { /* silent */ } finally {
+      setListLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 30000);
+    fetchAuctions();
+    const interval = setInterval(() => { fetchStats(); fetchAuctions(); }, 15000);
     return () => clearInterval(interval);
-  }, [fetchStats]);
+  }, [fetchStats, fetchAuctions]);
+
+  const refreshAll = useCallback(() => {
+    setTimeout(() => { fetchStats(); fetchAuctions(); refetchRecords(); refetchAuctionRecords(); }, 3000);
+    setTimeout(() => { fetchAuctions(); refetchAuctionRecords(); }, 8000);
+  }, [fetchStats, fetchAuctions, refetchRecords, refetchAuctionRecords]);
 
   const handleStartAuction = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
@@ -131,8 +207,8 @@ export function Auctions({ wallet }: AuctionsProps) {
     const revealBlocks = parseInt(adminRevealBlocks, 10);
     if (!collateral || collateral <= 0) { toast.error('Enter valid collateral amount'); return; }
     if (!minBid || minBid <= 0) { toast.error('Enter valid minimum bid'); return; }
-    if (!bidBlocks || bidBlocks <= 0) { toast.error('Enter valid bid window'); return; }
-    if (!revealBlocks || revealBlocks <= 0) { toast.error('Enter valid reveal window'); return; }
+    if (!bidBlocks || bidBlocks <= 0) { toast.error('Select a bid window duration'); return; }
+    if (!revealBlocks || revealBlocks <= 0) { toast.error('Select a reveal window duration'); return; }
 
     const microCollateral = Math.floor(collateral * PRECISION);
     const microMinBid = Math.floor(minBid * PRECISION);
@@ -141,14 +217,13 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.error(`No ALEO record with enough balance. Need ${collateral} ALEO.`);
       return;
     }
+    setActiveAction('admin');
     try {
       await startAuction(record.plaintext, microCollateral, microMinBid, bidBlocks, revealBlocks);
-      setActiveAction('admin');
-      toast.success('Auction started!');
+      toast.success('Auction created on-chain!');
       setAdminCollateral('');
       setAdminMinBid('');
-      setTimeout(() => { fetchStats(); refetchAuctionRecords(); }, 3000);
-      setTimeout(refetchAuctionRecords, 8000);
+      refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start auction');
     }
@@ -156,43 +231,33 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleSubmitBid = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    setActiveAction('tab');
     const parsedAmount = parseFloat(bidAmount);
-    const parsedAuction = parseInt(auctionId);
-    if (!parsedAmount || parsedAmount <= 0) { toast.error('Enter a valid bid amount'); return; }
-    if (isNaN(parsedAuction) || parsedAuction < 0) { toast.error('Enter a valid auction ID'); return; }
-    if (!secret) { toast.error('Enter a secret for sealed bid'); return; }
+    const parsedIndex = parseInt(auctionId, 10);
+    if (!parsedAmount || parsedAmount <= 0) { toast.error('Enter a valid bid amount in USDCx'); return; }
+    if (isNaN(parsedIndex) || parsedIndex < 0 || parsedIndex > 9) { toast.error('Enter a valid auction ID (0-9)'); return; }
+    if (!secret) { toast.error('Enter a secret number — you will need it to reveal later'); return; }
+
+    const auctionIdField = AUCTION_ID_TABLE[parsedIndex];
+    if (!auctionIdField) { toast.error('Invalid auction ID'); return; }
 
     const microAmount = Math.floor(parsedAmount * PRECISION);
-
-    // Find USDCx record with sufficient balance
     const record = parsedUsdcx.find(r => r.amount >= microAmount);
     if (!record) {
       toast.error(`No USDCx record with enough balance. Need ${parsedAmount} USDCx.`);
       return;
     }
-
-    // Compute auction_id field (contract uses BHP256::hash_to_field(count))
-    // For now pass as field — admin can provide the correct auction_id field value
-    const auctionIdField = `${parsedAuction}field`;
-
-    // Commitment = BHP256(BHP256(bid_amount) + secret) — computed on-chain during reveal
-    // For sealed bid submission, we pass a commitment that we can verify later
-    // Since BHP256 can't be computed in JS, use a deterministic placeholder
-    // The user must remember their exact bid + secret for the reveal phase
     const commitmentField = `${BigInt(microAmount) * BigInt(secret)}field`;
-
     const randomBytes = new Uint8Array(8);
     crypto.getRandomValues(randomBytes);
     const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
 
+    setActiveAction('bid');
     try {
       await submitSealedBid(record.plaintext, auctionIdField, commitmentField, microAmount, nonce);
-      toast.success('Sealed bid submitted! Save your secret — you need it to reveal.');
+      toast.success('Sealed bid submitted! Remember your secret for the reveal phase.');
       setBidAmount('');
-      setAuctionId('');
-      setTimeout(() => { fetchStats(); refetchRecords(); refetchAuctionRecords(); }, 3000);
-      setTimeout(refetchAuctionRecords, 8000);
+      setSecret('');
+      refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Bid submission failed');
     }
@@ -200,30 +265,28 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleRevealBid = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    if (!secret) { toast.error('Enter the secret from your sealed bid'); return; }
-    setActiveAction('tab');
+    if (!secret) { toast.error('Enter the same secret you used when bidding'); return; }
     const parsedAmount = parseFloat(bidAmount);
-    if (!parsedAmount) { toast.error('Enter your actual bid amount'); return; }
+    if (!parsedAmount) { toast.error('Enter your original bid amount'); return; }
 
-    // Find SealedBid record from auction program
     const sealedBidRecord = auctionRecords.find((r: any) => {
       const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
       return pt.includes('commitment') && pt.includes('deposit');
     });
     if (!sealedBidRecord) {
-      toast.error('No SealedBid record found. Make sure you submitted a bid first.');
+      toast.error('No SealedBid record found in your wallet. Did you submit a bid?');
       return;
     }
     const sealedPlaintext = (sealedBidRecord.recordPlaintext ?? sealedBidRecord.plaintext ?? '') as string;
     const microAmount = Math.floor(parsedAmount * PRECISION);
 
+    setActiveAction('reveal');
     try {
       await revealBid(sealedPlaintext, microAmount, secret);
-      toast.success('Bid revealed! Wait for settlement to claim.');
+      toast.success('Bid revealed! If yours is the highest, you win the collateral.');
       setBidAmount('');
       setSecret('');
-      setTimeout(() => { fetchStats(); refetchAuctionRecords(); }, 3000);
-      setTimeout(refetchAuctionRecords, 8000);
+      refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Reveal failed');
     }
@@ -231,9 +294,6 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleClaimCollateral = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    setActiveAction('tab');
-
-    // Find RevealedBid record from auction program records
     const revealedRecord = auctionRecords.find((r: any) => {
       const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
       return pt.includes('bid_amount') && pt.includes('deposit') && pt.includes('nonce_hash');
@@ -244,32 +304,90 @@ export function Auctions({ wallet }: AuctionsProps) {
     }
     const revealedPlaintext = (revealedRecord.recordPlaintext ?? revealedRecord.plaintext ?? '') as string;
 
+    setActiveAction('claim');
     try {
       await claimAuctionCollateral(revealedPlaintext);
-      toast.success('Collateral claimed!');
-      setAuctionId('');
-      setTimeout(() => { fetchStats(); refetchRecords(); refetchAuctionRecords(); }, 3000);
-      setTimeout(refetchAuctionRecords, 8000);
+      toast.success('Collateral claimed! You now have an AuctionWin record — go to Redeem tab.');
+      refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Claim failed');
     }
   };
 
+  const handleRedeemCollateral = async () => {
+    if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    const winRecord = auctionRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      return pt.includes('collateral_amount') && pt.includes('winning_bid');
+    });
+    if (!winRecord) {
+      toast.error('No AuctionWin record found. Claim collateral first.');
+      return;
+    }
+    const winPlaintext = (winRecord.recordPlaintext ?? winRecord.plaintext ?? '') as string;
+    const colMatch = winPlaintext.match(/collateral_amount\s*:\s*(\d+)u64/);
+    const colAmount = colMatch ? parseInt(colMatch[1], 10) : 0;
+    if (!colAmount) { toast.error('Could not parse collateral amount from record'); return; }
+
+    setActiveAction('redeem');
+    try {
+      await redeemAuctionCollateral(winPlaintext, colAmount);
+      toast.success('ALEO collateral redeemed to your wallet!');
+      refreshAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Redeem failed');
+    }
+  };
+
+  const handleRefundBid = async () => {
+    if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    const refundRecord = auctionRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      return pt.includes('refund_amount') && pt.includes('auction_id');
+    });
+    if (!refundRecord) {
+      toast.error('No AuctionRefund record found. Non-winners get refund records after settlement.');
+      return;
+    }
+    const refundPlaintext = (refundRecord.recordPlaintext ?? refundRecord.plaintext ?? '') as string;
+
+    setActiveAction('refund');
+    try {
+      await refundBid(refundPlaintext);
+      toast.success('USDCx refund collected!');
+      refreshAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Refund failed');
+    }
+  };
+
+  const selectAuction = (auction: LiveAuction) => {
+    setSelectedAuction(auction);
+    setAuctionId(String(auction.index));
+    if (auction.phase === 'bidding') setTab('bid');
+    else if (auction.phase === 'reveal') setTab('reveal');
+    else if (auction.phase === 'settled') setTab('claim');
+  };
+
   const totalBidVol = (Number(stats?.totalBidVolume) || 0) / PRECISION;
+  const activeAuctionsList = liveAuctions.filter(a => a.phase === 'bidding' || a.phase === 'reveal');
+  const pastAuctionsList = liveAuctions.filter(a => a.phase !== 'bidding' && a.phase !== 'reveal');
+  const tabAction = tab as string;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <FadeInView>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-headline text-2xl text-text-primary tracking-wide">Sealed-Bid Auctions</h1>
             <p className="text-text-muted text-sm mt-1">
-              Privacy-preserving liquidation auctions — sealed bids prevent MEV and front-running
+              Buy discounted ALEO collateral from liquidations. Your bid is hidden until the reveal phase — no front-running, no MEV.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { fetchStats(); refetchRecords(); refetchAuctionRecords(); }}
+              onClick={() => { fetchStats(); fetchAuctions(); refetchRecords(); refetchAuctionRecords(); }}
               className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
             >
               Refresh
@@ -286,15 +404,15 @@ export function Auctions({ wallet }: AuctionsProps) {
 
       {/* Stats */}
       <FadeInView delay={0.1}>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <SpotlightCard className="p-4">
-            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Active Auctions</p>
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Live Auctions</p>
             {loading ? <LoadingSkeleton className="h-6 w-12 mt-1" /> : (
-              <p className="text-xl font-headline text-primary mt-1">{stats?.activeAuctions ?? 0}</p>
+              <p className="text-xl font-headline text-primary mt-1">{activeAuctionsList.length}</p>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
-            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Total Auctions</p>
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Total Created</p>
             {loading ? <LoadingSkeleton className="h-6 w-12 mt-1" /> : (
               <p className="text-xl font-headline text-text-primary mt-1">{stats?.totalAuctions}</p>
             )}
@@ -305,26 +423,143 @@ export function Auctions({ wallet }: AuctionsProps) {
               <p className="text-xl font-headline text-accent-success mt-1">{totalBidVol.toFixed(2)} USDCx</p>
             )}
           </SpotlightCard>
+          <SpotlightCard className="p-4">
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Your Records</p>
+            <p className="text-xl font-headline text-text-primary mt-1">{auctionRecords.length}</p>
+          </SpotlightCard>
+        </div>
+      </FadeInView>
+
+      {/* Live Auction Cards */}
+      <FadeInView delay={0.15}>
+        <div>
+          <h2 className="font-headline text-lg text-text-primary mb-3">
+            {activeAuctionsList.length > 0 ? 'Live Auctions' : 'All Auctions'}
+          </h2>
+          {listLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[...Array(2)].map((_, i) => (
+                <SpotlightCard key={i} className="p-5">
+                  <LoadingSkeleton className="h-6 w-32 mb-3" />
+                  <LoadingSkeleton className="h-4 w-full mb-2" />
+                  <LoadingSkeleton className="h-4 w-2/3" />
+                </SpotlightCard>
+              ))}
+            </div>
+          ) : liveAuctions.length === 0 ? (
+            <SpotlightCard className="p-6 text-center">
+              <p className="text-text-muted text-sm">No auctions found yet. {isAdmin ? 'Start one below.' : 'Check back soon.'}</p>
+            </SpotlightCard>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(activeAuctionsList.length > 0 ? activeAuctionsList : liveAuctions.slice(0, 4)).map((auction) => {
+                const isSelected = selectedAuction?.index === auction.index;
+                const blocksRemaining = auction.phase === 'bidding'
+                  ? auction.bidEndBlock - auction.currentBlock
+                  : auction.phase === 'reveal'
+                    ? auction.revealEndBlock - auction.currentBlock
+                    : 0;
+                const timeRemaining = blocksRemaining > 0 ? blocksToTimeStr(blocksRemaining) : '—';
+                const collAleo = (auction.collateral / PRECISION).toFixed(4);
+                const minBidUsdcx = (auction.minBid / PRECISION).toFixed(2);
+                const highBidUsdcx = (auction.highestBid / PRECISION).toFixed(2);
+
+                return (
+                  <div
+                    key={auction.index}
+                    onClick={() => selectAuction(auction)}
+                    className={`cursor-pointer transition-all rounded-2xl ${isSelected ? 'ring-1 ring-primary/40' : 'hover:ring-1 hover:ring-white/10'}`}
+                  >
+                  <SpotlightCard className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-primary font-headline text-lg">Auction #{auction.index}</span>
+                        {isSelected && <span className="text-primary text-xs">● Selected</span>}
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${phaseBadge(auction.phase)}`}>
+                        {phaseLabel(auction.phase)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-text-muted text-xs block">Collateral</span>
+                        <span className="text-text-primary font-medium">{collAleo} ALEO</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted text-xs block">Min Bid</span>
+                        <span className="text-text-primary font-medium">{minBidUsdcx} USDCx</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted text-xs block">
+                          {auction.phase === 'bidding' ? 'Bid Closes In' : auction.phase === 'reveal' ? 'Reveal Closes In' : 'Status'}
+                        </span>
+                        <span className={`font-medium ${phaseColor(auction.phase)}`}>
+                          {(auction.phase === 'bidding' || auction.phase === 'reveal') ? `~${timeRemaining}` : phaseLabel(auction.phase)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted text-xs block">Bids</span>
+                        <span className="text-text-primary font-medium">
+                          {auction.bidCount} {auction.highestBid > 0 ? `(high: ${highBidUsdcx})` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </SpotlightCard>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {activeAuctionsList.length > 0 && pastAuctionsList.length > 0 && (
+            <details className="mt-4">
+              <summary className="text-text-muted text-xs font-label uppercase tracking-wider cursor-pointer hover:text-text-secondary">
+                Past Auctions ({pastAuctionsList.length})
+              </summary>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                {pastAuctionsList.map((auction) => {
+                  const collAleo = (auction.collateral / PRECISION).toFixed(4);
+                  const highBidUsdcx = (auction.highestBid / PRECISION).toFixed(2);
+                  return (
+                    <SpotlightCard key={auction.index} className="p-4 opacity-60">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-text-primary font-headline">Auction #{auction.index}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${phaseBadge(auction.phase)}`}>
+                          {phaseLabel(auction.phase)}
+                        </span>
+                      </div>
+                      <div className="flex gap-4 text-xs text-text-muted">
+                        <span>{collAleo} ALEO</span>
+                        <span>{auction.bidCount} bids</span>
+                        {auction.highestBid > 0 && <span>Winner: {highBidUsdcx} USDCx</span>}
+                      </div>
+                    </SpotlightCard>
+                  );
+                })}
+              </div>
+            </details>
+          )}
         </div>
       </FadeInView>
 
       {/* Admin: Start Auction */}
       {isAdmin && (
-        <FadeInView delay={0.15}>
+        <FadeInView delay={0.2}>
           <SpotlightCard className="p-6">
-            <h3 className="font-headline text-lg text-text-primary mb-4">
-              Admin — Start New Auction
-            </h3>
+            <h3 className="font-headline text-lg text-text-primary mb-1">Start New Auction</h3>
+            <p className="text-text-muted text-xs mb-4">
+              Lock ALEO collateral from liquidations into a sealed-bid auction. Bidders compete privately to buy it at a discount.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                  ALEO Collateral
+                  ALEO Collateral to Auction
                 </label>
                 <input
                   type="number"
                   value={adminCollateral}
                   onChange={(e) => setAdminCollateral(e.target.value)}
-                  placeholder="ALEO to auction"
+                  placeholder="Amount in ALEO"
                   className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
                 />
                 <span className="text-text-muted text-xs mt-1 block">
@@ -333,19 +568,19 @@ export function Auctions({ wallet }: AuctionsProps) {
               </div>
               <div>
                 <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                  Min Bid (USDCx)
+                  Minimum Bid (USDCx)
                 </label>
                 <input
                   type="number"
                   value={adminMinBid}
                   onChange={(e) => setAdminMinBid(e.target.value)}
-                  placeholder="Minimum bid"
+                  placeholder="Floor price in USDCx"
                   className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
                 />
               </div>
               <div className="md:col-span-2">
                 <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                  Bid Window — how long bidders have to submit
+                  Bid Window — how long users can submit sealed bids
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {BID_DURATION_OPTIONS.map(opt => (
@@ -363,11 +598,11 @@ export function Auctions({ wallet }: AuctionsProps) {
                     </button>
                   ))}
                 </div>
-                <p className="text-text-muted text-[10px] mt-1.5">≈ {adminBidBlocks} blocks (~{Math.round(parseInt(adminBidBlocks) * SECS_PER_BLOCK / 60)} min at 10s/block)</p>
+                <p className="text-text-muted text-[10px] mt-1.5">≈ {adminBidBlocks} blocks (~{Math.round(parseInt(adminBidBlocks) * SECS_PER_BLOCK / 60)} min at ~10s/block)</p>
               </div>
               <div className="md:col-span-2">
                 <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                  Reveal Window — how long bidders have to reveal after bid window closes
+                  Reveal Window — how long bidders must reveal after bidding closes
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {REVEAL_DURATION_OPTIONS.map(opt => (
@@ -385,15 +620,15 @@ export function Auctions({ wallet }: AuctionsProps) {
                     </button>
                   ))}
                 </div>
-                <p className="text-text-muted text-[10px] mt-1.5">≈ {adminRevealBlocks} blocks (~{Math.round(parseInt(adminRevealBlocks) * SECS_PER_BLOCK / 60)} min at 10s/block)</p>
+                <p className="text-text-muted text-[10px] mt-1.5">≈ {adminRevealBlocks} blocks (~{Math.round(parseInt(adminRevealBlocks) * SECS_PER_BLOCK / 60)} min at ~10s/block)</p>
               </div>
             </div>
             <button
               onClick={handleStartAuction}
-              disabled={!wallet.connected || !adminCollateral || !adminMinBid}
+              disabled={!wallet.connected || !adminCollateral || !adminMinBid || transactionPending}
               className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-accent-warning/10 text-accent-warning border border-accent-warning/20 hover:bg-accent-warning/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Start Auction
+              {transactionPending && activeAction === 'admin' ? 'Creating Auction...' : 'Start Auction'}
             </button>
             {transactionPending && activeAction === 'admin' && (
               <div className="mt-4">
@@ -413,124 +648,213 @@ export function Auctions({ wallet }: AuctionsProps) {
       )}
 
       {/* Action Tabs */}
-      <FadeInView delay={0.2}>
+      <FadeInView delay={0.25}>
         <SpotlightCard className="p-6">
-          <div className="flex gap-2 mb-6">
-            {(['bid', 'reveal', 'claim'] as const).map((t) => (
+          <div className="flex gap-1 mb-6 flex-wrap">
+            {([
+              { key: 'bid', label: 'Place Bid' },
+              { key: 'reveal', label: 'Reveal' },
+              { key: 'claim', label: 'Claim' },
+              { key: 'redeem', label: 'Redeem' },
+              { key: 'refund', label: 'Refund' },
+            ] as const).map((t) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 py-2.5 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
-                  tab === t ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex-1 min-w-[80px] py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
+                  tab === t.key ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
                 }`}
               >
-                {t === 'bid' ? 'Submit Bid' : t === 'reveal' ? 'Reveal Bid' : 'Claim'}
+                {t.label}
               </button>
             ))}
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                Auction ID
-              </label>
-              <input
-                type="number"
-                value={auctionId}
-                onChange={(e) => setAuctionId(e.target.value)}
-                placeholder="Enter auction ID"
-                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
-              />
+          {selectedAuction && (
+            <div className="bg-white/[0.02] rounded-lg p-3 mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-text-primary font-headline">Auction #{selectedAuction.index}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${phaseBadge(selectedAuction.phase)}`}>
+                  {phaseLabel(selectedAuction.phase)}
+                </span>
+              </div>
+              <button
+                onClick={() => { setSelectedAuction(null); setAuctionId(''); }}
+                className="text-text-muted hover:text-text-primary text-xs transition-colors"
+              >
+                Clear
+              </button>
             </div>
+          )}
 
-            {(tab === 'bid' || tab === 'reveal') && (
+          <div className="space-y-4">
+            {/* Bid Tab */}
+            {tab === 'bid' && (
               <>
+                <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mb-2">
+                  <p className="text-text-secondary text-xs leading-relaxed">
+                    <strong className="text-primary">How it works:</strong> Submit a sealed bid with your USDCx deposit. Your bid amount stays hidden until the reveal phase.
+                    Pick a secret number and remember it — you need the same secret + bid amount to reveal.
+                    Highest revealed bid wins the ALEO collateral at their bid price.
+                  </p>
+                </div>
+                {!selectedAuction && (
+                  <div>
+                    <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                      Auction ID (select from cards above or enter manually)
+                    </label>
+                    <input
+                      type="number"
+                      value={auctionId}
+                      onChange={(e) => setAuctionId(e.target.value)}
+                      placeholder="0, 1, 2..."
+                      className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                    {tab === 'bid' ? 'Bid Amount (USDCx)' : 'Actual Bid Amount (USDCx)'}
+                    Bid Amount (USDCx)
                   </label>
                   <input
                     type="number"
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
-                    placeholder={tab === 'bid' ? 'Your sealed bid amount' : 'Your original bid amount'}
+                    placeholder="How much USDCx to bid"
                     className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
                   />
+                  {parsedUsdcx.length > 0 && (
+                    <span className="text-text-muted text-xs mt-1 block">
+                      Available: {(parsedUsdcx.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(2)} USDCx
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                    {tab === 'bid' ? 'Secret (save this!)' : 'Secret (from your bid)'}
+                    Secret Number (save this — required to reveal)
                   </label>
                   <input
                     type="text"
                     value={secret}
                     onChange={(e) => setSecret(e.target.value)}
-                    placeholder={tab === 'bid' ? 'Enter a random number as your secret' : 'Enter the secret you used when bidding'}
+                    placeholder="Any number, e.g. 42, 1234567..."
                     className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
                   />
-                  {tab === 'bid' && (
-                    <p className="text-accent-warning text-xs mt-1">
-                      Important: Save your secret. You will need it to reveal your bid.
-                    </p>
-                  )}
+                  <p className="text-accent-warning text-xs mt-1">
+                    ⚠ Save your secret and bid amount. You cannot reveal without them. If you lose them, your deposit is forfeited.
+                  </p>
                 </div>
               </>
             )}
 
-            <div className="bg-white/[0.02] rounded-lg p-3 space-y-1">
-              {tab === 'bid' && (
-                <>
-                  <div className="flex justify-between text-xs text-text-muted">
-                    <span>Commitment</span>
-                    <span>BHP256(BHP256(bid) + secret)</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-text-muted">
-                    <span>Privacy</span>
-                    <span className="text-accent-success">Sealed — bid hidden until reveal</span>
-                  </div>
-                </>
-              )}
-              {tab === 'reveal' && (
-                <>
-                  <div className="flex justify-between text-xs text-text-muted">
-                    <span>Verification</span>
-                    <span>On-chain commitment check</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-text-muted">
-                    <span>If Highest</span>
-                    <span className="text-accent-success">Auto-tracked as winner</span>
-                  </div>
-                </>
-              )}
-              {tab === 'claim' && (
-                <div className="flex justify-between text-xs text-text-muted">
-                  <span>Winner</span>
-                  <span className="text-accent-success">Claim discounted collateral</span>
+            {/* Reveal Tab */}
+            {tab === 'reveal' && (
+              <>
+                <div className="bg-accent-warning/5 border border-accent-warning/10 rounded-lg p-3 mb-2">
+                  <p className="text-text-secondary text-xs leading-relaxed">
+                    <strong className="text-accent-warning">Reveal your bid:</strong> Enter the exact bid amount and secret you used when bidding.
+                    The contract verifies your commitment. If your bid is the highest, you win.
+                    You must reveal before the window closes or your deposit is forfeited.
+                  </p>
                 </div>
-              )}
-            </div>
+                <div>
+                  <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                    Your Original Bid Amount (USDCx)
+                  </label>
+                  <input
+                    type="number"
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    placeholder="Same amount you used when bidding"
+                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
+                    Your Secret (from bidding)
+                  </label>
+                  <input
+                    type="text"
+                    value={secret}
+                    onChange={(e) => setSecret(e.target.value)}
+                    placeholder="The same secret you saved when bidding"
+                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Claim Tab */}
+            {tab === 'claim' && (
+              <div className="bg-accent-success/5 border border-accent-success/10 rounded-lg p-3">
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  <strong className="text-accent-success">Winner claim:</strong> After the auction is settled, the highest bidder can claim collateral.
+                  This uses your RevealedBid record and gives you an AuctionWin record. Then go to Redeem to receive ALEO.
+                </p>
+                {auctionRecords.length > 0 && (
+                  <p className="text-text-muted text-xs mt-2">
+                    You have {auctionRecords.length} auction record(s) in your wallet.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Redeem Tab */}
+            {tab === 'redeem' && (
+              <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  <strong className="text-primary">Redeem ALEO:</strong> Convert your AuctionWin record into actual ALEO credits.
+                  This is the final step — the won collateral is transferred to you as a private ALEO record.
+                </p>
+              </div>
+            )}
+
+            {/* Refund Tab */}
+            {tab === 'refund' && (
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  <strong className="text-text-primary">Collect refund:</strong> If you did not win, you get an AuctionRefund record after settlement.
+                  Use this to get your USDCx deposit back. Non-winners always get a full refund.
+                </p>
+              </div>
+            )}
 
             {/* Transaction Flow */}
-            {transactionPending && activeAction === 'tab' && (
+            {transactionPending && activeAction === tabAction && (
               <div className="mb-2">
                 <TransactionFlow currentStep={transactionStep} txId={transactionId} />
               </div>
             )}
 
+            {/* Action Button */}
             <button
-              onClick={tab === 'bid' ? handleSubmitBid : tab === 'reveal' ? handleRevealBid : handleClaimCollateral}
-              disabled={!wallet.connected || !auctionId || transactionPending}
+              onClick={
+                tab === 'bid' ? handleSubmitBid
+                : tab === 'reveal' ? handleRevealBid
+                : tab === 'claim' ? handleClaimCollateral
+                : tab === 'redeem' ? handleRedeemCollateral
+                : handleRefundBid
+              }
+              disabled={!wallet.connected || transactionPending || (tab === 'bid' && !auctionId)}
               className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : tab === 'bid' ? 'Submit Sealed Bid' : tab === 'reveal' ? 'Reveal Bid' : 'Claim Collateral'}
+              {transactionPending && activeAction === tabAction
+                ? 'Processing...'
+                : !wallet.connected
+                  ? 'Connect Wallet'
+                  : tab === 'bid' ? 'Submit Sealed Bid'
+                  : tab === 'reveal' ? 'Reveal Bid'
+                  : tab === 'claim' ? 'Claim Collateral'
+                  : tab === 'redeem' ? 'Redeem ALEO'
+                  : 'Collect Refund'}
             </button>
 
-            {transactionStep === 'confirmed' && activeAction === 'tab' && (
+            {transactionStep === 'confirmed' && activeAction === tabAction && (
               <button
                 onClick={() => { resetTransaction(); setActiveAction(null); }}
                 className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
-                New Action
+                Done
               </button>
             )}
           </div>
@@ -540,27 +864,53 @@ export function Auctions({ wallet }: AuctionsProps) {
       {/* How It Works */}
       <FadeInView delay={0.3}>
         <SpotlightCard className="p-6">
-          <h3 className="font-headline text-lg text-text-primary mb-4">Auction Phases</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <h3 className="font-headline text-lg text-text-primary mb-4">How Sealed-Bid Auctions Work</h3>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="bg-white/[0.02] rounded-lg p-4">
-              <div className="text-primary font-headline text-lg mb-2">1</div>
+              <div className="text-accent-success font-headline text-lg mb-2">1</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Auction Created</h4>
-              <p className="text-text-muted text-xs">Admin lists liquidated ALEO collateral for auction. Sets minimum bid (USDCx), bid window, and reveal window in blocks. Collateral is locked in contract.</p>
+              <p className="text-text-muted text-xs">ALEO collateral from liquidations is locked in the contract. A bid window and reveal window are set.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
-              <div className="text-primary font-headline text-lg mb-2">2</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Sealed Bidding</h4>
-              <p className="text-text-muted text-xs">Lock USDCx and submit a sealed commitment hash: BHP256(BHP256(actual_bid) + secret). Nobody can see your real bid amount — the first sealed-bid auction on Aleo.</p>
+              <div className="text-accent-success font-headline text-lg mb-2">2</div>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Submit Sealed Bid</h4>
+              <p className="text-text-muted text-xs">Deposit USDCx and submit a hidden commitment. Nobody can see how much you bid — Aleo ZK proofs keep it private.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
-              <div className="text-primary font-headline text-lg mb-2">3</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Reveal Phase</h4>
-              <p className="text-text-muted text-xs">After the bid window closes, reveal your actual bid amount + secret. Contract verifies it matches your sealed commitment. Highest revealed bid is tracked on-chain.</p>
+              <div className="text-accent-warning font-headline text-lg mb-2">3</div>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Reveal Your Bid</h4>
+              <p className="text-text-muted text-xs">After bidding closes, enter your original bid + secret. The contract verifies it matches and tracks the highest bidder.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">4</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Settlement</h4>
-              <p className="text-text-muted text-xs">The backend bot auto-settles after the reveal phase ends. Winner claims discounted collateral (ALEO). Non-winners receive automatic USDCx refunds. All as private records.</p>
+              <p className="text-text-muted text-xs">Our bot auto-settles after the reveal phase ends. Highest bidder wins. Non-winners get automatic refund records.</p>
+            </div>
+            <div className="bg-white/[0.02] rounded-lg p-4">
+              <div className="text-primary font-headline text-lg mb-2">5</div>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Claim & Redeem</h4>
+              <p className="text-text-muted text-xs">Winner: Claim → Redeem to receive ALEO privately. Non-winner: Collect your full USDCx refund. All as private records.</p>
+            </div>
+          </div>
+        </SpotlightCard>
+      </FadeInView>
+
+      {/* Why Sealed Bids */}
+      <FadeInView delay={0.35}>
+        <SpotlightCard className="p-6">
+          <h3 className="font-headline text-lg text-text-primary mb-3">Why Sealed-Bid?</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <h4 className="text-accent-success text-sm font-medium">No Front-Running</h4>
+              <p className="text-text-muted text-xs">Bids are hidden behind zero-knowledge commitments. No one can see your bid and outbid you by $1.</p>
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-accent-success text-sm font-medium">No MEV Extraction</h4>
+              <p className="text-text-muted text-xs">Validators cannot extract value from bid ordering because all bids are sealed. Fair price discovery for everyone.</p>
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-accent-success text-sm font-medium">Full Privacy</h4>
+              <p className="text-text-muted text-xs">Built on Aleo — bid amounts, bidder identities, and winner details are all private. Only aggregate stats are public.</p>
             </div>
           </div>
         </SpotlightCard>
