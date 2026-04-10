@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 interface DarkPoolProps {
   wallet: {
     requestRecords?: (program: string, all?: boolean) => Promise<unknown[]>;
-    requestTransaction?: (tx: unknown) => Promise<{ transactionId: string } | undefined>;
+    requestTransaction?: (tx: any) => Promise<{ transactionId: string } | undefined>;
     transactionStatus?: (txId: string) => Promise<{ status: string }>;
     decrypt?: (cipherText: string) => Promise<string>;
     connected: boolean;
