@@ -36,7 +36,7 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 |  18 Pages - Shield Wallet - Obsidian Ledger Dark Theme       |
 +-------------------------------------------------------------+
 |                   Backend (Express.js)                        |
-|  7 Bots - 5-Source Oracle - Provable DPS Automation          |
+|  7 Bots - 7-Source Oracle - Provable DPS Automation          |
 +-------------------------------------------------------------+
 |                  Aleo Blockchain (Testnet)                    |
 |  7 Programs - 76 Transitions - ~5M Compiled Variables        |
@@ -226,9 +226,9 @@ The vault contract provides a ZK-shielded relay that atomically deposits tokens 
 
 ## Oracle System
 
-5-source price aggregation with on-chain manipulation resistance.
+7-source price aggregation with on-chain manipulation resistance.
 
-**Sources:** CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap
+**Sources:** Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap
 
 ```
 CoinGecko - CryptoCompare - Coinbase - Gate.io - CoinMarketCap

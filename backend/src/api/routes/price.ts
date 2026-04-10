@@ -14,6 +14,43 @@ interface PriceCache {
 const cache: PriceCache = { price: null, timestamp: 0, source: null };
 const CACHE_TTL = 300_000; // 5 minutes
 
+async function fetchFromCoinbase(): Promise<number> {
+  const res = await fetch('https://api.coinbase.com/v2/prices/ALEO-USD/spot');
+  if (!res.ok) throw new Error(`Coinbase ${res.status}`);
+  const data = (await res.json()) as { data?: { amount?: string } };
+  const price = parseFloat(data?.data?.amount ?? '');
+  if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid price');
+  return price;
+}
+
+async function fetchFromGateIO(): Promise<number> {
+  const res = await fetch('https://api.gateio.ws/api/v4/spot/tickers?currency_pair=ALEO_USDT');
+  if (!res.ok) throw new Error(`GateIO ${res.status}`);
+  const data = (await res.json()) as Array<{ last?: string }>;
+  const price = parseFloat(data?.[0]?.last ?? '');
+  if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid price');
+  return price;
+}
+
+async function fetchFromMexc(): Promise<number> {
+  const res = await fetch('https://api.mexc.com/api/v3/ticker/price?symbol=ALEOUSDT');
+  if (!res.ok) throw new Error(`MEXC ${res.status}`);
+  const data = (await res.json()) as { price?: string };
+  const price = parseFloat(data?.price ?? '');
+  if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid price');
+  return price;
+}
+
+async function fetchFromXT(): Promise<number> {
+  const res = await fetch('https://sapi.xt.com/v4/public/ticker/price?symbol=aleo_usdt');
+  if (!res.ok) throw new Error(`XT ${res.status}`);
+  const data = (await res.json()) as { rc?: number; result?: Array<{ p?: string }> };
+  if (data?.rc !== 0 || !Array.isArray(data?.result) || !data.result.length) throw new Error('Invalid response');
+  const price = parseFloat(data.result[0]?.p ?? '');
+  if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid price');
+  return price;
+}
+
 async function fetchFromCoinMarketCap(): Promise<number> {
   if (!CMC_API_KEY) throw new Error('CMC_API_KEY not set');
   const res = await fetch(
@@ -55,7 +92,7 @@ router.get('/', async (_req, res) => {
     return;
   }
 
-  for (const fetcher of [fetchFromCoinMarketCap, fetchFromCoinGecko, fetchFromCryptoCompare]) {
+  for (const fetcher of [fetchFromCoinbase, fetchFromGateIO, fetchFromMexc, fetchFromXT, fetchFromCoinGecko, fetchFromCoinMarketCap, fetchFromCryptoCompare]) {
     try {
       const price = await fetcher();
       cache.price = price;

@@ -4,7 +4,7 @@ import { SpotlightCard } from '@/components/shared/SpotlightCard';
 
 const advantages = [
   { title: '7 Production Smart Contracts', desc: 'Lending, credits, vault, governance, dark pool, auctions, and flash loans — 76 transitions deployed on Aleo with ~5M compiled variables.', icon: 'architecture' },
-  { title: 'Real-Time Oracle (5 Sources)', desc: 'Prices from CoinGecko, Coinbase, Gate.io, CryptoCompare, and CMC — cross-checked, outlier-rejected, pushed on-chain every 30 minutes.', icon: 'monitoring' },
+  { title: 'Real-Time Oracle (7 Sources)', desc: 'Prices from Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CMC, and CryptoCompare — cross-checked, outlier-rejected, pushed on-chain every 30 minutes.', icon: 'monitoring' },
   { title: 'Anti-MEV by Design', desc: 'Sealed-bid auctions with BHP256 commitments, dark pool batch settlement at oracle price — front-running is mathematically impossible.', icon: 'enhanced_encryption' },
   { title: 'Private Governance (ZK Votes)', desc: 'Vote on proposals without revealing your identity. No finalize, no on-chain trace — the first truly private DAO on Aleo.', icon: 'how_to_vote' },
   { title: 'Flash Loans (0.09% Fee)', desc: 'Borrow instantly in 4 atomic steps with 102% collateral. Bidirectional ALEO↔USDCx. All receipts are private records.', icon: 'bolt' },

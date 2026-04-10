@@ -603,7 +603,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">3</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Settlement</h4>
-              <p className="text-text-muted text-xs">Once both sides have orders, the bot settles automatically within 60 seconds using the 5-source oracle mid-price (Binance, Coinbase, CoinGecko, CoinMarketCap, CryptoCompare). No manual action needed.</p>
+              <p className="text-text-muted text-xs">Once both sides have orders, the bot settles automatically within 60 seconds using the 7-source oracle mid-price (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CMC, CryptoCompare). No manual action needed.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">4</div>

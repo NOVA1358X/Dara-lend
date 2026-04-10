@@ -87,7 +87,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             { value: '~5M', label: 'Compiled Variables', desc: '1.03M + 1.31M + 822K + 404K + 653K + 679K + 943K' },
             { value: '11+', label: 'Private Record Types', desc: 'Collateral, Debt, Flash, Auction, Trade, Pool, Gov, Transfer' },
             { value: '0', label: 'MEV Attack Surface', desc: 'Sealed bids + dark pool batch = no front-running' },
-            { value: '5', label: 'Oracle Sources', desc: 'CoinGecko, CryptoCompare, Coinbase, Gate.io, CMC' },
+            { value: '7', label: 'Oracle Sources', desc: 'Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CMC, CryptoCompare' },
           ].map((stat) => (
             <div key={stat.label} className="p-4 rounded-lg glass-panel-sm">
               <p className="text-primary font-mono text-2xl font-bold mb-1">{stat.value}</p>
@@ -972,15 +972,17 @@ record FlashRepayReceipt {
         </p>
 
         <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
-          Five-Source Price Aggregation
+          Seven-Source Price Aggregation
         </h3>
         <div className="space-y-2 mb-6">
           {[
-            { source: 'CoinGecko', role: 'Primary source (free tier)', color: 'text-primary' },
-            { source: 'CryptoCompare', role: 'Secondary source (free tier)', color: 'text-text-primary' },
-            { source: 'Coinbase', role: 'Exchange direct (free tier)', color: 'text-text-primary' },
-            { source: 'Gate.io', role: 'Exchange direct (free tier)', color: 'text-text-primary' },
-            { source: 'CoinMarketCap', role: 'Tertiary source (API key authenticated)', color: 'text-text-primary' },
+            { source: 'Coinbase', role: 'Exchange direct (no key required)', color: 'text-primary' },
+            { source: 'Gate.io', role: 'Exchange direct (no key required)', color: 'text-text-primary' },
+            { source: 'MEXC', role: 'Exchange direct (no key required)', color: 'text-text-primary' },
+            { source: 'XT.com', role: 'Exchange direct (no key required)', color: 'text-text-primary' },
+            { source: 'CoinGecko', role: 'Aggregator (free tier)', color: 'text-text-primary' },
+            { source: 'CoinMarketCap', role: 'Aggregator (API key authenticated)', color: 'text-text-primary' },
+            { source: 'CryptoCompare', role: 'Aggregator (free tier)', color: 'text-text-primary' },
           ].map((s, idx) => (
             <div key={s.source} className="flex items-center gap-3 p-2 rounded bg-white/[0.03]">
               <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-mono text-[10px] font-bold">
@@ -1000,7 +1002,7 @@ record FlashRepayReceipt {
         </p>
         <ul className="space-y-2 mb-6">
           {[
-            'Fetches ALEO/USD from all 5 sources in parallel (CoinGecko, CryptoCompare, Coinbase, Gate.io, CMC)',
+            'Fetches ALEO/USD from all 7 sources in parallel (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CMC, CryptoCompare)',
             'Rejects outlier prices (>2σ from median) for manipulation resistance',
             'Computes median of remaining valid prices',
             'Oracle Bot checks cooldown (30 min) and price delta (≥ 0.1%) — skips if neither threshold met',
@@ -1074,7 +1076,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
         </h3>
         <div className="space-y-2 mb-6">
           {[
-            { bot: 'Oracle Bot', interval: '30 min', action: 'update_oracle_price on dara_lend_v8 — 5-source median push', color: 'text-primary' },
+            { bot: 'Oracle Bot', interval: '30 min', action: 'update_oracle_price on dara_lend_v8 — 7-source median push', color: 'text-primary' },
             { bot: 'Interest Bot', interval: '1 hr', action: 'accrue_interest — updates supply/borrow APY from utilization', color: 'text-text-primary' },
             { bot: 'Yield Bot', interval: '6 hr', action: 'distribute_yield on vault — allocates protocol fees to depositors', color: 'text-text-primary' },
             { bot: 'Liquidation Bot', interval: '1 min', action: 'Scans positions, executes liquidate if health factor < 1.0', color: 'text-text-primary' },
@@ -1219,7 +1221,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'How does the oracle prevent manipulation?',
-              a: 'The oracle aggregates prices from 5 independent sources (CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap), rejects outliers, and uses median filtering. On-chain, the smart contract enforces a 15% deviation cap per update, a minimum 5-block interval between updates, and monotonic round counters to prevent replay attacks.',
+              a: 'The oracle aggregates prices from 7 independent sources (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CoinMarketCap, CryptoCompare), rejects outliers, and uses median filtering. On-chain, the smart contract enforces a 15% deviation cap per update, a minimum 5-block interval between updates, and monotonic round counters to prevent replay attacks.',
             },
           ].map((item, idx) => (
             <div key={idx}>

@@ -4,6 +4,8 @@ import { fetchFromCoinGecko } from './sources/coingecko.js';
 import { fetchFromCryptoCompare } from './sources/cryptocompare.js';
 import { fetchFromCoinbase } from './sources/coinbase.js';
 import { fetchFromBinance } from './sources/binance.js';
+import { fetchFromMexc } from './sources/mexc.js';
+import { fetchFromXT } from './sources/xt.js';
 
 export type Confidence = 'high' | 'medium' | 'low' | 'none';
 
@@ -20,6 +22,8 @@ const FETCHERS: PriceFetcher[] = [
   fetchFromCryptoCompare,
   fetchFromCoinbase,
   fetchFromBinance,
+  fetchFromMexc,
+  fetchFromXT,
 ];
 
 const OUTLIER_THRESHOLD = 0.10; // 10% from median triggers outlier removal
@@ -42,8 +46,8 @@ function removeOutliers(results: PriceResult[]): PriceResult[] {
 }
 
 function getConfidence(successCount: number, totalSources: number): Confidence {
-  if (successCount >= 3) return 'high';
-  if (successCount === 2) return 'medium';
+  if (successCount >= 4) return 'high';
+  if (successCount >= 2) return 'medium';
   if (successCount === 1) return 'low';
   return 'none';
 }
@@ -53,7 +57,7 @@ export async function aggregatePrices(): Promise<AggregatedPrice> {
 
   const successful: PriceResult[] = [];
   const failedSources: string[] = [];
-  const sourceNames = ['coinmarketcap', 'coingecko', 'cryptocompare', 'coinbase', 'gateio'];
+  const sourceNames = ['coinmarketcap', 'coingecko', 'cryptocompare', 'coinbase', 'gateio', 'mexc', 'xt'];
 
   results.forEach((result, i) => {
     if (result.status === 'fulfilled') {
