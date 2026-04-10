@@ -131,13 +131,13 @@ export function Auctions({ wallet }: AuctionsProps) {
   const [adminBidBlocks, setAdminBidBlocks] = useState('180');
   const [adminRevealBlocks, setAdminRevealBlocks] = useState('60');
 
-  // Parse USDCx records for bidding
+  // Parse USDCx records for bidding — sorted largest first
   const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
     const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
     const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
     const match = str.match(/amount\s*:\s*(\d+)u128/);
     return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
-  }).filter(Boolean) as { amount: number; plaintext: string }[];
+  }).filter(Boolean).sort((a, b) => b!.amount - a!.amount) as { amount: number; plaintext: string }[];
 
   // Parse credits records for admin start auction
   const parsedCredits = (creditsRecords || []).filter((r: any) => !r.spent).map((r: any) => {
@@ -288,7 +288,8 @@ export function Auctions({ wallet }: AuctionsProps) {
     const microAmount = Math.floor(parsedAmount * PRECISION);
     const record = parsedUsdcx.find(r => r.amount >= microAmount);
     if (!record) {
-      toast.error(`No USDCx record with enough balance. Need ${parsedAmount} USDCx.`);
+      const largest = parsedUsdcx.length > 0 ? (parsedUsdcx[0].amount / PRECISION).toFixed(2) : '0';
+      toast.error(`No single USDCx record has ${parsedAmount} USDCx. Your largest record: ${largest} USDCx. Bid up to that amount.`);
       return;
     }
     const commitmentField = `${BigInt(microAmount) * BigInt(secret)}field`;
@@ -793,6 +794,9 @@ export function Auctions({ wallet }: AuctionsProps) {
                   {parsedUsdcx.length > 0 && (
                     <span className="text-text-muted text-xs mt-1 block">
                       Available: {(parsedUsdcx.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(2)} USDCx
+                      {parsedUsdcx.length > 1 && (
+                        <> ({parsedUsdcx.length} records — max single: {(parsedUsdcx[0].amount / PRECISION).toFixed(2)} USDCx)</>
+                      )}
                     </span>
                   )}
                 </div>
