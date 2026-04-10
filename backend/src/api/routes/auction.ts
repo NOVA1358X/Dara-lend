@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { config } from '../../utils/config.js';
 import { getMappingValue, getLatestBlockHeight } from '../../utils/aleoClient.js';
+import { execSync } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const router = Router();
 
@@ -284,6 +287,59 @@ router.post('/cancel/:index', async (req, res) => {
   } catch (err) {
     console.error('[auction-api] cancel error:', err);
     res.status(500).json({ error: 'Failed to cancel auction' });
+  }
+});
+
+// POST /api/auction/commitment — compute BHP256 commitment for sealed bid
+// Uses Leo CLI because WASM SDK BHP256 doesn't match AVM on-chain hashing
+router.post('/commitment', async (req, res) => {
+  try {
+    const { bid, secret } = req.body;
+    if (!bid || !secret) {
+      res.status(400).json({ error: 'Missing bid or secret' });
+      return;
+    }
+
+    // Validate inputs: bid must be a positive integer, secret must be a safe integer/string
+    const bidNum = parseInt(String(bid), 10);
+    const secretStr = String(secret).replace(/[^0-9]/g, '');
+    if (isNaN(bidNum) || bidNum <= 0) {
+      res.status(400).json({ error: 'Invalid bid amount' });
+      return;
+    }
+    if (!secretStr || secretStr.length > 70) {
+      res.status(400).json({ error: 'Invalid secret' });
+      return;
+    }
+
+    // Resolve path to the test_syntax Leo program
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const leoDir = path.resolve(__dirname, '..', '..', '..', '..', 'tmp_test', 'test_syntax');
+
+    const cmd = `leo run compute_commitment ${bidNum}u128 ${secretStr}field`;
+    console.log(`[auction-api] Computing commitment: ${cmd}`);
+
+    const output = execSync(cmd, {
+      cwd: leoDir,
+      encoding: 'utf-8',
+      timeout: 60000,
+    });
+
+    // Parse the output field value from Leo CLI output
+    const fieldMatch = output.match(/•\s*(\d+field)/);
+    if (!fieldMatch) {
+      console.error('[auction-api] Could not parse Leo output:', output.slice(-500));
+      res.status(500).json({ error: 'Failed to parse commitment result' });
+      return;
+    }
+
+    const commitment = fieldMatch[1];
+    console.log(`[auction-api] Commitment computed: ${commitment.slice(0, 30)}...`);
+    res.json({ commitment });
+  } catch (err) {
+    console.error('[auction-api] commitment error:', err);
+    res.status(500).json({ error: 'Failed to compute commitment' });
   }
 });
 

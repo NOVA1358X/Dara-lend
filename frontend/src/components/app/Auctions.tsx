@@ -306,12 +306,35 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.error(`No single USDCx record has ${parsedAmount} USDCx. Your largest record: ${largest} USDCx. Bid up to that amount.`);
       return;
     }
-    const commitmentField = `${BigInt(microAmount) * BigInt(secret)}field`;
+
+    // Compute BHP256 commitment via backend (WASM SDK doesn't match AVM hashing)
+    // commitment = BHP256(BHP256(actual_bid) + secret) — verified by reveal_bid on-chain
+    setActiveAction('bid');
+    let commitmentField: string;
+    try {
+      toast('Computing commitment hash...', { icon: '⏳', duration: 3000 });
+      const commitRes = await fetch(`${BACKEND_API}/auction/commitment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bid: microAmount, secret }),
+      });
+      const commitData = await commitRes.json();
+      if (!commitRes.ok || !commitData.commitment) {
+        toast.error(commitData.error || 'Failed to compute commitment. Try again.');
+        setActiveAction(null);
+        return;
+      }
+      commitmentField = commitData.commitment;
+    } catch (err) {
+      toast.error('Backend unreachable — cannot compute commitment hash.');
+      setActiveAction(null);
+      return;
+    }
+
     const randomBytes = new Uint8Array(8);
     crypto.getRandomValues(randomBytes);
     const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
 
-    setActiveAction('bid');
     try {
       await submitSealedBid(record.plaintext, auctionIdField, commitmentField, microAmount, nonce);
       toast.success('Sealed bid submitted! Remember your secret for the reveal phase.');
