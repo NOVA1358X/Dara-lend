@@ -22,8 +22,8 @@ const queryClient = new QueryClient({
 });
 
 const wallets = [
-  new LeoWalletAdapter({ appName: 'DARA Lend' }),
-  new ShieldWalletAdapter({ appName: 'DARA Lend' }),
+  new LeoWalletAdapter({ appName: 'DARA' }),
+  new ShieldWalletAdapter({ appName: 'DARA' }),
 ];
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

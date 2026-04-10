@@ -38,7 +38,7 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 |  18 Pages - Shield Wallet - Obsidian Ledger Dark Theme       |
 +-------------------------------------------------------------+
 |                   Backend (Express.js)                        |
-|  6 Bots - 5-Source Oracle - Provable DPS Automation          |
+|  7 Bots - 5-Source Oracle - Provable DPS Automation          |
 +-------------------------------------------------------------+
 |                  Aleo Blockchain (Testnet)                    |
 |  7 Programs - 76 Transitions - ~5M Compiled Variables        |
@@ -178,19 +178,25 @@ All deposits use private token records. The vault also powers private transfers.
 
 ## Governance
 
-On-chain governance with full voter privacy through ZK proofs.
+On-chain governance with full voter privacy through ZK proofs. The governance system evolved through three iterations during Wave 5 development:
+
+- **v1**: Leaked voter identity through finalize — voter address visible on-chain
+- **v2**: Fixed privacy but hardcoded 200-block voting window — inflexible
+- **v3 (production)**: `vote()` has NO finalize — zero on-chain trace. Configurable 1–30 day voting, delegation, timelock
 
 **Flow:**
-1. **Mint GovernanceToken**  Admin issues tokens to participants
-2. **Create Proposal**  Token holder submits proposal with voting period (130 days)
-3. **Vote**  Cast ZK-encrypted vote (yes/no)  nobody can see individual votes
-4. **Execute**  If quorum reached (20%), proposal passes by majority
+1. **Claim GOV Tokens** — Any user claims 1,000 tokens via the faucet
+2. **Create Proposal** — Token holder (min 100 power) submits proposal with voting period (1–30 days)
+3. **Vote Privately** — Cast ZK-encrypted vote (For/Against) — `vote()` has NO finalize, shows as PRIVATE in Shield Wallet
+4. **Tally & Execute** — After voting ends + timelock, admin tallies. If quorum (20%) met + majority for → proposal executes
 
 **Features:**
 - Delegation: transfer voting power to another address
-- Configurable voting periods: 1 to 30 days
-- 100% private voting  only aggregate tallies visible
-- Timelock between proposal and execution
+- Configurable voting periods: 1 to 30 days (8,640 to 259,200 blocks)
+- Timelock: max(voting_blocks/4, 8,640 blocks) — minimum 1 day
+- 100% private voting — only aggregate tallies visible
+- 5 proposal types: Rate, LTV, Liquidation threshold, Pause, Admin
+- The first truly private DAO on Aleo
 
 **Transitions (12):** `mint_gov_token`, `delegate`, `undelegate`, `create_proposal`, `vote`, `execute_proposal`, `cancel_proposal`, `burn_gov_token`, `set_voting_params`, `transfer_gov_token`, `pause_governance`, `resume_governance`
 
@@ -246,18 +252,24 @@ CoinGecko - CryptoCompare - Coinbase - Gate.io - CoinMarketCap
 
 ## Backend Automation
 
-Six bots managed by a unified orchestrator, deployed on Provable DPS (Decentralized Private Sequencer).
+Seven bots managed by a unified orchestrator, all deployed on **Provable DPS** (Decentralized Private Sequencer).
 
 | Bot | Interval | Action | Program |
-|-----|:--------:|--------|---------|
-| Oracle Bot | 30 min | `update_oracle` | `dara_lend_v8.aleo` |
+|-----|:--------:|--------|--------|
+| Oracle Bot | 30 min | `update_oracle_price` | `dara_lend_v8.aleo` |
 | Interest Bot | 1 hr | `accrue_interest` | `dara_lend_v8.aleo` |
 | Yield Bot | 6 hr | `distribute_yield` | `dara_lend_v8_vault.aleo` |
-| Liquidation Bot | 5 min | `liquidate_*` | `dara_lend_v8.aleo` |
+| Liquidation Bot | 1 min | `liquidate_*` | `dara_lend_v8.aleo` |
 | Dark Pool Bot | 5 min | `settle_epoch` | `dara_dark_pool_v1.aleo` |
 | Auction Bot | 5 min | `settle_auction` | `dara_auction_v1.aleo` |
+| Flash Oracle Bot | 30 min | `update_oracle_price` | `dara_flash_v1.aleo` |
 
-Sequential execution queue prevents nonce conflicts. `useFeeMaster: true` for zero gas costs. JWT auto-refresh keeps DPS connection active 24/7.
+**Provable DPS Integration:**
+- JWT authentication via `POST /jwts/:consumerId` with `X-Provable-API-Key` header
+- JWT returned in `authorization` response header — auto-refreshed before expiry
+- Proving via `POST /prove/testnet/prove` with `useFeeMaster: true` (zero gas cost)
+- Sequential nonce queue prevents transaction conflicts across all 7 bots
+- WASM SDK warmed at startup for instant first-transaction readiness
 
 ---
 
@@ -414,20 +426,22 @@ DARA-Lend/
 - Single collateral (ALEO only), single borrow (USDCx only)
 
 ### Wave 4
-- 4-program architecture (lending + credits + vault + governance)
+- 3-program architecture (lending + credits + vault)
 - Multi-collateral (ALEO, USDCx, USAD), yield vault, private transfers
-- 45 transitions, ~3.5M compiled variables
+- 34 transitions, ~2.4M compiled variables
 - Complete frontend redesign  14 pages
 - Provable DPS automation  4 bots
 
 ### Wave 5
-- **3 new DeFi modules**: Dark Pool, Sealed-Bid Auctions, Flash Loans
+- **4 new DeFi modules**: Dark Pool, Sealed-Bid Auctions, Flash Loans, Private Governance
+- **Governance v1→v2→v3 evolution**: v1 leaked voter identity via finalize, v2 had hardcoded 200-block voting, v3 (production) delivers configurable 1–30 day voting with `vote()` having NO finalize — zero on-chain trace of voter identity
 - Dark Pool  epoch-based batch trading, oracle mid-price settlement, anti-MEV
 - Sealed-Bid Auctions  BHP256 commitments, configurable bid/reveal windows (15 min to 7 days)
 - Flash Loans  0.09% fee, 102% collateral, bidirectional ALEO/USDCx, 4-step atomic flow
+- Governance v3  ZK-encrypted voting, delegation, 20% quorum, timelock, the first truly private DAO on Aleo
 - 7 programs, 76 transitions, ~5M compiled variables
-- 18 app pages (added Dark Pool, Auctions, Flash Loans, Rate Curve)
-- 6 automated bots (added DarkPool Bot, Auction Bot)
+- 18 app pages (added Dark Pool, Auctions, Flash Loans, Governance, Rate Curve)
+- 7 automated bots via Provable DPS (added DarkPool, Auction, Flash Oracle)
 - 17+ bug fixes and UX improvements across all modules
 - Complete landing page and docs redesign
 

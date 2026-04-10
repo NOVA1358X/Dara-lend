@@ -13,6 +13,7 @@ const sections: DocSection[] = [
   { id: 'governance', label: 'Governance' },
   { id: 'architecture', label: 'Architecture' },
   { id: 'oracle', label: 'Oracle System' },
+  { id: 'automation', label: 'Provable DPS Automation' },
   { id: 'roadmap', label: 'Roadmap' },
   { id: 'faq', label: 'FAQ' },
 ];

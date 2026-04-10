@@ -53,7 +53,7 @@ export function Sidebar() {
         }`}
       >
         <div className={`h-[72px] flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? 'justify-center px-2' : 'px-5'}`}>
-          <NavLink to="/" aria-label="DARA Lend Home" className="flex items-center gap-2.5">
+          <NavLink to="/" aria-label="DARA Home" className="flex items-center gap-2.5">
             <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 shadow-[0_0_16px_rgba(201,221,255,0.2)] flex-shrink-0">
               <img src="/logo.png" alt="DARA" className="w-full h-full object-cover" />
               <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-white/20 pointer-events-none" />

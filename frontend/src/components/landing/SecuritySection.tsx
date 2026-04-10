@@ -13,7 +13,7 @@ const comparisons = [
     ],
   },
   {
-    label: 'DARA Lend',
+    label: 'DARA',
     points: [
       { text: 'Balances encrypted by default', bad: false },
       { text: 'Zero-knowledge proof-based history', bad: false },
@@ -43,7 +43,7 @@ export function SecuritySection() {
             DeFi Was Never Private.<br />Until Now.
           </h2>
           <p className="text-[17px] text-text-secondary font-light max-w-[520px] mx-auto">
-            See how DARA Lend compares to every other lending protocol.
+            See how DARA compares to every other DeFi protocol.
           </p>
         </div>
 

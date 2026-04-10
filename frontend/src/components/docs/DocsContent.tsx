@@ -168,7 +168,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           Privacy Model
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          DARA Lend implements a two-layer privacy model separating individual positions (private)
+          DARA implements a two-layer privacy model separating individual positions (private)
           from protocol health metrics (public). This ensures every borrower&apos;s position remains
           confidential while the protocol&apos;s overall solvency is verifiable by anyone.
         </p>
@@ -184,6 +184,10 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             'Health factors — computed client-side only, never touches the chain',
             'Supplier identity — hidden via private transfer functions per token type',
             'Borrower identity — hashed via BHP256 in LiquidationAuth',
+            'Trade intents — encrypted in TradeIntent records, invisible until epoch settlement',
+            'Auction bids — hidden behind BHP256 commitments (double-hash + secret) until reveal phase',
+            'Flash loan amounts — encrypted in FlashLoanReceipt and FlashRepayReceipt records',
+            'Governance votes — vote() has NO finalize, zero on-chain trace. Only aggregate tallies visible',
             'Liquidator identity — hidden via private outflow transfers',
             'Wallet ↔ Loan links — no on-chain mapping between addresses and loans',
           ].map((item) => (
@@ -203,8 +207,10 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             'Total amount borrowed per debt type (USDCx, USAD, ALEO — keyed by token ID)',
             'Oracle prices per asset (ALEO, USDCx, USAD)',
             'Interest rate parameters (base rate, slope, supply/borrow APY in BPS)',
-            'Circuit breaker status (protocol_paused mapping)',
-            'Privacy version counter',
+            'Dark pool epoch volume and settlement prices (aggregate, not per-user)',
+            'Auction bid counts and highest-bid amounts (not individual sealed bids)',
+            'Governance proposal tallies (aggregate for/against, not individual votes)',
+            'Circuit breaker status per module (protocol_paused, vault_paused, etc.)',
           ].map((item) => (
             <li key={item} className="flex items-start gap-2 text-text-secondary text-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-text-muted mt-1.5 flex-shrink-0" />
@@ -221,7 +227,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           the mempool or blockchain state to identify positions approaching liquidation. This
           eliminates sandwich attacks, front-running, and targeted liquidation sniping that plague
           transparent DeFi protocols like Aave and Compound. On Ethereum, MEV bots extracted
-          over $600M in 2023 by targeting visible liquidation thresholds — on DARA Lend, that
+          over $600M in 2023 by targeting visible liquidation thresholds — on DARA, that
           attack surface is zero.
         </p>
 
@@ -269,7 +275,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           Getting Started
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          Follow these steps to start using DARA Lend on Aleo Testnet.
+          Follow these steps to start using DARA on Aleo Testnet.
         </p>
 
         <div className="space-y-6">
@@ -331,7 +337,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           Smart Contract
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          The DARA Lend protocol is powered by four linked Leo smart contracts deployed on Aleo Testnet:{' '}
+          The DARA protocol is powered by seven linked Leo smart contracts deployed on Aleo Testnet:{' '}
           <a
             href="https://testnet.explorer.provable.com/program/dara_lend_v8.aleo"
             target="_blank"
@@ -653,7 +659,7 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
           {[
             { name: 'submit_buy_intent(usdcx_token, proof, amount, nonce)', desc: 'Lock USDCx as private TradeIntent — buyer enters the epoch.' },
             { name: 'submit_sell_intent(credits, aleo_amount, nonce)', desc: 'Lock ALEO as private TradeIntent — seller enters the epoch.' },
-            { name: 'settle_epoch(epoch_id, oracle_price)', desc: 'Admin: close epoch and record settlement price. Buys/sells match at mid-price.' },
+            { name: 'settle_epoch(epoch_id, oracle_price)', desc: 'Dark Pool Bot (via Provable DPS) settles the epoch at oracle mid-price once both sides have volume.' },
             { name: 'claim_buy_fill(intent, epoch_id)', desc: 'Buyer claims ALEO after settlement. Fill amount = min(buy_vol, sell_vol) prorated.' },
             { name: 'claim_sell_fill(intent, epoch_id)', desc: 'Seller claims USDCx after settlement.' },
             { name: 'cancel_buy(intent) / cancel_sell(intent)', desc: 'Cancel unfilled intent and reclaim locked tokens.' },
@@ -704,7 +710,7 @@ record FillReceipt {
             { step: '1', title: 'Start Auction', desc: 'Admin lists liquidated collateral with configurable bid window (15 min to 7 days) and reveal window.' },
             { step: '2', title: 'Submit Sealed Bid', desc: 'Bidders lock USDCx and submit commitment = BHP256(BHP256(bid_amount) + secret). No one sees the actual bid.' },
             { step: '3', title: 'Reveal Bid', desc: 'After the bid window closes, bidders reveal their actual amount and secret. Contract verifies the commitment matches.' },
-            { step: '4', title: 'Settle', desc: 'Admin settles the auction. Highest revealed bid wins. Winner claims collateral at a discount, others get refunds.' },
+            { step: '4', title: 'Auto-Settle', desc: 'The Auction Bot (via Provable DPS) automatically settles after the reveal window closes. Highest revealed bid wins. Winner claims collateral at a discount, others get automatic refunds.' },
           ].map((item) => (
             <div key={item.step} className="flex items-start gap-4">
               <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-mono text-sm font-bold">
@@ -873,7 +879,7 @@ record FlashRepayReceipt {
           Architecture
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          DARA Lend consists of three main components working together:
+          DARA consists of three main components working together:
         </p>
 
         <div className="space-y-4 mb-6">
@@ -888,7 +894,7 @@ record FlashRepayReceipt {
             },
             {
               title: 'Express Backend — Sentinel (TypeScript)',
-              items: ['5-source oracle aggregation with outlier rejection (median-based)', '6 automated bots: Oracle (30 min), Interest (1 hr), Yield (6 hr), Liquidation, Dark Pool Settlement, Auction Settlement', 'Provable DPS integration for headless on-chain transactions', 'Analytics API with TVL, interest rates, borrow history, flash loan stats'],
+              items: ['5-source oracle aggregation with outlier rejection (median-based)', '7 automated bots: Oracle (30 min), Interest (1 hr), Yield (6 hr), Liquidation (1 min), Dark Pool (5 min), Auction (5 min), Flash Oracle (30 min)', 'Provable DPS integration — JWT auth, useFeeMaster zero-gas proving, sequential nonce queue', 'Analytics API with TVL, interest rates, borrow history, flash loan stats'],
             },
           ].map((section) => (
             <div key={section.title} className="p-4 rounded-lg glass-panel-sm">
@@ -960,7 +966,7 @@ record FlashRepayReceipt {
           Oracle System
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          DARA Lend runs a production-grade 5-source oracle aggregation system that automatically
+          DARA runs a production-grade 5-source oracle aggregation system that automatically
           keeps on-chain pricing accurate without manual intervention — a critical advancement over
           hardcoded or admin-panel-only approaches.
         </p>
@@ -1032,13 +1038,71 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
         </p>
       </section>
 
+      {/* Provable DPS Automation */}
+      <section id="automation">
+        <h2 className="font-headline text-2xl font-bold text-text-primary mb-4">
+          Provable DPS Automation
+        </h2>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          All protocol maintenance runs headlessly through <strong className="text-text-primary">Provable DPS</strong> (Decentralized Private Sequencer).
+          Seven bots execute on-chain transitions without any manual intervention — the protocol operates 24/7.
+        </p>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          How Provable DPS Works
+        </h3>
+        <ol className="space-y-3 mb-6">
+          {[
+            'Bot requests a JWT from Provable API using the consumer ID and API key (X-Provable-API-Key header)',
+            'JWT is returned in the authorization response header — auto-refreshed before expiry',
+            'Bot builds the Leo transition inputs and submits to Provable\'s /prove endpoint',
+            'useFeeMaster: true — Provable covers all gas fees, zero cost to the protocol',
+            'Provable generates the ZK proof server-side and broadcasts the transaction to Aleo',
+            'Sequential nonce queue ensures each bot waits for the previous TX to confirm before submitting',
+          ].map((step, idx) => (
+            <li key={idx} className="flex items-start gap-3 text-text-secondary text-sm">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-mono text-xs font-bold">
+                {idx + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ol>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Seven Automated Bots
+        </h3>
+        <div className="space-y-2 mb-6">
+          {[
+            { bot: 'Oracle Bot', interval: '30 min', action: 'update_oracle_price on dara_lend_v8 — 5-source median push', color: 'text-primary' },
+            { bot: 'Interest Bot', interval: '1 hr', action: 'accrue_interest — updates supply/borrow APY from utilization', color: 'text-text-primary' },
+            { bot: 'Yield Bot', interval: '6 hr', action: 'distribute_yield on vault — allocates protocol fees to depositors', color: 'text-text-primary' },
+            { bot: 'Liquidation Bot', interval: '1 min', action: 'Scans positions, executes liquidate if health factor < 1.0', color: 'text-text-primary' },
+            { bot: 'Dark Pool Bot', interval: '5 min', action: 'settle_epoch — batch-settles matched trades at oracle mid-price', color: 'text-text-primary' },
+            { bot: 'Auction Bot', interval: '5 min', action: 'settle_auction — closes reveal window, awards winner, auto-refunds losers', color: 'text-text-primary' },
+            { bot: 'Flash Oracle Bot', interval: '30 min', action: 'update_oracle_price on dara_flash_v1 — separate oracle for flash contract', color: 'text-text-primary' },
+          ].map((s) => (
+            <div key={s.bot} className="flex items-center gap-3 p-2 rounded bg-white/[0.03]">
+              <span className={`text-sm font-medium min-w-[140px] ${s.color}`}>{s.bot}</span>
+              <span className="text-xs text-primary font-mono min-w-[60px]">{s.interval}</span>
+              <span className="text-xs text-text-muted">{s.action}</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-text-muted">
+          WASM proving SDK is warmed at startup for instant first-transaction readiness. The orchestrator
+          manages all seven bots with staggered intervals and automatic retry on failure.
+        </p>
+      </section>
+
       {/* Roadmap */}
       <section id="roadmap">
         <h2 className="font-headline text-2xl font-bold text-text-primary mb-4">
           Roadmap
         </h2>
         <p className="text-text-secondary leading-relaxed mb-6">
-          DARA Lend is actively evolving. Here is our development roadmap:
+          DARA is actively evolving. Here is our development roadmap:
         </p>
 
         <div className="space-y-4">
@@ -1051,10 +1115,11 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
                 'Dark Pool — epoch-based batch trading, oracle mid-price settlement, anti-MEV',
                 'Sealed-Bid Auctions — BHP256 commitments, configurable bid/reveal windows (15 min to 7 days)',
                 'Flash Loans — 0.09% fee, 102% collateral, bidirectional ALEO↔USDCx, 4-step atomic flow',
-                'Private Governance v3 — configurable voting (1–30 days), ZK votes, delegation, timelock',
+                'Private Governance v1→v2→v3 evolution — from leaked voter identity to fully private ZK votes with NO finalize',
+                'Governance v3: configurable voting (1–30 days), delegation, 20% quorum, timelock execution',
                 'Credits contract — reverse lending: stablecoin collateral → borrow ALEO',
                 'Complete UI/UX redesign — 18 app pages, Obsidian Ledger luxury dark theme',
-                '6 automated bots: Oracle, Interest, Yield, Liquidation, DarkPool, Auction settlement',
+                '7 automated bots via Provable DPS: Oracle, Interest, Yield, Liquidation, DarkPool, Auction, Flash Oracle',
                 '17+ bug fixes and UX improvements across all modules',
               ],
             },
