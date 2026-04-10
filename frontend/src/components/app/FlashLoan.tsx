@@ -4,7 +4,7 @@ import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
   FLASH_PROGRAM_ID, FLASH_TRANSITIONS, FLASH_MAPPINGS,
   BACKEND_API, PRECISION, TX_FEE, TX_FEE_HIGH,
-  ALEO_TESTNET_API,
+  ALEO_TESTNET_API, ADMIN_ADDRESS, FLASH_ADDRESS,
 } from '@/utils/constants';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
@@ -41,6 +41,7 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const {
     flashBorrowUsdcx, flashClaimUsdcx, flashRepayUsdcx, flashWithdrawAleo,
     flashBorrowAleo, flashClaimAleo, flashRepayAleo, flashWithdrawUsdcx,
+    fundFlashPoolAleo, fundFlashPoolUsdcx,
     resetTransaction,
   } = useTransaction(wallet as any);
   const { creditsRecords, usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
@@ -52,6 +53,11 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const [borrowAmount, setBorrowAmount] = useState('');
   const [step, setStep] = useState<'borrow' | 'claim' | 'repay' | 'withdraw'>('borrow');
   const [flashRecords, setFlashRecords] = useState<any[]>([]);
+  const [fundAmount, setFundAmount] = useState('');
+  const [fundToken, setFundToken] = useState<'aleo' | 'usdcx'>('usdcx');
+  const [poolBalance, setPoolBalance] = useState({ aleo: 0, usdcx: 0 });
+
+  const isAdmin = wallet.address === ADMIN_ADDRESS;
 
   // Parse wallet records
   const parsedCredits = (creditsRecords || []).filter((r: any) => !r.spent).map((r: any) => {
@@ -108,6 +114,27 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, [fetchStats]);
+
+  // Fetch flash pool balances (admin view)
+  useEffect(() => {
+    const fetchPoolBalance = async () => {
+      try {
+        const apiUrl = ALEO_TESTNET_API;
+        const parseVal = (raw: string): number => {
+          const cleaned = raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
+          return parseInt(cleaned, 10) || 0;
+        };
+        const [aleoRaw, usdcxRaw] = await Promise.all([
+          fetch(`${apiUrl}/program/credits.aleo/mapping/account/${FLASH_ADDRESS}`).then(r => r.text()).catch(() => '0'),
+          fetch(`${apiUrl}/program/test_usdcx_stablecoin.aleo/mapping/account/${FLASH_ADDRESS}`).then(r => r.text()).catch(() => '0'),
+        ]);
+        setPoolBalance({ aleo: parseVal(aleoRaw), usdcx: parseVal(usdcxRaw) });
+      } catch { /* silent */ }
+    };
+    fetchPoolBalance();
+    const interval = setInterval(fetchPoolBalance, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleBorrow = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
@@ -515,6 +542,77 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
           </div>
         </SpotlightCard>
       </FadeInView>
+
+      {/* Admin: Fund Flash Pool */}
+      {isAdmin && (
+        <FadeInView delay={0.35}>
+          <SpotlightCard className="p-6 border border-primary/20">
+            <h3 className="font-headline text-lg text-primary mb-4">Admin — Fund Flash Pool</h3>
+            <p className="text-text-muted text-xs mb-4">
+              Transfer ALEO or USDCx to the flash loan pool. USDCx flash loans need USDCx liquidity, ALEO flash loans need ALEO liquidity.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-white/[0.02] rounded-lg p-3">
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Pool ALEO Balance</p>
+                <p className="text-lg font-headline text-accent-success mt-1">{(poolBalance.aleo / PRECISION).toFixed(6)} ALEO</p>
+              </div>
+              <div className="bg-white/[0.02] rounded-lg p-3">
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Pool USDCx Balance</p>
+                <p className="text-lg font-headline text-primary mt-1">{(poolBalance.usdcx / PRECISION).toFixed(2)} USDCx</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setFundToken('aleo')}
+                className={`flex-1 py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
+                  fundToken === 'aleo' ? 'bg-accent-success/20 text-accent-success border border-accent-success/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                Fund ALEO
+              </button>
+              <button
+                onClick={() => setFundToken('usdcx')}
+                className={`flex-1 py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
+                  fundToken === 'usdcx' ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                Fund USDCx
+              </button>
+            </div>
+
+            <div className="flex gap-3">
+              <input
+                type="number"
+                value={fundAmount}
+                onChange={(e) => setFundAmount(e.target.value)}
+                placeholder={fundToken === 'aleo' ? 'ALEO amount (e.g. 5.0)' : 'USDCx amount (e.g. 10.0)'}
+                className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+              />
+              <button
+                onClick={async () => {
+                  const parsed = parseFloat(fundAmount);
+                  if (!parsed || parsed <= 0) { toast.error('Enter a valid amount'); return; }
+                  const micro = Math.floor(parsed * PRECISION);
+                  if (fundToken === 'aleo') {
+                    await fundFlashPoolAleo(micro);
+                  } else {
+                    await fundFlashPoolUsdcx(micro);
+                  }
+                  setFundAmount('');
+                  setTimeout(() => refetchRecords(), 3000);
+                }}
+                disabled={!wallet.connected || !fundAmount}
+                className="px-6 py-3 rounded-lg font-label text-xs uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Fund {fundToken === 'aleo' ? 'ALEO' : 'USDCx'}
+              </button>
+            </div>
+            <p className="text-text-muted text-[10px] mt-2 font-mono break-all">Pool: {FLASH_ADDRESS}</p>
+          </SpotlightCard>
+        </FadeInView>
+      )}
 
       {/* Footer */}
       <FadeInView delay={0.4}>

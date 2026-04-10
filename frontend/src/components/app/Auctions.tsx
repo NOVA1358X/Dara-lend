@@ -54,6 +54,7 @@ const BID_DURATION_OPTIONS = [
   { label: '6 hours', blocks: 2160 },
   { label: '12 hours', blocks: 4320 },
   { label: '1 day',   blocks: 8640 },
+  { label: '7 days',  blocks: 60480 },
 ] as const;
 
 const REVEAL_DURATION_OPTIONS = [

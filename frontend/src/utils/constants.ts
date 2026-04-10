@@ -44,6 +44,7 @@ export const VAULT_ADDRESS = 'aleo1w9j2fge5683q5mnldq5x8vuavnhnd6eweyfzvdg3cd9uv
 export const GOV_ADDRESS = 'aleo1jhyy6dtmsctfnca7dcv9tckyfxesnr4j9zv0qqqd6aummhnrj5xsh87huv';
 
 export const DARKPOOL_ADDRESS = 'aleo1yrxw370zssfmulgk33c0hzm0asj6rqjc9dxdtt2v8t8y7x3ez5fqx8quh0';
+export const FLASH_ADDRESS = 'aleo1n0p7h8mar8c7hn3upy3sz3l03zfhjj0zm07fcw37r6xk9zdpsu9qc4fkl4';
 
 export const ADMIN_ADDRESS = 'aleo1fcvvertrnraperrdn7p048vlddlxpd89xszelsgyvwnfyxhmcc8skn2cs8';
 
