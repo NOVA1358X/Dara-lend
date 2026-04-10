@@ -1059,27 +1059,104 @@ export function Auctions({ wallet }: AuctionsProps) {
             )}
 
             {/* Action Button */}
-            <button
-              onClick={
-                tab === 'bid' ? handleSubmitBid
-                : tab === 'reveal' ? handleRevealBid
-                : tab === 'claim' ? handleClaimCollateral
-                : tab === 'redeem' ? handleRedeemCollateral
-                : handleRefundBid
+            {(() => {
+              const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+              const hasSealed = !!getRecordByType('sealed', idHash);
+              const hasRevealed = !!getRecordByType('revealed', idHash);
+              const hasWin = !!getRecordByType('win', idHash);
+              const hasRefund = !!getRecordByType('refund', idHash);
+              const phase = selectedAuction?.phase;
+              const isSettledOrCancelled = phase === 'settled' || phase === 'cancelled';
+
+              // Forfeited: has SealedBid, no RevealedBid, auction already closed
+              const isForfeited = tab === 'claim' && hasSealed && !hasRevealed && isSettledOrCancelled;
+              // Already done: has win record and on redeem tab
+              const alreadyRedeemable = tab === 'redeem' && hasWin;
+              // Already revealed, waiting for settlement on claim
+              const waitingForSettlement = tab === 'claim' && hasRevealed && phase !== 'settled';
+              // Reveal too late
+              const revealTooLate = tab === 'reveal' && hasSealed && isSettledOrCancelled;
+              // Already revealed and auction settled: ready to claim
+              const readyToClaim = tab === 'claim' && hasRevealed && phase === 'settled';
+              // Claim done, ready to redeem
+              const readyToRedeem = tab === 'redeem' && hasWin;
+              // Has refund ready
+              const readyToRefund = tab === 'refund' && hasRefund;
+
+              const isActionDisabled =
+                !wallet.connected ||
+                transactionPending ||
+                (tab === 'bid' && !auctionId) ||
+                isForfeited ||
+                revealTooLate ||
+                waitingForSettlement;
+
+              let buttonLabel = '';
+              if (transactionPending && activeAction === tabAction) {
+                buttonLabel = 'Processing...';
+              } else if (!wallet.connected) {
+                buttonLabel = 'Connect Wallet';
+              } else if (isForfeited) {
+                buttonLabel = 'Deposit Forfeited — Cannot Claim';
+              } else if (revealTooLate) {
+                buttonLabel = 'Reveal Window Closed';
+              } else if (waitingForSettlement) {
+                buttonLabel = 'Waiting for Settlement';
+              } else if (tab === 'bid') {
+                buttonLabel = 'Submit Sealed Bid';
+              } else if (tab === 'reveal') {
+                buttonLabel = hasRevealed ? '✓ Already Revealed' : 'Reveal Bid';
+              } else if (tab === 'claim') {
+                buttonLabel = hasWin ? '✓ Already Claimed' : readyToClaim ? 'Claim Collateral' : 'Claim Collateral';
+              } else if (tab === 'redeem') {
+                buttonLabel = readyToRedeem ? 'Redeem ALEO' : 'Redeem ALEO';
+              } else {
+                buttonLabel = readyToRefund ? 'Collect Refund' : 'Collect Refund';
               }
-              disabled={!wallet.connected || transactionPending || (tab === 'bid' && !auctionId)}
-              className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {transactionPending && activeAction === tabAction
-                ? 'Processing...'
-                : !wallet.connected
-                  ? 'Connect Wallet'
-                  : tab === 'bid' ? 'Submit Sealed Bid'
-                  : tab === 'reveal' ? 'Reveal Bid'
-                  : tab === 'claim' ? 'Claim Collateral'
-                  : tab === 'redeem' ? 'Redeem ALEO'
-                  : 'Collect Refund'}
-            </button>
+
+              // Reveal already done — show Done state, no button needed
+              if (tab === 'reveal' && hasRevealed) {
+                return (
+                  <button
+                    disabled
+                    className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-accent-success/10 text-accent-success border border-accent-success/20 opacity-60 cursor-not-allowed"
+                  >
+                    ✓ Already Revealed — Wait for Settlement
+                  </button>
+                );
+              }
+              // Claim already done — show Done state
+              if (tab === 'claim' && hasWin) {
+                return (
+                  <button
+                    disabled
+                    className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-accent-success/10 text-accent-success border border-accent-success/20 opacity-60 cursor-not-allowed"
+                  >
+                    ✓ Already Claimed — Go to Redeem Tab
+                  </button>
+                );
+              }
+
+              return (
+                <button
+                  onClick={
+                    tab === 'bid' ? handleSubmitBid
+                    : tab === 'reveal' ? handleRevealBid
+                    : tab === 'claim' ? handleClaimCollateral
+                    : tab === 'redeem' ? handleRedeemCollateral
+                    : handleRefundBid
+                  }
+                  disabled={isActionDisabled}
+                  className={`w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all border disabled:cursor-not-allowed ${
+                    isForfeited || revealTooLate
+                      ? 'bg-red-500/5 text-red-400/60 border-red-500/10 opacity-60'
+                      : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 disabled:opacity-40'
+                  }`}
+                >
+                  {buttonLabel}
+                </button>
+              );
+            })()}
 
             {transactionStep === 'confirmed' && activeAction === tabAction && (
               <button
