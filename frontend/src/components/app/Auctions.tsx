@@ -158,6 +158,20 @@ export function Auctions({ wallet }: AuctionsProps) {
     refetchAuctionRecords();
   }, [refetchAuctionRecords]);
 
+  // Helper: find auction record by type, filtered by auction_id hash
+  const getRecordByType = useCallback((type: 'sealed' | 'revealed' | 'win' | 'refund', auctionIdHash?: string) => {
+    return auctionRecords.find((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
+      if (auctionIdHash && !pt.includes(auctionIdHash)) return false;
+      switch (type) {
+        case 'sealed': return pt.includes('commitment') && pt.includes('deposit') && !pt.includes('bid_amount');
+        case 'revealed': return pt.includes('bid_amount') && pt.includes('nonce_hash');
+        case 'win': return pt.includes('collateral_amount') && pt.includes('winning_bid');
+        case 'refund': return pt.includes('refund_amount');
+      }
+    });
+  }, [auctionRecords]);
+
   const fetchStats = useCallback(async () => {
     try {
       const [activeRes, statsRes] = await Promise.all([
@@ -315,12 +329,16 @@ export function Auctions({ wallet }: AuctionsProps) {
     const parsedAmount = parseFloat(bidAmount);
     if (!parsedAmount) { toast.error('Enter your original bid amount'); return; }
 
-    const sealedBidRecord = auctionRecords.find((r: any) => {
-      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
-      return pt.includes('commitment') && pt.includes('deposit');
-    });
+    const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+    const sealedBidRecord = getRecordByType('sealed', idHash);
     if (!sealedBidRecord) {
-      toast.error('No SealedBid record found in your wallet. Did you submit a bid?');
+      toast.error(selectedAuction
+        ? `No SealedBid record for Auction #${selectedAuction.index}. Did you bid on this auction?`
+        : 'No SealedBid record found. Select an auction and place a bid first.');
+      return;
+    }
+    if (selectedAuction?.phase === 'settled' || selectedAuction?.phase === 'cancelled') {
+      toast.error('This auction is already settled/cancelled. You cannot reveal after settlement — your deposit is forfeited.');
       return;
     }
     const sealedPlaintext = (sealedBidRecord.recordPlaintext ?? sealedBidRecord.plaintext ?? '') as string;
@@ -340,12 +358,17 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleClaimCollateral = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    const revealedRecord = auctionRecords.find((r: any) => {
-      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
-      return pt.includes('bid_amount') && pt.includes('deposit') && pt.includes('nonce_hash');
-    });
+    const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+    const revealedRecord = getRecordByType('revealed', idHash);
     if (!revealedRecord) {
-      toast.error('No RevealedBid record found. Reveal your bid first.');
+      const sealedRecord = getRecordByType('sealed', idHash);
+      if (sealedRecord && (selectedAuction?.phase === 'settled' || selectedAuction?.phase === 'cancelled')) {
+        toast.error('Your bid was not revealed before settlement. Your USDCx deposit is forfeited — sealed-bid auctions require revealing before the window closes.');
+      } else if (sealedRecord) {
+        toast.error('You have an unrevealed SealedBid. Go to the Reveal tab first to reveal it before the window closes!');
+      } else {
+        toast.error(selectedAuction ? `No bid records found for Auction #${selectedAuction.index}.` : 'No RevealedBid record found.');
+      }
       return;
     }
     const revealedPlaintext = (revealedRecord.recordPlaintext ?? revealedRecord.plaintext ?? '') as string;
@@ -362,12 +385,15 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleRedeemCollateral = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    const winRecord = auctionRecords.find((r: any) => {
-      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
-      return pt.includes('collateral_amount') && pt.includes('winning_bid');
-    });
+    const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+    const winRecord = getRecordByType('win', idHash);
     if (!winRecord) {
-      toast.error('No AuctionWin record found. Claim collateral first.');
+      const revealedRecord = getRecordByType('revealed', idHash);
+      if (revealedRecord) {
+        toast.error('You have a RevealedBid but no AuctionWin yet. Go to the Claim tab first.');
+      } else {
+        toast.error('No AuctionWin record found. You need to Claim first (Claim tab → Claim Collateral).');
+      }
       return;
     }
     const winPlaintext = (winRecord.recordPlaintext ?? winRecord.plaintext ?? '') as string;
@@ -387,12 +413,12 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleRefundBid = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    const refundRecord = auctionRecords.find((r: any) => {
-      const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
-      return pt.includes('refund_amount') && pt.includes('auction_id');
-    });
+    const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+    const refundRecord = getRecordByType('refund', idHash);
     if (!refundRecord) {
-      toast.error('No AuctionRefund record found. Non-winners get refund records after settlement.');
+      toast.error(selectedAuction
+        ? `No AuctionRefund record for Auction #${selectedAuction.index}. Non-winners get refund records after settlement.`
+        : 'No AuctionRefund record found. Non-winners get refund records after settlement.');
       return;
     }
     const refundPlaintext = (refundRecord.recordPlaintext ?? refundRecord.plaintext ?? '') as string;
@@ -410,9 +436,19 @@ export function Auctions({ wallet }: AuctionsProps) {
   const selectAuction = (auction: LiveAuction) => {
     setSelectedAuction(auction);
     setAuctionId(String(auction.index));
+    const idHash = AUCTION_ID_TABLE[auction.index];
+    const hasSealed = !!getRecordByType('sealed', idHash);
+    const hasRevealed = !!getRecordByType('revealed', idHash);
+    const hasWin = !!getRecordByType('win', idHash);
     if (auction.phase === 'bidding') setTab('bid');
-    else if (auction.phase === 'reveal') setTab('reveal');
-    else if (auction.phase === 'settled') setTab('claim');
+    else if (auction.phase === 'reveal') setTab(hasSealed ? 'reveal' : 'bid');
+    else if (auction.phase === 'settled') {
+      if (hasWin) setTab('redeem');
+      else if (hasRevealed) setTab('claim');
+      else if (hasSealed) setTab('claim'); // show forfeited warning
+      else setTab('bid');
+    } else if (auction.phase === 'cancelled') setTab('refund');
+    else setTab('bid');
   };
 
   const totalBidVol = (Number(stats?.totalBidVolume) || 0) / PRECISION;
@@ -739,19 +775,39 @@ export function Auctions({ wallet }: AuctionsProps) {
           </div>
 
           {selectedAuction && (
-            <div className="bg-white/[0.02] rounded-lg p-3 mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-text-primary font-headline">Auction #{selectedAuction.index}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${phaseBadge(selectedAuction.phase)}`}>
-                  {phaseLabel(selectedAuction.phase)}
-                </span>
+            <div className="bg-white/[0.02] rounded-lg p-3 mb-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-text-primary font-headline">Auction #{selectedAuction.index}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${phaseBadge(selectedAuction.phase)}`}>
+                    {phaseLabel(selectedAuction.phase)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => { setSelectedAuction(null); setAuctionId(''); }}
+                  className="text-text-muted hover:text-text-primary text-xs transition-colors"
+                >
+                  Clear
+                </button>
               </div>
-              <button
-                onClick={() => { setSelectedAuction(null); setAuctionId(''); }}
-                className="text-text-muted hover:text-text-primary text-xs transition-colors"
-              >
-                Clear
-              </button>
+              {/* Record status for this auction */}
+              {(() => {
+                const idHash = AUCTION_ID_TABLE[selectedAuction.index];
+                const hasSealed = !!getRecordByType('sealed', idHash);
+                const hasRevealed = !!getRecordByType('revealed', idHash);
+                const hasWin = !!getRecordByType('win', idHash);
+                const hasRefund = !!getRecordByType('refund', idHash);
+                if (!hasSealed && !hasRevealed && !hasWin && !hasRefund) return null;
+                return (
+                  <div className="flex flex-wrap gap-2 text-[10px] font-label uppercase tracking-wider">
+                    <span className="text-text-muted">Your records:</span>
+                    {hasSealed && <span className="text-accent-warning">● SealedBid</span>}
+                    {hasRevealed && <span className="text-accent-success">● RevealedBid</span>}
+                    {hasWin && <span className="text-primary">● AuctionWin</span>}
+                    {hasRefund && <span className="text-text-secondary">● Refund</span>}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -821,13 +877,47 @@ export function Auctions({ wallet }: AuctionsProps) {
             {/* Reveal Tab */}
             {tab === 'reveal' && (
               <>
-                <div className="bg-accent-warning/5 border border-accent-warning/10 rounded-lg p-3 mb-2">
-                  <p className="text-text-secondary text-xs leading-relaxed">
-                    <strong className="text-accent-warning">Reveal your bid:</strong> Enter the exact bid amount and secret you used when bidding.
-                    The contract verifies your commitment. If your bid is the highest, you win.
-                    You must reveal before the window closes or your deposit is forfeited.
-                  </p>
-                </div>
+                {(() => {
+                  const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+                  const hasSealed = !!getRecordByType('sealed', idHash);
+                  const hasRevealed = !!getRecordByType('revealed', idHash);
+                  const isSettled = selectedAuction?.phase === 'settled';
+                  const isCancelled = selectedAuction?.phase === 'cancelled';
+
+                  if (hasRevealed) return (
+                    <div className="bg-accent-success/5 border border-accent-success/10 rounded-lg p-3 mb-2">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-success">✓ Already revealed!</strong> Your bid is revealed for this auction.
+                        {isSettled ? ' Go to the Claim tab to claim your collateral.' : ' Wait for the auction to be settled.'}
+                      </p>
+                    </div>
+                  );
+                  if (hasSealed && (isSettled || isCancelled)) return (
+                    <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3 mb-2">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-red-400">⚠ Too late:</strong> This auction is already {isSettled ? 'settled' : 'cancelled'}.
+                        You cannot reveal after settlement — your deposit is forfeited.
+                      </p>
+                    </div>
+                  );
+                  if (hasSealed) return (
+                    <div className="bg-accent-warning/5 border border-accent-warning/10 rounded-lg p-3 mb-2">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-warning">SealedBid found!</strong> Enter your original bid amount and secret to reveal.
+                        You must reveal before the window closes or your deposit is forfeited.
+                      </p>
+                    </div>
+                  );
+                  return (
+                    <div className="bg-accent-warning/5 border border-accent-warning/10 rounded-lg p-3 mb-2">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-warning">Reveal your bid:</strong> Enter the exact bid amount and secret you used when bidding.
+                        The contract verifies your commitment. If your bid is the highest, you win.
+                        You must reveal before the window closes or your deposit is forfeited.
+                      </p>
+                    </div>
+                  );
+                })()}
                 <div>
                   <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
                     Your Original Bid Amount (USDCx)
@@ -857,27 +947,98 @@ export function Auctions({ wallet }: AuctionsProps) {
 
             {/* Claim Tab */}
             {tab === 'claim' && (
-              <div className="bg-accent-success/5 border border-accent-success/10 rounded-lg p-3">
-                <p className="text-text-secondary text-xs leading-relaxed">
-                  <strong className="text-accent-success">Winner claim:</strong> After the auction is settled, the highest bidder can claim collateral.
-                  This uses your RevealedBid record and gives you an AuctionWin record. Then go to Redeem to receive ALEO.
-                </p>
-                {auctionRecords.length > 0 && (
-                  <p className="text-text-muted text-xs mt-2">
-                    You have {auctionRecords.length} auction record(s) in your wallet.
-                  </p>
-                )}
-              </div>
+              <>
+                {(() => {
+                  const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+                  const hasSealed = !!getRecordByType('sealed', idHash);
+                  const hasRevealed = !!getRecordByType('revealed', idHash);
+                  const hasWin = !!getRecordByType('win', idHash);
+                  const isSettled = selectedAuction?.phase === 'settled';
+                  const isCancelled = selectedAuction?.phase === 'cancelled';
+
+                  if (hasWin) return (
+                    <div className="bg-accent-success/5 border border-accent-success/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-success">✓ Already claimed!</strong> You have an AuctionWin record for this auction.
+                        Go to the <strong>Redeem</strong> tab to convert it into ALEO credits in your wallet.
+                      </p>
+                    </div>
+                  );
+                  if (hasRevealed) return (
+                    <div className="bg-accent-success/5 border border-accent-success/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-success">Ready to claim:</strong> You have a RevealedBid for this auction.
+                        {isSettled ? ' The auction is settled — click Claim Collateral. If you\'re the highest bidder, you\'ll get an AuctionWin record.' : ' Wait for the auction to be settled, then claim.'}
+                      </p>
+                    </div>
+                  );
+                  if (hasSealed && (isSettled || isCancelled)) return (
+                    <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-red-400">⚠ Deposit forfeited:</strong> You have an unrevealed SealedBid for this auction,
+                        but it has already been {isSettled ? 'settled' : 'cancelled'}. You cannot reveal after settlement.
+                        In sealed-bid auctions, failing to reveal within the reveal window forfeits your deposit.
+                      </p>
+                    </div>
+                  );
+                  if (hasSealed) return (
+                    <div className="bg-accent-warning/5 border border-accent-warning/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-warning">⚠ Reveal first!</strong> You have a SealedBid — go to the <strong>Reveal</strong> tab
+                        to reveal your bid before the window closes. You cannot claim without revealing.
+                      </p>
+                    </div>
+                  );
+                  return (
+                    <div className="bg-accent-success/5 border border-accent-success/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-success">Winner claim:</strong> After the auction is settled, the highest bidder can claim collateral.
+                        This uses your RevealedBid record and gives you an AuctionWin record. Then go to Redeem to receive ALEO.
+                      </p>
+                      {auctionRecords.length > 0 && (
+                        <p className="text-text-muted text-xs mt-2">
+                          You have {auctionRecords.length} auction record(s) in your wallet.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </>
             )}
 
             {/* Redeem Tab */}
             {tab === 'redeem' && (
-              <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
-                <p className="text-text-secondary text-xs leading-relaxed">
-                  <strong className="text-primary">Redeem ALEO:</strong> Convert your AuctionWin record into actual ALEO credits.
-                  This is the final step — the won collateral is transferred to you as a private ALEO record.
-                </p>
-              </div>
+              <>
+                {(() => {
+                  const idHash = selectedAuction ? AUCTION_ID_TABLE[selectedAuction.index] : undefined;
+                  const hasWin = !!getRecordByType('win', idHash);
+                  const hasRevealed = !!getRecordByType('revealed', idHash);
+                  if (hasWin) return (
+                    <div className="bg-accent-success/5 border border-accent-success/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-success">✓ Ready to redeem!</strong> Click Redeem ALEO below to convert your AuctionWin record
+                        into actual ALEO credits in your wallet. This is the final step.
+                      </p>
+                    </div>
+                  );
+                  if (hasRevealed) return (
+                    <div className="bg-accent-warning/5 border border-accent-warning/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-accent-warning">Claim first:</strong> You have a RevealedBid but no AuctionWin yet.
+                        Go to the <strong>Claim</strong> tab first to get your AuctionWin record, then come back to Redeem.
+                      </p>
+                    </div>
+                  );
+                  return (
+                    <div className="bg-primary/5 border border-primary/10 rounded-lg p-3">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-primary">Redeem ALEO:</strong> Convert your AuctionWin record into actual ALEO credits.
+                        Flow: Place Bid → Reveal → Claim → <strong>Redeem</strong>. This is the final step — ALEO is sent privately to your wallet.
+                      </p>
+                    </div>
+                  );
+                })()}
+              </>
             )}
 
             {/* Refund Tab */}
