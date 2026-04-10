@@ -561,7 +561,7 @@ export function Auctions({ wallet }: AuctionsProps) {
             </SpotlightCard>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(activeAuctionsList.length > 0 ? activeAuctionsList : liveAuctions.slice(0, 4)).map((auction) => {
+              {(activeAuctionsList.length > 0 ? activeAuctionsList : liveAuctions).map((auction) => {
                 const isSelected = selectedAuction?.index === auction.index;
                 const blocksRemaining = auction.phase === 'bidding'
                   ? auction.bidEndBlock - auction.currentBlock
@@ -643,7 +643,7 @@ export function Auctions({ wallet }: AuctionsProps) {
           )}
 
           {activeAuctionsList.length > 0 && pastAuctionsList.length > 0 && (
-            <details className="mt-4">
+            <details className="mt-4" open={activeAuctionsList.length > 0}>
               <summary className="text-text-muted text-xs font-label uppercase tracking-wider cursor-pointer hover:text-text-secondary">
                 Past Auctions ({pastAuctionsList.length})
               </summary>
