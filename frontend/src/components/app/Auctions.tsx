@@ -46,8 +46,28 @@ export function Auctions({ wallet }: AuctionsProps) {
   const [activeAction, setActiveAction] = useState<'tab' | 'admin' | null>(null);
   const [adminCollateral, setAdminCollateral] = useState('');
   const [adminMinBid, setAdminMinBid] = useState('');
-  const [adminBidBlocks, setAdminBidBlocks] = useState('100');
-  const [adminRevealBlocks, setAdminRevealBlocks] = useState('50');
+  const [adminBidBlocks, setAdminBidBlocks] = useState('180'); // 30 min
+  const [adminRevealBlocks, setAdminRevealBlocks] = useState('60'); // 10 min
+
+  // Time-to-blocks helpers (~10s per block on Aleo testnet)
+  const SECS_PER_BLOCK = 10;
+  const BID_DURATION_OPTIONS = [
+    { label: '15 min',  blocks: 90 },
+    { label: '30 min',  blocks: 180 },
+    { label: '1 hour',  blocks: 360 },
+    { label: '3 hours', blocks: 1080 },
+    { label: '6 hours', blocks: 2160 },
+    { label: '12 hours', blocks: 4320 },
+    { label: '1 day',   blocks: 8640 },
+  ] as const;
+  const REVEAL_DURATION_OPTIONS = [
+    { label: '5 min',   blocks: 30 },
+    { label: '10 min',  blocks: 60 },
+    { label: '30 min',  blocks: 180 },
+    { label: '1 hour',  blocks: 360 },
+    { label: '3 hours', blocks: 1080 },
+    { label: '6 hours', blocks: 2160 },
+  ] as const;
 
   // Parse USDCx records for bidding
   const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
@@ -323,29 +343,49 @@ export function Auctions({ wallet }: AuctionsProps) {
                   className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
                 />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                  Bid Window (blocks)
+                  Bid Window — how long bidders have to submit
                 </label>
-                <input
-                  type="number"
-                  value={adminBidBlocks}
-                  onChange={(e) => setAdminBidBlocks(e.target.value)}
-                  placeholder="100"
-                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
-                />
+                <div className="flex flex-wrap gap-2">
+                  {BID_DURATION_OPTIONS.map(opt => (
+                    <button
+                      key={opt.blocks}
+                      type="button"
+                      onClick={() => setAdminBidBlocks(String(opt.blocks))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-label transition-all border ${
+                        adminBidBlocks === String(opt.blocks)
+                          ? 'bg-primary/20 border-primary/50 text-primary'
+                          : 'bg-white/[0.03] border-white/[0.06] text-text-muted hover:text-text-secondary hover:border-white/10'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-text-muted text-[10px] mt-1.5">≈ {adminBidBlocks} blocks (~{Math.round(parseInt(adminBidBlocks) * SECS_PER_BLOCK / 60)} min at 10s/block)</p>
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="text-text-muted text-xs font-label uppercase tracking-wider block mb-2">
-                  Reveal Window (blocks)
+                  Reveal Window — how long bidders have to reveal after bid window closes
                 </label>
-                <input
-                  type="number"
-                  value={adminRevealBlocks}
-                  onChange={(e) => setAdminRevealBlocks(e.target.value)}
-                  placeholder="50"
-                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
-                />
+                <div className="flex flex-wrap gap-2">
+                  {REVEAL_DURATION_OPTIONS.map(opt => (
+                    <button
+                      key={opt.blocks}
+                      type="button"
+                      onClick={() => setAdminRevealBlocks(String(opt.blocks))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-label transition-all border ${
+                        adminRevealBlocks === String(opt.blocks)
+                          ? 'bg-accent-warning/20 border-accent-warning/50 text-accent-warning'
+                          : 'bg-white/[0.03] border-white/[0.06] text-text-muted hover:text-text-secondary hover:border-white/10'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-text-muted text-[10px] mt-1.5">≈ {adminRevealBlocks} blocks (~{Math.round(parseInt(adminRevealBlocks) * SECS_PER_BLOCK / 60)} min at 10s/block)</p>
               </div>
             </div>
             <button
