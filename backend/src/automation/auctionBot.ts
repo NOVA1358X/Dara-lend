@@ -104,13 +104,27 @@ export async function runAuctionBotCycle(): Promise<boolean> {
         const revealEndBlock = revealEndMatch ? parseInt(revealEndMatch[1], 10) : 0;
         if (!revealEndBlock || currentBlock <= revealEndBlock) continue;
 
-        // Past reveal phase — check if there are bids
-        const highestBidRaw = await getMappingValue('highest_bid', idHash, programId);
+        // Grace period: wait 60 blocks (~10 min) after reveal phase ends
+        // This allows late TX confirmations and prevents cancelling before bids finalize
+        const GRACE_BLOCKS = 60;
+        if (currentBlock < revealEndBlock + GRACE_BLOCKS) {
+          console.log(`[auction-bot] Auction #${i} in grace period (${revealEndBlock + GRACE_BLOCKS - currentBlock} blocks left)`);
+          continue;
+        }
+
+        // Past reveal phase + grace — check bid_count (NOT highest_bid!)
+        // highest_bid is only set during reveal_bid, NOT submit_sealed_bid
+        // bid_count increments during submit_sealed_bid, so it's the correct indicator
+        const [bidCountRaw, highestBidRaw] = await Promise.all([
+          getMappingValue('bid_count', idHash, programId),
+          getMappingValue('highest_bid', idHash, programId),
+        ]);
+        const bidCount = bidCountRaw ? parseInt(cleanAleo(bidCountRaw), 10) || 0 : 0;
         const highestBid = highestBidRaw ? parseInt(cleanAleo(highestBidRaw), 10) || 0 : 0;
 
-        if (highestBid === 0) {
-          // No bids → cancel
-          console.log(`[auction-bot] Auction #${i} has no bids, cancelling (hash: ${idHash.slice(0, 20)}...)`);
+        if (bidCount === 0) {
+          // Truly no bids at all → cancel
+          console.log(`[auction-bot] Auction #${i} has 0 bids (bid_count=0), cancelling (hash: ${idHash.slice(0, 20)}...)`);
           const cancelTx = await buildAndBroadcastTransaction(
             programId,
             'cancel_auction',
@@ -125,7 +139,7 @@ export async function runAuctionBotCycle(): Promise<boolean> {
           break; // One TX per cycle
         } else {
           // Has bids → settle
-          console.log(`[auction-bot] Settling auction #${i} (highest bid: ${highestBid}, hash: ${idHash.slice(0, 20)}...)`);
+          console.log(`[auction-bot] Settling auction #${i} (bid_count=${bidCount}, highest_bid=${highestBid}, hash: ${idHash.slice(0, 20)}...)`);
           const tx = await buildAndBroadcastTransaction(
             programId,
             'settle_auction',
