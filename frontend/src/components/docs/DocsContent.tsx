@@ -23,6 +23,10 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
       'privacy-model',
       'getting-started',
       'smart-contract',
+      'dark-pool',
+      'auctions',
+      'flash-loans',
+      'governance',
       'architecture',
       'oracle',
       'roadmap',
@@ -54,32 +58,35 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
       {/* Overview */}
       <section id="overview">
         <h1 className="font-headline text-3xl font-bold text-text-primary mb-2">
-          DARA Lend — The Obsidian Ledger
+          DARA — The Obsidian Ledger
         </h1>
         <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary mb-8">
-          Protocol Documentation &middot; v8 &middot; Four-Program Architecture
+          Protocol Documentation &middot; v8 &middot; Seven-Program DeFi Suite
         </p>
         <p className="text-text-secondary leading-relaxed mb-4">
-          DARA Lend is a privacy-first, multi-collateral lending protocol built on the Aleo blockchain.
-          It leverages zero-knowledge proofs to encrypt individual lending positions while maintaining
-          verifiable protocol solvency — protecting borrowers from MEV attacks and front-running.
+          DARA is a privacy-first DeFi suite built on Aleo. It combines multi-collateral lending,
+          dark pool trading, sealed-bid auctions, flash loans, yield vaults, private transfers,
+          and on-chain governance — all powered by zero-knowledge proofs. Every position, trade,
+          and vote is fully encrypted, protecting users from MEV attacks, front-running, and surveillance.
         </p>
         <p className="text-text-secondary leading-relaxed mb-4">
-          v8 introduces a four-program architecture: <strong className="text-text-primary">dara_lend_v8.aleo</strong> (ALEO-collateral lending, 12 transitions),{' '}
-          <strong className="text-text-primary">dara_lend_v8_credits.aleo</strong> (stablecoin-collateral lending, 12 transitions),{' '}
-          <strong className="text-text-primary">dara_lend_v8_vault.aleo</strong> (yield vault + private transfers, 10 transitions), and{' '}
-          <strong className="text-text-primary">dara_lend_v8_gov_v3.aleo</strong> (governance + private voting, 12 transitions).
-          Users supply ALEO, USDCx, or USAD, borrow against them, earn yield on stablecoin deposits,
-          govern the protocol via proposals, and transfer tokens with zero on-chain traceability.
+          v8 deploys seven programs: <strong className="text-text-primary">dara_lend_v8.aleo</strong> (ALEO-collateral lending),{' '}
+          <strong className="text-text-primary">dara_lend_v8_credits.aleo</strong> (stablecoin-collateral lending),{' '}
+          <strong className="text-text-primary">dara_lend_v8_vault.aleo</strong> (yield vault + private transfers),{' '}
+          <strong className="text-text-primary">dara_lend_v8_gov_v3.aleo</strong> (private governance),{' '}
+          <strong className="text-text-primary">dara_dark_pool_v1.aleo</strong> (batch dark pool trading),{' '}
+          <strong className="text-text-primary">dara_auction_v1.aleo</strong> (sealed-bid auctions), and{' '}
+          <strong className="text-text-primary">dara_flash_v1.aleo</strong> (flash loans).
+          Together: 76 transitions, ~5M compiled variables, 11+ private record types.
         </p>
 
         <div className="grid grid-cols-2 gap-4 mt-8">
           {[
-            { value: '100%', label: 'Private Positions', desc: 'All positions encrypted by default' },
-            { value: '0', label: 'MEV Attack Surface', desc: 'Liquidation prices invisible to bots' },
-            { value: '45', label: 'On-Chain Transitions', desc: '12+12 lending + 10 vault + 11 gov across 4 programs' },
-            { value: '3.5M', label: 'Compiled Variables', desc: '1.03M main + 1.31M credits + 822K vault + 380K gov' },
-            { value: '7', label: 'Private Record Types', desc: 'Collateral, Debt, Liquidation, Pool, Transfer' },
+            { value: '7', label: 'Smart Contracts', desc: 'Lending, Credits, Vault, Gov, Dark Pool, Auctions, Flash' },
+            { value: '76', label: 'On-Chain Transitions', desc: '12+12+10+12+9+10+11 across all programs' },
+            { value: '~5M', label: 'Compiled Variables', desc: '1.03M + 1.31M + 822K + 404K + 653K + 679K + 943K' },
+            { value: '11+', label: 'Private Record Types', desc: 'Collateral, Debt, Flash, Auction, Trade, Pool, Gov, Transfer' },
+            { value: '0', label: 'MEV Attack Surface', desc: 'Sealed bids + dark pool batch = no front-running' },
             { value: '5', label: 'Oracle Sources', desc: 'CoinGecko, CryptoCompare, Coinbase, Gate.io, CMC' },
           ].map((stat) => (
             <div key={stat.label} className="p-4 rounded-lg glass-panel-sm">
@@ -123,6 +130,30 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
               rel="noopener noreferrer"
               className="font-mono text-primary hover:underline"
             >dara_lend_v8_gov_v3.aleo</a>
+            {' · '}
+            <strong className="text-primary">Dark Pool:</strong>{' '}
+            <a
+              href="https://testnet.explorer.provable.com/program/dara_dark_pool_v1.aleo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-primary hover:underline"
+            >dara_dark_pool_v1.aleo</a>
+            {' · '}
+            <strong className="text-primary">Auctions:</strong>{' '}
+            <a
+              href="https://testnet.explorer.provable.com/program/dara_auction_v1.aleo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-primary hover:underline"
+            >dara_auction_v1.aleo</a>
+            {' · '}
+            <strong className="text-primary">Flash:</strong>{' '}
+            <a
+              href="https://testnet.explorer.provable.com/program/dara_flash_v1.aleo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-primary hover:underline"
+            >dara_flash_v1.aleo</a>
             {' · '}
             <strong className="text-text-primary">Network:</strong> Aleo Testnet
             {' · '}
@@ -583,6 +614,259 @@ test_usad_stablecoin.aleo (+ MerkleProof freeze-list)
 merkle_tree.aleo                 → Freeze-list compliance verification`}</CodeBlock>
       </section>
 
+      {/* Dark Pool */}
+      <section id="dark-pool">
+        <h2 className="font-headline text-2xl font-bold text-text-primary mb-4">
+          Dark Pool
+        </h2>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          The DARA Dark Pool (<strong className="text-text-primary">dara_dark_pool_v1.aleo</strong>, 9 transitions)
+          enables private, MEV-resistant trading of ALEO/USDCx pairs. Trades are submitted as encrypted intents
+          and batch-settled at the oracle mid-price — no order book, no front-running, no price manipulation.
+        </p>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          How It Works
+        </h3>
+        <div className="space-y-3 mb-6">
+          {[
+            { step: '1', title: 'Submit Intent', desc: 'Buyers lock USDCx, sellers lock ALEO. Each intent is a private record — no one sees your order size or direction.' },
+            { step: '2', title: 'Epoch Settles', desc: 'The settlement bot closes the current epoch and records the oracle mid-price. All buys and sells in that epoch match at the same fair price.' },
+            { step: '3', title: 'Claim Fill', desc: 'Buyers claim ALEO, sellers claim USDCx. If there\'s a volume imbalance, fills are prorated. Unfilled amounts can be cancelled.' },
+          ].map((item) => (
+            <div key={item.step} className="flex items-start gap-4">
+              <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-mono text-sm font-bold">
+                {item.step}
+              </span>
+              <div>
+                <h4 className="font-headline text-base font-semibold text-text-primary mb-1">{item.title}</h4>
+                <p className="text-sm text-text-secondary leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Transitions (9)
+        </h3>
+        <div className="space-y-3">
+          {[
+            { name: 'submit_buy_intent(usdcx_token, proof, amount, nonce)', desc: 'Lock USDCx as private TradeIntent — buyer enters the epoch.' },
+            { name: 'submit_sell_intent(credits, aleo_amount, nonce)', desc: 'Lock ALEO as private TradeIntent — seller enters the epoch.' },
+            { name: 'settle_epoch(epoch_id, oracle_price)', desc: 'Admin: close epoch and record settlement price. Buys/sells match at mid-price.' },
+            { name: 'claim_buy_fill(intent, epoch_id)', desc: 'Buyer claims ALEO after settlement. Fill amount = min(buy_vol, sell_vol) prorated.' },
+            { name: 'claim_sell_fill(intent, epoch_id)', desc: 'Seller claims USDCx after settlement.' },
+            { name: 'cancel_buy(intent) / cancel_sell(intent)', desc: 'Cancel unfilled intent and reclaim locked tokens.' },
+            { name: 'pause_darkpool() / resume_darkpool()', desc: 'Admin emergency controls.' },
+          ].map((t) => (
+            <div key={t.name} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <p className="font-mono text-xs text-primary mb-1">{t.name}</p>
+              <p className="text-xs text-text-secondary">{t.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Records
+        </h3>
+        <CodeBlock>{`record TradeIntent {
+    owner: address,
+    epoch: u64,
+    amount: u128,        // locked token amount
+    side: u8,            // 0=buy, 1=sell
+    nonce_hash: field,
+}
+
+record FillReceipt {
+    owner: address,
+    epoch: u64,
+    fill_amount: u128,
+    side: u8,
+}`}</CodeBlock>
+      </section>
+
+      {/* Sealed-Bid Auctions */}
+      <section id="auctions">
+        <h2 className="font-headline text-2xl font-bold text-text-primary mb-4">
+          Sealed-Bid Auctions
+        </h2>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          <strong className="text-text-primary">dara_auction_v1.aleo</strong> (10 transitions) implements the first
+          anti-MEV sealed-bid auction system on Aleo. Liquidated collateral is auctioned privately —
+          bids are hidden behind BHP256 commitments until the reveal phase.
+        </p>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Auction Flow
+        </h3>
+        <div className="space-y-3 mb-6">
+          {[
+            { step: '1', title: 'Start Auction', desc: 'Admin lists liquidated collateral with configurable bid window (15 min to 7 days) and reveal window.' },
+            { step: '2', title: 'Submit Sealed Bid', desc: 'Bidders lock USDCx and submit commitment = BHP256(BHP256(bid_amount) + secret). No one sees the actual bid.' },
+            { step: '3', title: 'Reveal Bid', desc: 'After the bid window closes, bidders reveal their actual amount and secret. Contract verifies the commitment matches.' },
+            { step: '4', title: 'Settle', desc: 'Admin settles the auction. Highest revealed bid wins. Winner claims collateral at a discount, others get refunds.' },
+          ].map((item) => (
+            <div key={item.step} className="flex items-start gap-4">
+              <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-mono text-sm font-bold">
+                {item.step}
+              </span>
+              <div>
+                <h4 className="font-headline text-base font-semibold text-text-primary mb-1">{item.title}</h4>
+                <p className="text-sm text-text-secondary leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Commitment Scheme
+        </h3>
+        <CodeBlock>{`// Anti-MEV sealed-bid commitment
+commitment = BHP256::hash_to_field(
+    BHP256::hash_to_field(actual_bid_amount) + secret_field
+)
+// Reveal phase verifies: recomputed commitment == stored commitment
+// If mismatch → bid is invalid, deposit forfeited`}</CodeBlock>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Records
+        </h3>
+        <CodeBlock>{`record SealedBid {
+    owner: address, auction_id: field,
+    deposit_amount: u128, commitment: field,
+}
+record RevealedBid {
+    owner: address, auction_id: field,
+    actual_bid: u128, deposit_amount: u128,
+}
+record AuctionWin { owner, auction_id, collateral_amount, winning_bid }
+record AuctionRefund { owner, auction_id, refund_amount }`}</CodeBlock>
+      </section>
+
+      {/* Flash Loans */}
+      <section id="flash-loans">
+        <h2 className="font-headline text-2xl font-bold text-text-primary mb-4">
+          Flash Loans
+        </h2>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          <strong className="text-text-primary">dara_flash_v1.aleo</strong> (11 transitions) provides instant
+          collateral-backed flash lending. Bidirectional ALEO↔USDCx, 0.09% fee (9 BPS),
+          102% collateral ratio. All positions are private records.
+        </p>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Four-Step Atomic Flow
+        </h3>
+        <div className="space-y-3 mb-6">
+          {[
+            { step: '1', title: 'Lock Collateral (Borrow)', desc: 'Deposit 102% collateral (ALEO for USDCx loans, USDCx for ALEO loans). Receive a private FlashLoanReceipt.' },
+            { step: '2', title: 'Claim Tokens', desc: 'Use your receipt to claim the borrowed tokens from the flash pool. Tokens arrive as private records.' },
+            { step: '3', title: 'Repay + 0.09% Fee', desc: 'Return the exact borrowed amount plus the 9 BPS fee. Receive a FlashRepayReceipt confirming repayment.' },
+            { step: '4', title: 'Withdraw Collateral', desc: 'Use your repay receipt to withdraw your full collateral. The flash loan cycle is complete — all private.' },
+          ].map((item) => (
+            <div key={item.step} className="flex items-start gap-4">
+              <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-mono text-sm font-bold">
+                {item.step}
+              </span>
+              <div>
+                <h4 className="font-headline text-base font-semibold text-text-primary mb-1">{item.title}</h4>
+                <p className="text-sm text-text-secondary leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Parameters
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { param: 'Fee', value: '0.09%', detail: '9 BPS — lowest on Aleo' },
+            { param: 'Collateral Ratio', value: '102%', detail: '10,200 / 10,000 BPS' },
+            { param: 'Min Flash Amount', value: '100,000', detail: 'USDCx microtokens (0.1 USDCx)' },
+            { param: 'Max Flash Amount', value: '100B', detail: 'USDCx microtokens per loan' },
+            { param: 'Directions', value: 'ALEO↔USDCx', detail: 'Borrow either, collateral in the other' },
+            { param: 'Oracle', value: 'Own Feed', detail: 'Independent price oracle for flash loans' },
+          ].map((p) => (
+            <div key={p.param} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <p className="text-xs text-text-muted mb-0.5">{p.param}</p>
+              <p className="text-sm font-semibold text-text-primary">{p.value}</p>
+              <p className="text-[11px] text-text-muted">{p.detail}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Records
+        </h3>
+        <CodeBlock>{`record FlashLoanReceipt {
+    owner: address,
+    borrow_amount: u128, borrow_token: u8,
+    collateral_amount: u128, collateral_token: u8,
+    fee_amount: u128, nonce_hash: field,
+}
+record FlashRepayReceipt {
+    owner: address,
+    amount_repaid: u128,
+    collateral_returned: u128,
+    collateral_token: u8, nonce_hash: field,
+}`}</CodeBlock>
+      </section>
+
+      {/* Governance */}
+      <section id="governance">
+        <h2 className="font-headline text-2xl font-bold text-text-primary mb-4">
+          Governance
+        </h2>
+        <p className="text-text-secondary leading-relaxed mb-4">
+          <strong className="text-text-primary">dara_lend_v8_gov_v3.aleo</strong> (12 transitions) implements
+          fully private on-chain governance. Users vote with zero-knowledge proofs — voter identity
+          never appears on-chain. The first production private DAO on Aleo.
+        </p>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Governance Flow
+        </h3>
+        <div className="space-y-3 mb-6">
+          {[
+            { step: '1', title: 'Claim GOV Tokens', desc: 'Any user can claim 1,000 governance tokens via the faucet. Tokens represent voting power.' },
+            { step: '2', title: 'Create Proposal', desc: 'Proposers (min 100 power) select a parameter change, set duration (1–30 days), and submit on-chain.' },
+            { step: '3', title: 'Vote Privately', desc: 'Cast your vote (For/Against) — the vote() transition has NO finalize, showing as PRIVATE in Shield wallet. Your identity is never leaked.' },
+            { step: '4', title: 'Tally & Execute', desc: 'After voting ends + timelock period (min 1 day), admin tallies votes. If quorum (20%) met + majority for → proposal executes automatically.' },
+          ].map((item) => (
+            <div key={item.step} className="flex items-start gap-4">
+              <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-mono text-sm font-bold">
+                {item.step}
+              </span>
+              <div>
+                <h4 className="font-headline text-base font-semibold text-text-primary mb-1">{item.title}</h4>
+                <p className="text-sm text-text-secondary leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="font-headline text-lg font-semibold text-text-primary mt-6 mb-3">
+          Key Parameters
+        </h3>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {[
+            { param: 'Voting Duration', value: '1–30 days', detail: '8,640 to 259,200 blocks' },
+            { param: 'Timelock', value: '25% of vote', detail: 'Minimum 1 day (8,640 blocks)' },
+            { param: 'Quorum', value: '20%', detail: 'Of total governance token supply' },
+            { param: 'Proposal Types', value: '5', detail: 'Rate, LTV, Liq threshold, Pause, Admin' },
+            { param: 'Privacy', value: '100%', detail: 'vote() has NO finalize — zero on-chain trace' },
+            { param: 'Delegation', value: 'Supported', detail: 'Delegate/undelegate voting power' },
+          ].map((p) => (
+            <div key={p.param} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <p className="text-xs text-text-muted mb-0.5">{p.param}</p>
+              <p className="text-sm font-semibold text-text-primary">{p.value}</p>
+              <p className="text-[11px] text-text-muted">{p.detail}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Architecture */}
       <section id="architecture">
         <h2 className="font-headline text-2xl font-bold text-text-primary mb-4">
@@ -595,16 +879,16 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
         <div className="space-y-4 mb-6">
           {[
             {
-              title: 'Leo Smart Contracts (4 programs — v8)',
-              items: ['Main: 482 statements, 1.03M variables — Credits: 381 statements, 1.31M variables — Vault: 272 statements, 822K variables — Gov: 223 statements, 380K variables', '45 total transitions (12+12 lending + 10 vault + 11 governance), 7+ private records', 'Imports credits.aleo + test_usdcx_stablecoin.aleo + test_usad_stablecoin.aleo + merkle_tree.aleo', 'Yield vault pools, private transfers, governance proposals & voting, auto liquidation bot, circuit breaker'],
+              title: 'Leo Smart Contracts (7 programs — v8)',
+              items: ['76 total transitions across 7 programs, ~5M compiled variables, 11+ private record types', 'Core lending (12+12), Vault (10), Governance (12), Dark Pool (9), Auctions (10), Flash Loans (11)', 'Imports credits.aleo, test_usdcx_stablecoin.aleo, test_usad_stablecoin.aleo, merkle_tree.aleo', 'Independent circuit breakers per module, BHP256 commitment schemes, replay protection'],
             },
             {
               title: 'React Frontend (Vite + TypeScript)',
-              items: ['Shield Wallet integration (@provablehq/aleo-wallet-adaptor)', 'Private record decryption and display', 'Real-time analytics dashboard with multi-collateral composition', 'Luxury "Obsidian Ledger" design system (Gilda Display + Inter + Space Grotesk)'],
+              items: ['Shield Wallet integration for private record management', '18 app pages: Dashboard, Supply, Borrow, Repay, Withdraw, Positions, Yield, Transfer, Dark Pool, Auctions, Flash Loans, Governance, Analytics, Rates, History, Stats, Liquidate, Admin', 'Real-time analytics with multi-collateral composition', 'Luxury "Obsidian Ledger" design system'],
             },
             {
               title: 'Express Backend — Sentinel (TypeScript)',
-              items: ['5-source oracle price aggregation with outlier rejection', 'Manual on-chain price updates via admin wallet', 'Analytics API with TVL time-series, interest rates, and borrow history', 'Liquidation monitoring (Sentinel) with circuit breaker awareness'],
+              items: ['5-source oracle aggregation with outlier rejection (median-based)', '6 automated bots: Oracle (30 min), Interest (1 hr), Yield (6 hr), Liquidation, Dark Pool Settlement, Auction Settlement', 'Provable DPS integration for headless on-chain transactions', 'Analytics API with TVL, interest rates, borrow history, flash loan stats'],
             },
           ].map((section) => (
             <div key={section.title} className="p-4 rounded-lg glass-panel-sm">
@@ -762,42 +1046,35 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             {
               phase: 'Wave 5 — Current Release (v8)',
               items: [
-                'Four-program architecture — dara_lend_v8.aleo (12) + dara_lend_v8_credits.aleo (12) + dara_lend_v8_vault.aleo (10) + dara_lend_v8_gov_v3.aleo (12)',
-                'Governance — GovernanceToken minting/burning, proposals, delegation, voting, execution',
-                'Credits contract — stablecoin collateral supply, ALEO borrow against stablecoins',
-                'Yield Vault — deposit USDCx/USAD stablecoins, earn protocol fees, redeem PoolShare records',
-                'Private Transfers — ZK-shielded relay breaks sender-recipient on-chain link completely',
-                'Admin Panel — distribute yield, pause/resume protocol + vault, accrue interest (manual fallback)',
-                'Multi-collateral vaults — ALEO, USDCx, USAD as collateral types with cross-pair borrowing',
-                'Interest rate model — on-chain base rate + slope (BPS), utilization-based APY',
-                'Emergency circuit breaker — independent pause/resume for lending core and vault',
-                'MerkleProof freeze-list compliance for all stablecoin operations',
-                '45 transitions, ~3.5M compiled variables, 7+ private record types',
-                'Analytics dashboard — TVL, oracle prices, vault stats, interest rates',
-                'Complete UI/UX redesign — Obsidian Ledger luxury dark theme with 14 app pages',
-                '5-source Oracle — CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap',
-                'Provable DPS Automation — Oracle Bot (30 min), Interest Bot (1 hr), Yield Bot (6 hr), Liquidation Monitor',
-                'Solvency Proof dashboard — live bot health, collateral vs debt, explorer links',
+                'Seven-program architecture — 76 transitions, ~5M compiled variables',
+                'Three new DeFi modules: Dark Pool, Sealed-Bid Auctions, Flash Loans',
+                'Dark Pool — epoch-based batch trading, oracle mid-price settlement, anti-MEV',
+                'Sealed-Bid Auctions — BHP256 commitments, configurable bid/reveal windows (15 min to 7 days)',
+                'Flash Loans — 0.09% fee, 102% collateral, bidirectional ALEO↔USDCx, 4-step atomic flow',
+                'Private Governance v3 — configurable voting (1–30 days), ZK votes, delegation, timelock',
+                'Credits contract — reverse lending: stablecoin collateral → borrow ALEO',
+                'Complete UI/UX redesign — 18 app pages, Obsidian Ledger luxury dark theme',
+                '6 automated bots: Oracle, Interest, Yield, Liquidation, DarkPool, Auction settlement',
+                '17+ bug fixes and UX improvements across all modules',
               ],
             },
             {
-              phase: 'Wave 3 — Previous Release (v5)',
+              phase: 'Wave 3 — Previous Release',
               items: [
                 'Single program, 6 transitions — basic supply/borrow/repay/liquidate/withdraw',
                 'Single collateral (ALEO only), single borrow (USDCx only)',
                 'Dual-record architecture — DebtPosition + LiquidationAuth with hashed borrower',
                 '5-source oracle aggregation',
-                '0.5% origination fee + 5% liquidation incentive',
               ],
             },
             {
               phase: 'Future Vision',
               items: [
-                'Cross-chain collateral via Shield Wallet NEAR Intents',
-                'Governance token and decentralized admin transition',
-                'Flash loan protection mechanisms',
-                'Multi-oracle per asset (not just ALEO/USD)',
+                'Cross-chain collateral via NEAR Intents',
+                'Decentralized admin transition through governance',
+                'Multi-asset oracle feeds (not just ALEO/USD)',
                 'Mainnet deployment after security audit',
+                'SDK for third-party integrations',
               ],
             },
           ].map((section) => (
@@ -833,11 +1110,27 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'What collateral types are supported?',
-              a: 'v6 supports three collateral types: ALEO credits (native), USDCx stablecoin, and USAD stablecoin. Each has dedicated supply, withdraw, and liquidation transitions. Stablecoin operations use MerkleProof for freeze-list compliance.',
+              a: 'Three collateral types: ALEO credits (native), USDCx stablecoin, and USAD stablecoin. Each has dedicated supply, withdraw, and liquidation transitions. Stablecoin operations use MerkleProof for freeze-list compliance.',
             },
             {
               q: 'What can I borrow?',
-              a: 'You can borrow USDCx or USAD stablecoins against ALEO collateral, or borrow ALEO credits against stablecoin collateral. Each borrow type has its own transition with the same LTV/fee parameters.',
+              a: 'You can borrow USDCx or USAD stablecoins against ALEO collateral, or borrow ALEO credits against stablecoin collateral via the Credits contract. Each borrow type has its own transition with the same LTV/fee parameters.',
+            },
+            {
+              q: 'What is the Dark Pool?',
+              a: 'The dark pool enables private OTC-style trading without exposing order intent. Makers submit encrypted TradeIntent records, takers fill against the oracle mid-price in epoch-based batches, and settlement happens atomically. No one can front-run your trades because intents are invisible until matched.',
+            },
+            {
+              q: 'How do Sealed-Bid Auctions work?',
+              a: 'Auctions use a commit-reveal scheme: bidders submit a BHP256 hash of (amount + secret) during the bidding phase, then reveal during the reveal phase. The contract verifies the hash matches. Highest bidder wins the collateral; losers get automatic refunds. Bid windows range from 15 minutes to 7 days.',
+            },
+            {
+              q: 'What are Flash Loans?',
+              a: 'Flash loans let you borrow ALEO or USDCx with minimal collateral (102%) for a single atomic flow: borrow → receive FlashLoanReceipt → repay (principal + 0.09% fee) → withdraw collateral. The entire cycle is on-chain and fully private. 4 transitions handle the complete lifecycle.',
+            },
+            {
+              q: 'How does Governance work?',
+              a: 'GovernanceToken holders can create proposals, delegate voting power, and cast ZK-verified votes during a configurable voting period (1–30 days). Proposals require a 20% quorum to pass. All votes are encrypted — no one can see how you voted, only the aggregate result.',
             },
             {
               q: 'What happens if I get liquidated?',
@@ -845,31 +1138,23 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'What wallet do I need?',
-              a: 'DARA Lend works with the Shield Wallet browser extension, which supports Aleo\'s private record model, zero-knowledge proof generation, and direct transaction signing.',
+              a: 'DARA works with the Shield Wallet browser extension, which supports Aleo\'s private record model, zero-knowledge proof generation, and direct transaction signing.',
             },
             {
-              q: 'What network is DARA Lend deployed on?',
-              a: 'Currently on Aleo Testnet. Main: dara_lend_v8.aleo (TX: at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg). Credits: dara_lend_v8_credits.aleo (TX: at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp). Vault: dara_lend_v8_vault.aleo (TX: at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t). Gov: dara_lend_v8_gov_v3.aleo (TX: at1azr6jrvyx807glrxydwuuf8wtx5m7h3y7jrax80v2m4gmteawcxqg5d4nr). Mainnet deployment planned after audits.',
+              q: 'What network is DARA deployed on?',
+              a: 'Currently on Aleo Testnet with 7 deployed contracts: dara_lend_v8, dara_lend_v8_credits, dara_lend_v8_vault, dara_lend_v8_gov_v3, dara_dark_pool_v1, dara_auction_v1, and dara_flash_v1. All are live and verifiable on the Aleo explorer. Mainnet deployment planned after audits.',
             },
             {
               q: 'What is the Yield Vault?',
-              a: 'v7 adds a yield vault where users deposit USDCx or USAD stablecoins and receive PoolShare records. Protocol fees are distributed as yield by the admin. When redeeming, users get their original deposit plus accumulated yield (minus 0.1% fee). All deposits use private token records.',
+              a: 'The yield vault lets users deposit USDCx or USAD stablecoins and receive PoolShare records. Protocol fees are distributed as yield by the admin. When redeeming, users get their original deposit plus accumulated yield (minus 0.1% fee). All deposits use private token records.',
             },
             {
               q: 'How do Private Transfers work?',
               a: 'The vault contract provides a ZK-shielded relay that atomically deposits your tokens and re-mints them to the recipient in a single transaction. This breaks the on-chain link between sender and recipient completely. Nonce replay protection prevents double-spending.',
             },
             {
-              q: 'What is the interest rate model?',
-              a: 'v6 introduces an on-chain interest rate model with configurable base rate and slope parameters (in BPS). The admin can set these via set_rate_params, and accrue_interest computes supply/borrow APY based on current utilization.',
-            },
-            {
-              q: 'What is the circuit breaker?',
-              a: 'The admin can call emergency_pause() to halt all protocol operations (supply, borrow, withdraw) if anomalies are detected. resume_protocol() re-enables operations. The Sentinel monitor also tracks pause status.',
-            },
-            {
               q: 'How does the oracle prevent manipulation?',
-              a: 'The oracle aggregates prices from 5 independent sources, rejects outliers, and uses median filtering. On-chain, the smart contract enforces a 15% deviation cap per update, a minimum 5-block interval between updates, and monotonic round counters to prevent replay attacks.',
+              a: 'The oracle aggregates prices from 5 independent sources (CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap), rejects outliers, and uses median filtering. On-chain, the smart contract enforces a 15% deviation cap per update, a minimum 5-block interval between updates, and monotonic round counters to prevent replay attacks.',
             },
           ].map((item, idx) => (
             <div key={idx}>

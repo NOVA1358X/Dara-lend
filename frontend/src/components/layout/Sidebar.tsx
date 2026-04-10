@@ -14,24 +14,30 @@ import { LinkIcon } from '@/components/icons/LinkIcon';
 import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
 
 const navItems = [
+  // ── Overview ──
   { path: '/app', label: 'Dashboard', icon: ShieldIcon, end: true },
+  // ── Core Lending ──
   { path: '/app/supply', label: 'Supply', icon: WalletIcon, end: false },
   { path: '/app/borrow', label: 'Borrow', icon: ArrowDownIcon, end: false },
   { path: '/app/repay', label: 'Repay', icon: UnlockIcon, end: false },
   { path: '/app/withdraw', label: 'Withdraw', icon: KeyIcon, end: false },
   { path: '/app/positions', label: 'Positions', icon: LockIcon, end: false },
-  { path: '/app/liquidate', label: 'Liquidate', icon: ZapIcon, end: false },
-  { path: '/app/yield', label: 'Yield', icon: LinkIcon, end: false },
+  // ── DeFi Modules ──
+  { path: '/app/yield', label: 'Yield Vault', icon: LinkIcon, end: false },
   { path: '/app/transfer', label: 'Transfer', icon: EyeOffIcon, end: false },
-  { path: '/app/history', label: 'History', icon: ClockIcon, end: false },
-  { path: '/app/analytics', label: 'Analytics', icon: ChartIcon, end: false },
-  { path: '/app/stats', label: 'Stats', icon: ShieldIcon, end: false },
-  { path: '/app/admin', label: 'Admin', icon: KeyIcon, end: false },
-  { path: '/app/governance', label: 'Governance', icon: ShieldIcon, end: false },
-  { path: '/app/rates', label: 'Rate Curve', icon: ChartIcon, end: false },
   { path: '/app/darkpool', label: 'Dark Pool', icon: EyeOffIcon, end: false },
   { path: '/app/auctions', label: 'Auctions', icon: ZapIcon, end: false },
   { path: '/app/flash', label: 'Flash Loans', icon: LinkIcon, end: false },
+  // ── Governance ──
+  { path: '/app/governance', label: 'Governance', icon: ShieldIcon, end: false },
+  // ── Analytics ──
+  { path: '/app/analytics', label: 'Analytics', icon: ChartIcon, end: false },
+  { path: '/app/rates', label: 'Rate Curve', icon: ChartIcon, end: false },
+  { path: '/app/history', label: 'History', icon: ClockIcon, end: false },
+  { path: '/app/stats', label: 'Stats', icon: ShieldIcon, end: false },
+  // ── Admin ──
+  { path: '/app/liquidate', label: 'Liquidate', icon: ZapIcon, end: false },
+  { path: '/app/admin', label: 'Admin', icon: KeyIcon, end: false },
 ];
 
 export function Sidebar() {

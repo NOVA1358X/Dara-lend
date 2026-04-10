@@ -58,7 +58,7 @@ export function HeroSection() {
             className="mb-6"
           >
             <span className="font-label text-label uppercase text-secondary tracking-[0.3em]">
-              <TextScramble text="Privacy-First Lending on Aleo" speed={25} delay={300} />
+              <TextScramble text="The Privacy-First DeFi Suite on Aleo" speed={25} delay={300} />
             </span>
           </motion.div>
 
@@ -68,7 +68,7 @@ export function HeroSection() {
             transition={{ delay: 0.2, duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="font-headline text-hero-mobile md:text-hero text-text-primary mb-6"
           >
-            Borrow Without<br />Being Watched.
+            DeFi Without<br />Being Watched.
           </motion.h1>
 
           <motion.p
@@ -77,9 +77,9 @@ export function HeroSection() {
             transition={{ delay: 0.4, duration: 0.7 }}
             className="text-[17px] leading-relaxed text-text-secondary max-w-[480px] mb-10 font-light"
           >
-            Your loans, collateral, and identity stay completely encrypted.
-            No one can see your positions — not bots, not trackers, not anyone.
-            Lend and borrow with total privacy on Aleo.
+            Lend, trade, auction, and flash-borrow — all with zero-knowledge privacy.
+            7 smart contracts, 76 transitions, and every position fully encrypted.
+            No bots. No trackers. No exposure.
           </motion.p>
 
           <motion.div

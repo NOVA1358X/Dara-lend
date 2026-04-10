@@ -3,11 +3,12 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
 
 const advantages = [
-  { title: 'Battle-Tested Architecture', desc: 'Two verified smart contracts running on Aleo — purpose-built for private lending and earning.', icon: 'architecture' },
-  { title: 'Real-Time Price Feeds', desc: 'Prices pulled from 5 independent sources (CoinGecko, Coinbase, Gate.io, CryptoCompare, CMC), cross-checked, and pushed on-chain every 30 minutes automatically.', icon: 'monitoring' },
-  { title: 'Fully Private Records', desc: 'Your deposits, loans, and transfers each generate encrypted records only you can read — nothing is public.', icon: 'enhanced_encryption' },
-  { title: 'Fully Automated Protocol', desc: 'Oracle, interest accrual, and yield distribution run headlessly via Provable DPS — no manual intervention needed. Admin Panel always available as fallback.', icon: 'smart_toy' },
-  { title: 'Earn While You Sleep', desc: 'Deposit stablecoins into the yield vault and earn interest privately — withdraw anytime with zero trace.', icon: 'savings' },
+  { title: '7 Production Smart Contracts', desc: 'Lending, credits, vault, governance, dark pool, auctions, and flash loans — 76 transitions deployed on Aleo with ~5M compiled variables.', icon: 'architecture' },
+  { title: 'Real-Time Oracle (5 Sources)', desc: 'Prices from CoinGecko, Coinbase, Gate.io, CryptoCompare, and CMC — cross-checked, outlier-rejected, pushed on-chain every 30 minutes.', icon: 'monitoring' },
+  { title: 'Anti-MEV by Design', desc: 'Sealed-bid auctions with BHP256 commitments, dark pool batch settlement at oracle price — front-running is mathematically impossible.', icon: 'enhanced_encryption' },
+  { title: 'Private Governance (ZK Votes)', desc: 'Vote on proposals without revealing your identity. No finalize, no on-chain trace — the first truly private DAO on Aleo.', icon: 'how_to_vote' },
+  { title: 'Flash Loans (0.09% Fee)', desc: 'Borrow instantly in 4 atomic steps with 102% collateral. Bidirectional ALEO↔USDCx. All receipts are private records.', icon: 'bolt' },
+  { title: 'Fully Automated Protocol', desc: 'Oracle, interest, yield, liquidation, dark pool settlement, and auction bots run headlessly via Provable DPS — zero manual intervention.', icon: 'smart_toy' },
 ];
 
 export function TechnicalEdge() {
@@ -26,7 +27,7 @@ export function TechnicalEdge() {
             </h2>
             <p className="text-[17px] leading-relaxed text-text-secondary font-light max-w-[440px]">
               Most DeFi protocols expose everything — your balances, your strategies, your identity.
-              DARA Lend was designed from scratch so that privacy is the default, not an afterthought.
+              DARA was designed from scratch as a complete privacy DeFi suite — lending, trading, auctions, flash loans, and governance, all invisible.
             </p>
           </div>
 

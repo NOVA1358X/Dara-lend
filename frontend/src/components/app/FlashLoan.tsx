@@ -275,8 +275,18 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
   const handleWithdraw = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
 
+    // Force-refresh flash records so the new FlashRepayReceipt is available immediately
+    let latestRecords = flashRecords;
+    try {
+      if (wallet.requestRecords) {
+        const fresh = await wallet.requestRecords(FLASH_PROGRAM_ID, true);
+        latestRecords = (fresh as any[]).filter((r: any) => !r.spent);
+        setFlashRecords(latestRecords);
+      }
+    } catch { /* fall back to cached */ }
+
     // Find the LATEST FlashRepayReceipt (reverse to get most recent)
-    const repayReceipt = [...flashRecords].reverse().find((r: any) => {
+    const repayReceipt = [...latestRecords].reverse().find((r: any) => {
       const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
       return pt.includes('amount_repaid') && pt.includes('collateral_returned');
     });

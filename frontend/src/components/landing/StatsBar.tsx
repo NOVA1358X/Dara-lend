@@ -2,7 +2,7 @@ import { VelocityScroll } from '@/components/shared/VelocityScroll';
 
 const marqueeItems = [
   'PRIVATE LENDING', '·', 'ZERO-KNOWLEDGE', '·', 'ALEO', '·',
-  'ENCRYPTED POSITIONS', '·', 'YIELD VAULT', '·', 'INVISIBLE TRANSFERS', '·',
+  'DARK POOL TRADING', '·', 'SEALED-BID AUCTIONS', '·', 'FLASH LOANS', '·',
   'MEV PROTECTED', '·', 'MULTI-COLLATERAL', '·',
 ];
 
@@ -29,8 +29,8 @@ export function StatsBar() {
       <div className="mt-2" />
 
       <VelocityScroll baseVelocity={0.4} damping={0.92}>
-        {['SHIELD WALLET', '·', 'USDCx', '·', 'USAD', '·', 'PROVABLE', '·',
-          'PRIVACY FIRST', '·', 'AUTOMATED LIQUIDATION', '·', 'ORACLE SECURED', '·',
+        {['7 CONTRACTS', '·', '76 TRANSITIONS', '·', 'YIELD VAULT', '·', 'PRIVATE GOVERNANCE', '·',
+          'ENCRYPTED POSITIONS', '·', 'INVISIBLE TRANSFERS', '·', 'ORACLE SECURED', '·',
         ].map((item, i) => (
           <span
             key={i}

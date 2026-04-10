@@ -1,20 +1,20 @@
-# DARA Lend — The Obsidian Ledger
+# DARA  The Obsidian Ledger
 
 <div align="center">
 
-**The First Privacy-Preserving Multi-Collateral Lending Protocol on Aleo**
+**The Privacy-First DeFi Suite on Aleo**
 
-Supply ALEO, USDCx, or USAD as collateral — borrow against them — earn yield — transfer privately — keep every position encrypted inside zero-knowledge proofs. MEV bots can't target what they can't see.
+DeFi Without Being Watched. Seven smart contracts, 76 transitions, and ~5 million compiled variables deliver private lending, dark-pool trading, sealed-bid auctions, flash loans, yield vaults, and ZK governance  all shielded by zero-knowledge proofs.
 
-[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-C9DDFF?style=flat-square)](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo)
+[![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-C9DDFF?style=flat-square)](https://testnet.aleo.info/program/dara_lend_v8.aleo)
 [![Leo](https://img.shields.io/badge/Leo-4.0.0-blue?style=flat-square)](https://leo-lang.org)
-[![Programs](https://img.shields.io/badge/Programs-4_Deployed-D6C5A1?style=flat-square)](#smart-contracts)
-[![Transitions](https://img.shields.io/badge/Transitions-45-C9DDFF?style=flat-square)](#smart-contracts)
+[![Programs](https://img.shields.io/badge/Programs-7_Deployed-D6C5A1?style=flat-square)](#smart-contracts)
+[![Transitions](https://img.shields.io/badge/Transitions-76-C9DDFF?style=flat-square)](#smart-contracts)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](#license)
 
-**Aleo Privacy Buildathon — Wave 5**
+**Aleo Privacy Buildathon  Wave 5**
 
-[Live App](https://dara-lend.vercel.app) · [API](https://dara-lend-api.onrender.com/api/health) · [Main Contract](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) · [Credits Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) · [Vault Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) · [Gov Contract](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v3.aleo) · [Docs](https://dara-lend.vercel.app/docs)
+[Live App](https://dara-lend.vercel.app)  [API](https://dara-lend-api.onrender.com/api/health)  [Docs](https://dara-lend.vercel.app/docs)  [Main](https://testnet.aleo.info/program/dara_lend_v8.aleo)  [Credits](https://testnet.aleo.info/program/dara_lend_v8_credits.aleo)  [Vault](https://testnet.aleo.info/program/dara_lend_v8_vault.aleo)  [Gov](https://testnet.aleo.info/program/dara_lend_v8_gov_v3.aleo)  [Dark Pool](https://testnet.aleo.info/program/dara_dark_pool_v1.aleo)  [Auctions](https://testnet.aleo.info/program/dara_auction_v1.aleo)  [Flash](https://testnet.aleo.info/program/dara_flash_v1.aleo)
 
 </div>
 
@@ -22,76 +22,183 @@ Supply ALEO, USDCx, or USAD as collateral — borrow against them — earn yield
 
 ## The Problem
 
-On transparent chains, lending protocols expose every user's **collateral**, **debt**, and **liquidation price** publicly. MEV bots extracted **$600M+** on Ethereum in 2023 by targeting visible liquidation thresholds. Every DeFi borrower is monitored, front-run, and sandwich-attacked. There is no financial privacy.
+On transparent chains, every DeFi position is public  collateral, debt, liquidation thresholds, trade intents. MEV bots extracted **$600M+** on Ethereum in 2023 by front-running liquidations and sandwich-attacking trades. There is no financial privacy.
 
 ## The Solution
 
-**DARA Lend** is a fully functional, privacy-first lending protocol built on Aleo's zero-knowledge architecture. Every position — collateral, debt, liquidation price, and borrower identity — is encrypted inside ZK proofs. The protocol remains publicly verifiable for solvency while keeping individual positions invisible.
-
-Built from scratch across Wave 4–5 with **5 deployed programs, 46 transitions, ~3.5M compiled variables**, a complete frontend app, backend sentinel, 5-source oracle, governance system, and a luxury "Obsidian Ledger" design system.
+**DARA** is a complete DeFi suite where every position, trade, bid, flash loan, and vote is encrypted inside zero-knowledge proofs. The protocol remains publicly verifiable for solvency while keeping individual activity invisible. Built from scratch across Waves 35 with 7 deployed programs.
 
 ---
 
-## Live Demo & Deployed Contracts
+## Architecture
 
-| Component | Link |
-|-----------|------|
-| **Frontend** | [dara-lend.vercel.app](https://dara-lend.vercel.app) |
-| **Backend API** | [dara-lend-api.onrender.com](https://dara-lend-api.onrender.com/api/health) |
-| **Lending Core (ALEO)** | [`dara_lend_v8.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8.aleo) — 12 transitions, 1,029,787 vars |
-| **Lending Core (Stablecoin)** | [`dara_lend_v8_credits.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_credits.aleo) — 12 transitions, 1,307,183 vars |
-| **Vault Companion** | [`dara_lend_v8_vault.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_vault.aleo) — 10 transitions, ~822K vars |
-| **Governance** | [`dara_lend_v8_gov_v3.aleo`](https://testnet.explorer.provable.com/program/dara_lend_v8_gov_v3.aleo) — 12 transitions, 403,771 vars |
-| **Main Deploy TX** | [`at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg`](https://testnet.explorer.provable.com/transaction/at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg) |
-| **Credits Deploy TX** | [`at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp`](https://testnet.explorer.provable.com/transaction/at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp) |
-| **Vault Deploy TX** | [`at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t`](https://testnet.explorer.provable.com/transaction/at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t) |
-| **Gov Deploy TX** | [`at1azr6jrvyx807glrxydwuuf8wtx5m7h3y7jrax80v2m4gmteawcxqg5d4nr`](https://testnet.explorer.provable.com/transaction/at1azr6jrvyx807glrxydwuuf8wtx5m7h3y7jrax80v2m4gmteawcxqg5d4nr) |
+```
++-------------------------------------------------------------+
+|                    Frontend (React/Vite)                      |
+|  18 Pages - Shield Wallet - Obsidian Ledger Dark Theme       |
++-------------------------------------------------------------+
+|                   Backend (Express.js)                        |
+|  6 Bots - 5-Source Oracle - Provable DPS Automation          |
++-------------------------------------------------------------+
+|                  Aleo Blockchain (Testnet)                    |
+|  7 Programs - 76 Transitions - ~5M Compiled Variables        |
+|                                                              |
+|  +---------------+ +---------------+ +---------------+       |
+|  | dara_lend_v8  | |   _credits    | |    _vault     |       |
+|  |  12 trans.    | |  12 trans.    | |  10 trans.    |       |
+|  +---------------+ +---------------+ +---------------+       |
+|  +---------------+ +---------------+                         |
+|  |   _gov_v3     | | _dark_pool   |                         |
+|  |  12 trans.    | |   9 trans.   |                         |
+|  +---------------+ +---------------+                         |
+|  +---------------+ +---------------+                         |
+|  |  _auction     | |   _flash     |                         |
+|  |  10 trans.    | |  11 trans.   |                         |
+|  +---------------+ +---------------+                         |
++-------------------------------------------------------------+
+```
 
 ---
 
-## Key Features
+## Smart Contracts
 
-### 🔒 Privacy-First Lending
-Every collateral deposit, loan, and liquidation is encrypted as a private record (UTXO). No user addresses, amounts, or liquidation prices appear in any on-chain finalize. Health factors are computed client-side only.
+| Program | Transitions | Variables | Purpose |
+|---------|:-----------:|:---------:|---------|
+| `dara_lend_v8.aleo` | 12 | ~920K | Core lending  supply, borrow, repay, withdraw, liquidate |
+| `dara_lend_v8_credits.aleo` | 12 | ~920K | Reverse lending  stablecoin collateral -> borrow ALEO |
+| `dara_lend_v8_vault.aleo` | 10 | ~575K | Yield vault, private transfers, PoolShare management |
+| `dara_lend_v8_gov_v3.aleo` | 12 | ~860K | Governance proposals, delegation, ZK voting |
+| `dara_dark_pool_v1.aleo` | 9 | ~653K | Epoch-based private OTC trading |
+| `dara_auction_v1.aleo` | 10 | ~679K | Sealed-bid liquidation auctions |
+| `dara_flash_v1.aleo` | 11 | ~943K | Collateral-backed flash loans |
+| **Total** | **76** | **~5M** | |
 
-### 🏦 Multi-Collateral Architecture
-Supply **ALEO**, **USDCx**, or **USAD** as collateral. Borrow any of the three against any collateral type. Cross-pair support: stablecoin collateral → borrow ALEO, ALEO collateral → borrow stablecoins.
+---
 
-### 💰 Yield Vault
-Deposit USDCx or USAD into the yield pool via private token records. Receive `PoolShare` records as proof. Admin distributes protocol fees as yield. Redeem shares for original deposit + accumulated yield.
+## Core Lending
 
-### 🕵️ Private Transfers
-ZK-shielded token relay that atomically breaks the on-chain link between sender and recipient. The vault contract deposits and re-mints tokens in a single transaction — truly private transfers with nonce replay protection.
+DARA's lending core supports three collateral types (ALEO, USDCx, USAD) with cross-pair borrowing.
 
-### 📊 5-Source Oracle with Automated On-Chain Writes
-CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap — median aggregated with outlier rejection (>2σ), 15% deviation cap, round replay protection. **Prices are pushed on-chain automatically every 30 minutes** (or instantly if price moves ≥ 0.1%) via Provable DPS. Admin can also push manually via the Admin Panel at any time as a fallback.
+**Flow:**
+1. **Supply**  Deposit ALEO, USDCx, or USAD as collateral -> receive `DebtPosition` record
+2. **Borrow**  Draw stablecoins against collateral at 50% LTV -> updated `DebtPosition` + `LiquidationAuth`
+3. **Repay**  Return borrowed tokens + interest -> cleared debt
+4. **Withdraw**  Reclaim collateral after debt is zero
 
-### 🛡️ Emergency Circuit Breaker
-Admin can pause/resume both the lending protocol and vault independently via `emergency_pause()` / `resume_protocol()` / `pause_vault()` / `resume_vault()`. Admin Panel is always available as the human fallback for all bot operations.
+**Parameters:**
+| Parameter | Value |
+|-----------|-------|
+| LTV Ratio | 50% |
+| Liquidation Incentive | 5% bonus to liquidators |
+| Origination Fee | 0.5% |
+| Interest Model | On-chain configurable base rate + utilization slope (BPS) |
+| Precision | 6 decimals (1,000,000) |
 
-### 📈 Interest Rate Model with Auto-Accrual
-On-chain configurable base rate + slope (BPS). Utilization-based supply/borrow APY computed and stored in mappings. **Interest accrues automatically every 1 hour** via the orchestrator bot (only when active loans exist). Admin can trigger `accrue_interest()` manually via Admin Panel at any time.
+**Privacy:** All positions are encrypted in Aleo records. Only aggregate pool totals are public (for solvency verification). Individual collateral amounts, debt, and liquidation prices are invisible.
 
-### 🔐 MerkleProof Compliance
-All stablecoin operations verified against a freeze-list via `merkle_tree.aleo`. Non-inclusion proofs ensure addresses aren't frozen before executing transfers.
+---
 
-### 🤖 Automated Orchestrator (Provable DPS)
-Full protocol automation via Delegated Proving Service — all timers are minimums, manual admin overrides always available:
+## Dark Pool
 
-| Bot | Schedule | Trigger |
-|-----|----------|---------|
-| **Oracle Bot** | **Every 30 min** | Also triggers on ≥ 0.1% price delta |
-| **Interest Bot** | **Every 1 hour** | Only when `loan_count > 0` |
-| **Yield Bot** | **Every 6 hours** | Only when accumulated fees ≥ threshold |
-| **Liquidation Bot** | Every tick (1 min) | Only when global LTV > 80% |
+Private OTC-style trading with on-chain settlement. Epoch-based batch matching eliminates MEV.
 
-Sequential execution queue prevents nonce conflicts. `useFeeMaster: true` for zero gas costs. JWT auto-refresh keeps DPS connection active 24/7.
+**Flow:**
+1. **Submit Intent**  Maker creates encrypted `TradeIntent` (buy or sell ALEO/USDCx)
+2. **Epoch Settlement**  Bot calls `settle_epoch` using oracle mid-price for that epoch
+3. **Claim Fill**  Taker claims `FillReceipt` with settled tokens
 
-### 🔍 Solvency Proof Dashboard
-Real-time on-chain verification page at `/app/solvency` — shows collateral vs debt breakdown, oracle freshness, bot activity, and direct links to explorer mappings for independent verification.
+**Anti-MEV guarantees:**
+- Trade intents are encrypted records  invisible to block producers
+- Batch settlement at oracle price  no slippage, no front-running
+- Epoch-based matching prevents temporal ordering attacks
 
-### 🎨 Obsidian Ledger Design
-Luxury dark UI with Gilda Display serif headlines, Inter body, Space Grotesk labels, JetBrains Mono for values. Glass-morphism panels, signature gradients (C9DDFF → D6C5A1), Framer Motion animations.
+**Transitions (9):** `submit_buy_intent`, `submit_sell_intent`, `settle_epoch`, `claim_buy_fill`, `claim_sell_fill`, `cancel_buy`, `cancel_sell`, `pause_darkpool`, `resume_darkpool`
+
+---
+
+## Sealed-Bid Auctions
+
+The first sealed-bid auction system on Aleo. Used for liquidated collateral sales with zero information leakage.
+
+**Flow:**
+1. **Start Auction**  Admin creates auction for liquidated collateral
+2. **Submit Sealed Bid**  Bidders commit `BHP256(BHP256(actual_bid) + secret)` -> `SealedBid` record
+3. **Reveal Bid**  After bidding ends, bidders reveal amount + secret -> `RevealedBid` record
+4. **Settle**  Contract verifies hashes, highest bid wins -> `AuctionWin` for winner, `AuctionRefund` for losers
+
+**Commitment scheme (Leo):**
+```leo
+let inner: field = BHP256::hash_to_field(actual_bid);
+let commitment: field = BHP256::hash_to_field(inner + secret);
+```
+
+**Parameters:**
+- Bid window: 15 minutes to 7 days (configurable per auction)
+- Reveal window: follows bid window
+- Automatic refunds for losing bidders
+
+**Transitions (10):** `start_auction`, `submit_sealed_bid`, `reveal_bid`, `settle_auction`, `claim_collateral`, `redeem_collateral`, `refund_bid`, `cancel_auction`, `pause_auctions`, `resume_auctions`
+
+---
+
+## Flash Loans
+
+Instant collateral-backed lending with a 4-step atomic flow.
+
+**Flow:**
+1. **Borrow**  Lock 102% collateral -> receive `FlashLoanReceipt`
+2. **Claim**  Present receipt -> receive borrowed ALEO or USDCx
+3. **Repay**  Return principal + 0.09% fee -> receive `FlashRepayReceipt`
+4. **Withdraw**  Present repay receipt -> reclaim collateral
+
+**Parameters:**
+| Parameter | Value |
+|-----------|-------|
+| Fee | 0.09% (9 BPS) |
+| Collateral Ratio | 102% |
+| Directions | ALEO -> USDCx, USDCx -> ALEO |
+| Lifecycle | Fully atomic, private, on-chain |
+
+**Transitions (11):** `flash_borrow_aleo`, `flash_borrow_usdcx`, `flash_claim_aleo`, `flash_claim_usdcx`, `flash_repay_aleo`, `flash_repay_usdcx`, `flash_withdraw_aleo`, `flash_withdraw_usdcx`, `set_flash_params`, `pause_flash`, `resume_flash`
+
+---
+
+## Yield Vault
+
+Depositors supply USDCx or USAD stablecoins and earn protocol fees as yield.
+
+**Flow:**
+1. **Deposit**  Supply stablecoins -> receive `PoolShare` record
+2. **Admin distributes yield**  Protocol fees directed to vault
+3. **Redeem**  Burn PoolShare -> receive original deposit + yield (minus 0.1% fee)
+
+All deposits use private token records. The vault also powers private transfers.
+
+---
+
+## Governance
+
+On-chain governance with full voter privacy through ZK proofs.
+
+**Flow:**
+1. **Mint GovernanceToken**  Admin issues tokens to participants
+2. **Create Proposal**  Token holder submits proposal with voting period (130 days)
+3. **Vote**  Cast ZK-encrypted vote (yes/no)  nobody can see individual votes
+4. **Execute**  If quorum reached (20%), proposal passes by majority
+
+**Features:**
+- Delegation: transfer voting power to another address
+- Configurable voting periods: 1 to 30 days
+- 100% private voting  only aggregate tallies visible
+- Timelock between proposal and execution
+
+**Transitions (12):** `mint_gov_token`, `delegate`, `undelegate`, `create_proposal`, `vote`, `execute_proposal`, `cancel_proposal`, `burn_gov_token`, `set_voting_params`, `transfer_gov_token`, `pause_governance`, `resume_governance`
+
+---
+
+## Private Transfers
+
+The vault contract provides a ZK-shielded relay that atomically deposits tokens and re-mints them to the recipient in a single transaction. This completely breaks the on-chain link between sender and recipient. Nonce replay protection prevents double-spending.
 
 ---
 
@@ -99,253 +206,138 @@ Luxury dark UI with Gilda Display serif headlines, Inter body, Space Grotesk lab
 
 | Data | Visibility | Mechanism |
 |------|------------|-----------|
-| Collateral amounts | **Encrypted** | `CollateralReceipt` private record |
-| Debt positions | **Encrypted** | `DebtPosition` private record |
+| Collateral amounts | **Encrypted** | `DebtPosition` private record |
+| Debt positions | **Encrypted** | Inside `DebtPosition` record |
 | Liquidation prices | **Encrypted** | Inside `DebtPosition` + `LiquidationAuth` |
+| Trade intents | **Encrypted** | `TradeIntent` private record |
+| Auction bids | **Encrypted** | `SealedBid` with BHP256 commitment |
+| Flash loan amounts | **Encrypted** | `FlashLoanReceipt` private record |
+| Governance votes | **Encrypted** | ZK-verified, only aggregate tallies visible |
 | Health factors | **Client-only** | Computed in browser, never on-chain |
-| Borrower identity | **Hashed** | BHP256 in `LiquidationAuth` — no raw address leak |
+| Borrower identity | **Hashed** | BHP256 in `LiquidationAuth` |
 | Transfer recipients | **Hidden** | Private transfer relay breaks sender-recipient link |
-| Yield deposits | **Encrypted** | `PoolShare` private record |
 | Protocol TVL/Debt | **Public** | Aggregate mappings for verifiable solvency |
-
-### Dual-Record Pattern
-When a user borrows, two records are created simultaneously:
-1. **`DebtPosition`** → owned by **borrower** (for repayment)
-2. **`LiquidationAuth`** → owned by **orchestrator** (for liquidation)
-
-The borrower's address is hashed (BHP256) inside `LiquidationAuth` — the protocol can enforce solvency without exposing who borrowed what.
-
----
-
-## Smart Contracts
-
-### Program 1: `dara_lend_v8.aleo` — Lending Core (ALEO Collateral)
-**Leo 4.0.0** · **12 transitions** · **1,029,787 variables** · **482 statements**
-**Deploy cost:** 26.73 credits
-
-| Category | Transitions | Count |
-|----------|-------------|-------|
-| **Admin** | `update_oracle_price`, `set_rate_params`, `emergency_pause`, `resume_protocol`, `accrue_interest` | 5 |
-| **Supply** | `supply_collateral` | 1 |
-| **Borrow** | `borrow`, `borrow_usad` | 2 |
-| **Repay** | `repay`, `repay_usad` | 2 |
-| **Liquidate** | `liquidate` | 1 |
-| **Withdraw** | `withdraw_collateral` | 1 |
-
-### Program 2: `dara_lend_v8_credits.aleo` — Lending Core (Stablecoin Collateral)
-**Leo 4.0.0** · **12 transitions** · **1,307,183 variables** · **381 statements**
-**Deploy cost:** 26.10 credits
-
-| Category | Transitions | Count |
-|----------|-------------|-------|
-| **Admin** | `update_oracle_price`, `emergency_pause`, `resume_protocol` | 3 |
-| **Supply** | `supply_usdcx_collateral`, `supply_usad_collateral` | 2 |
-| **Borrow** | `borrow_credits` | 1 |
-| **Repay** | `repay_credits_usdcx`, `repay_credits_usad` | 2 |
-| **Liquidate** | `liquidate_usdcx`, `liquidate_usad` | 2 |
-| **Withdraw** | `withdraw_usdcx_collateral`, `withdraw_usad_collateral` | 2 |
-
-### Program 3: `dara_lend_v8_vault.aleo` — Yield + Privacy
-**Leo 4.0.0** · **10 transitions** · **~822K variables**
-**Deploy cost:** 18.62 credits
-
-| Category | Transitions | Count |
-|----------|-------------|-------|
-| **Admin** | `set_vault_admin`, `pause_vault`, `resume_vault` | 3 |
-| **Yield** | `provide_usdcx_capital`, `provide_usad_capital`, `redeem_usdcx_capital`, `redeem_usad_capital`, `distribute_yield` | 5 |
-| **Privacy** | `private_transfer_usdcx`, `private_transfer_usad` | 2 |
-
-### Program 4: `dara_lend_v8_gov_v3.aleo` — Governance (Private Voting)
-**Leo 4.0.0** · **12 transitions** · **403,771 variables** · **222 statements**
-**Deploy cost:** 18.25 credits
-
-| Category | Transitions | Count |
-|----------|-------------|-------|
-| **Tokens** | `mint_governance_tokens`, `burn_governance_tokens` | 2 |
-| **Proposals** | `create_proposal`, `vote`, `tally_vote`, `execute_proposal` | 4 |
-| **Delegation** | `delegate_votes`, `undelegate_votes` | 2 |
-| **Admin** | `set_lending_protocol`, `set_gov_admin`, `pause_governance`, `resume_governance` | 4 |
-
-### Private Records (7 types)
-
-| Record | Owner | Purpose |
-|--------|-------|---------|
-| `CollateralReceipt` | Depositor | Proves collateral deposit (token_type, amount, nonce) |
-| `DebtPosition` | Borrower | Loan details (collateral_token, debt_token, amount, liquidation_price) |
-| `LiquidationAuth` | Orchestrator | Authorizes liquidation (borrower_hash, not raw address) |
-| `RepaymentReceipt` | Borrower | Proof of repayment (unlocks collateral withdrawal) |
-| `LiquidationReceipt` | Liquidator | Proof of liquidation execution |
-| `PoolShare` | Depositor | Yield pool share (token_type, share_amount) |
-| `PrivateTransferReceipt` | Recipient | Proof of private transfer |
-
-### External Programs
-| Program | Purpose |
-|---------|---------|
-| `credits.aleo` | ALEO token operations |
-| `test_usdcx_stablecoin.aleo` | USDCx transfers + MerkleProof compliance |
-| `test_usad_stablecoin.aleo` | USAD transfers + MerkleProof compliance |
-| `merkle_tree.aleo` | Freeze-list verification |
-
-### Protocol Parameters
-
-| Parameter | Value |
-|-----------|-------|
-| LTV Ratio | 70% (7,000 BPS) |
-| Liquidation Threshold | 80% (8,000 BPS) |
-| Min Collateral | 0.1 ALEO |
-| Origination Fee | 0.5% |
-| Liquidation Bonus | 5% |
-| Vault Withdrawal Fee | 0.1% |
-| Max Price Deviation | 15% per update |
-| Precision | 6 decimals (1,000,000) |
-
----
-
-## User Flow
-
-### As a User
-1. **Connect** Shield Wallet → Aleo Testnet
-2. **Supply** — Deposit ALEO, USDCx, or USAD as collateral → receive encrypted `CollateralReceipt`
-3. **Borrow** — Draw USDCx, USAD, or ALEO against collateral (up to 70% LTV) → receive `DebtPosition`
-4. **Monitor** — Dashboard shows health factor, positions, oracle prices (all computed client-side)
-5. **Repay** — Submit `DebtPosition` record → debt cleared → receive `RepaymentReceipt`
-6. **Withdraw** — Submit `RepaymentReceipt` → collateral returned to wallet
-7. **Yield** — Deposit stablecoins to vault → earn yield → redeem `PoolShare` for deposit + yield
-8. **Transfer** — ZK-shielded private transfer → recipient receives tokens with no on-chain link to sender
-
-### As Admin
-1. **Update Oracle** — Fetch live price from 5 sources → push to `update_oracle_price`
-2. **Set Rates** — Configure interest rate model via `set_rate_params(base_bps, slope_bps)`
-3. **Accrue Interest** — Trigger on-chain interest accrual
-4. **Distribute Yield** — Add protocol fees to yield pool via `distribute_yield`
-5. **Circuit Breaker** — Pause/resume protocol and vault independently
-6. **Fund Liquidity** — Transfer tokens to protocol address for borrower liquidity
-
----
-
-## Verified Transactions (Testnet)
-
-All features have been tested and verified on Aleo Testnet:
-
-| Action | Status | TX ID |
-|--------|--------|-------|
-| Deploy Main (ALEO lending) | ✅ ACCEPTED | `at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg` |
-| Deploy Credits (stable lending) | ✅ ACCEPTED | `at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp` |
-| Deploy Vault | ✅ ACCEPTED | `at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t` |
-| Deploy Governance | ✅ ACCEPTED | `at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d` |
-| Supply USDCx | ✅ ACCEPTED | `at1u5vx34f6gnuwy7php826arfgdfs3lnj0guv6nmh8xn9pks2ugy8s7dy39m` |
-| Borrow ALEO | ✅ ACCEPTED | `at1qd9l0advkvt83fdmnwxdcn4j3mjpxf6ep3a9zzwx0r4y7udgmcgsfghx5r` |
-| Yield Deposit (USDCx seed) | ✅ ACCEPTED | `at1mgfymddpvl3zugr32j762ec4z4x0g3evddwvuhzp9rr2yukvgv9syj8f4x` |
-| Yield Deposit (USAD seed) | ✅ ACCEPTED | `at15mpg9jcvvdp7rl3lg8yl32j2km4wf09apzlew8fzg0rhwlveu58qq9wfsf` |
-| Private Transfer USDCx | ✅ ACCEPTED | Verified on-chain — truly private (no address link) |
-| Yield Redeem | ✅ ACCEPTED | Verified — shares redeemed for deposit + accumulated yield |
 
 ---
 
 ## Oracle System
 
-5-source price aggregation with on-chain oracle updates:
+5-source price aggregation with on-chain manipulation resistance.
+
+**Sources:** CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap
 
 ```
-  CoinGecko · CryptoCompare · Coinbase · Gate.io · CoinMarketCap
-                            ↓
-                Median filter + outlier rejection (>2σ)
-                            ↓
-                15% deviation cap · round replay protection
-                            ↓
-                update_oracle_price → on-chain mapping
+CoinGecko - CryptoCompare - Coinbase - Gate.io - CoinMarketCap
+                          |
+              Median filter + outlier rejection (>2 sigma)
+                          |
+              15% deviation cap - round replay protection
+                          |
+              update_oracle_price -> on-chain mapping
 ```
 
-**Pipeline:** Fetch all 5 sources → reject outliers → compute median → admin pushes to contract → contract enforces 15% max deviation + round counter to prevent replay.
+**On-chain safeguards:**
+- 15% maximum deviation per update
+- Minimum 5-block interval between updates
+- Monotonic round counter prevents replay attacks
+- Median filtering with outlier rejection
 
 ---
 
-## Architecture
+## Backend Automation
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Frontend (React 18 + Vite + Tailwind + Framer Motion)   │
-│  Shield Wallet ←→ Private record decrypt/display         │
-│  14 pages: Dashboard, Supply, Borrow, Repay, Withdraw,   │
-│  Positions, Liquidate, Yield, Transfer, Analytics,        │
-│  History, Stats, Solvency, Admin                          │
-├──────────────────────────────────────────────────────────┤
-│  Backend Sentinel + Bot Orchestrator (Express + TS)       │
-│  5-source oracle aggregator · liquidation monitor · API   │
-│  Oracle Bot · Liquidation Bot · Interest Bot · Yield Bot  │
-│  Provable DPS integration (useFeeMaster)                  │
-│  Routes: health, health/bot, oracle, price, solvency,     │
-│  stats, analytics (TVL, vault, multi-price)               │
-├──────────────────────────────────────────────────────────┤
-│  dara_lend_v8.aleo (Main Lending · 12 transitions)          │
-│  ALEO collateral · interest model · circuit breaker         │
-│  7 private record types · dual-record borrow pattern         │
-├──────────────────────────────────────────────────────────┤
-│  dara_lend_v8_credits.aleo (Credits · 12 transitions)        │
-│  Stablecoin collateral · borrow ALEO against stables        │
-├──────────────────────────────────────────────────────────┤
-│  dara_lend_v8_vault.aleo (Vault · 10 transitions)            │
-│  Yield pool · private transfer relay · PoolShare records     │
-├──────────────────────────────────────────────────────────┤
-│  dara_lend_v8_gov_v3.aleo (Governance · 12 transitions)       │
-│  Proposals · private voting · delegation · GovernanceToken    │
-├──────────────────────────────────────────────────────────┤
-│  credits.aleo · test_usdcx_stablecoin.aleo               │
-│  test_usad_stablecoin.aleo · merkle_tree.aleo             │
-└──────────────────────────────────────────────────────────┘
-```
+Six bots managed by a unified orchestrator, deployed on Provable DPS (Decentralized Private Sequencer).
 
-### Tech Stack
+| Bot | Interval | Action | Program |
+|-----|:--------:|--------|---------|
+| Oracle Bot | 30 min | `update_oracle` | `dara_lend_v8.aleo` |
+| Interest Bot | 1 hr | `accrue_interest` | `dara_lend_v8.aleo` |
+| Yield Bot | 6 hr | `distribute_yield` | `dara_lend_v8_vault.aleo` |
+| Liquidation Bot | 5 min | `liquidate_*` | `dara_lend_v8.aleo` |
+| Dark Pool Bot | 5 min | `settle_epoch` | `dara_dark_pool_v1.aleo` |
+| Auction Bot | 5 min | `settle_auction` | `dara_auction_v1.aleo` |
 
-| Layer | Technologies |
-|-------|--------------|
-| **Frontend** | React 18, TypeScript, Vite 5, Tailwind CSS 3, Framer Motion 11, Zustand 5, React Query 5 |
-| **Backend** | Express 4, TypeScript, node-cron, @provablehq/sdk |
-| **Contract** | Leo 4.0.0, Aleo Testnet |
-| **Design** | Gilda Display (serif), Inter (body), Space Grotesk (labels), JetBrains Mono (code), Material Symbols |
-| **Wallet** | Shield Wallet (Aleo Testnet) |
-| **Deploy** | Vercel (frontend), Render (backend) |
+Sequential execution queue prevents nonce conflicts. `useFeeMaster: true` for zero gas costs. JWT auto-refresh keeps DPS connection active 24/7.
 
 ---
 
-## Project Structure
+## Frontend
 
-```
-DARA-Lend/
-├── contract/
-│   └── dara_lend_v1/src/main.leo        # Lending core (21 transitions, 1.98M vars)
-│
-├── backend/src/
-│   ├── index.ts                          # Sentinel + orchestrator entry point
-│   ├── api/routes/                       # health, health/bot, oracle, price, solvency,
-│   │                                     # stats, analytics, transaction
-│   ├── oracle/                           # 5-source aggregator, priceUpdater, validator,
-│   │                                     # oracleBot (auto on-chain writes via DPS)
-│   ├── liquidation/                      # monitor.ts, executor.ts, liquidationBot.ts
-│   ├── automation/                       # orchestrator.ts, interestBot.ts, yieldBot.ts
-│   └── utils/                            # aleoClient, config, transactionBuilder (DPS)
-│
-├── frontend/src/
-│   ├── pages/                            # Landing, AppDashboard (14 routes), Docs
-│   ├── components/
-│   │   ├── app/                          # Dashboard, Supply, Borrow, Repay, Withdraw,
-│   │   │                                 # Liquidate, Positions, YieldVault, PrivateTransfer,
-│   │   │                                 # Analytics, ProtocolStats, AdminPanel, History,
-│   │   │                                 # SolvencyProof
-│   │   ├── landing/                      # Hero, ProblemSolution, HowItWorks, Privacy,
-│   │   │                                 # TechnicalEdge, CrossChain, Security, CTA
-│   │   ├── layout/                       # Sidebar (13 nav items), TopBar, AppLayout
-│   │   ├── shared/                       # StatCard, WalletButton, GlowCard, PrivacyBadge
-│   │   └── docs/                         # DocsContent, DocsSidebar, DocsLayout
-│   ├── hooks/                            # useTransaction (27 functions), useWalletRecords,
-│   │                                     # useVaultStats, useMarketPrice, useProtocolStats
-│   ├── stores/appStore.ts                # Zustand state management
-│   └── utils/                            # constants, formatting, records
-│
-├── whitepaper.md                         # Technical whitepaper (15 sections)
-├── render.yaml                           # Backend deployment
-└── vercel.json                           # Frontend deployment
-```
+**18 App Pages:**
+
+| Group | Pages |
+|-------|-------|
+| Overview | Dashboard |
+| Core Lending | Supply, Borrow, Repay, Withdraw, Positions |
+| DeFi Modules | Yield Vault, Transfer, Dark Pool, Auctions, Flash Loans |
+| Governance | Governance |
+| Analytics | Analytics, Rate Curve, History, Stats |
+| Admin | Liquidate, Admin |
+
+**Additional pages:** Landing, Docs
+
+**Design:** Obsidian Ledger luxury dark theme  Gilda Display headings, Inter body, Space Grotesk monospace. Gold (#D4AF37) accents on deep black (#0A0A0A). Glass-morphism panels, Framer Motion animations.
+
+**Wallet:** Shield Wallet browser extension with 7-program authorization on connect.
+
+---
+
+## Record Types
+
+All positions and receipts are encrypted Aleo records  only the owner can decrypt them.
+
+| Record | Program | Purpose |
+|--------|---------|---------|
+| `DebtPosition` | dara_lend_v8 | Collateral + debt state |
+| `LiquidationAuth` | dara_lend_v8 | Authorizes third-party liquidation |
+| `PoolShare` | dara_lend_v8_vault | Yield vault deposit receipt |
+| `GovernanceToken` | dara_lend_v8_gov_v3 | Voting power |
+| `TradeIntent` | dara_dark_pool_v1 | Private buy/sell order |
+| `FillReceipt` | dara_dark_pool_v1 | OTC trade settlement |
+| `SealedBid` | dara_auction_v1 | Committed bid hash |
+| `RevealedBid` | dara_auction_v1 | Revealed bid amount |
+| `AuctionWin` | dara_auction_v1 | Winner receipt |
+| `AuctionRefund` | dara_auction_v1 | Loser refund receipt |
+| `FlashLoanReceipt` | dara_flash_v1 | Flash borrow receipt |
+| `FlashRepayReceipt` | dara_flash_v1 | Flash repay receipt |
+
+---
+
+## Deployment
+
+All 7 programs are deployed on **Aleo Testnet**.
+
+| Program | Deploy TX |
+|---------|-----------|
+| `dara_lend_v8.aleo` | `at1tn7vutm8dw3c9aknr66wxs8gz39r0lv2argnqkmclnxgauv4mc8sty74xg` |
+| `dara_lend_v8_credits.aleo` | `at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp` |
+| `dara_lend_v8_vault.aleo` | `at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t` |
+| `dara_lend_v8_gov_v3.aleo` | `at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d` |
+| `dara_dark_pool_v1.aleo` | `at1xr06dkaermzl6hfm5syqzkrtw950hhe0rsttl06qp9gksuey2vxqh0ww4l` |
+| `dara_auction_v1.aleo` | `at1xjkazhxpy76m97lvkj3ex0l3lvn32vzwfv9vt09j6zvey9dlxqyqpkvxp6` |
+| `dara_flash_v1.aleo` | `at128zjzny542ty3z2kf74u2vne22gahemp2eadtjkurjf4dguxwgyquvuv7m` |
+
+**Explorer:** All programs verifiable at `https://testnet.aleo.info/program/<program_id>`
+
+| Component | Link |
+|-----------|------|
+| **Frontend** | [dara-lend.vercel.app](https://dara-lend.vercel.app) |
+| **Backend API** | [dara-lend-api.onrender.com](https://dara-lend-api.onrender.com/api/health) |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Blockchain | Aleo Testnet (Leo v4.0, snarkVM) |
+| Smart Contracts | Leo language (7 programs, 76 transitions) |
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS, Framer Motion |
+| Backend | Node.js, Express.js, TypeScript |
+| Automation | Provable DPS (Decentralized Private Sequencer) |
+| Wallet | Shield Wallet (Aleo browser extension) |
+| Oracle Sources | CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap |
+| Hosting | Vercel (frontend), Render (backend) |
 
 ---
 
@@ -353,52 +345,98 @@ DARA-Lend/
 
 ### Prerequisites
 - Node.js 18+
-- [Shield Wallet](https://www.shieldwallet.co) browser extension (Aleo Testnet)
-
-### Backend
-```bash
-cd backend
-npm install
-npm run dev             # Starts on :3001 with oracle cron
-```
+- Shield Wallet browser extension
+- Aleo Testnet credits (for on-chain transactions)
 
 ### Frontend
 ```bash
 cd frontend
 npm install
-npm run dev             # Starts on :3000
+npm run dev
 ```
 
-### Connect & Use
-1. Install Shield Wallet → switch to **Aleo Testnet**
-2. Get testnet credits from [faucet.aleo.org](https://faucet.aleo.org)
-3. Open the app → **Connect Wallet** → Supply → Borrow → Repay → Withdraw → Earn Yield → Transfer Privately
+### Backend
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+### Smart Contracts
+Each contract lives in `contract/<program_name>/src/main.leo`. Build with Leo CLI:
+```bash
+cd contract/dara_lend_v8
+leo build
+```
 
 ---
 
-## Wave 4 Changelog
+## Repository Structure
 
-### Smart Contract Evolution (v5 → v6 → v7)
-- **v5** (Wave 3): 6 transitions, 445 lines, single collateral (ALEO only)
-- **v6** (Wave 4): 21 transitions, 812 statements, multi-collateral (ALEO/USDCx/USAD), interest rate model, circuit breaker, MerkleProof compliance
-- **v7** (Wave 4): Dual-program architecture — split into lending core + vault companion due to Aleo's 2M variable limit. Added 10 vault transitions: yield pool, private transfers, vault admin. Total: **31 transitions, 2,805,091 variables across 2 programs**
+```
+DARA-Lend/
+|-- frontend/               # React/Vite/TypeScript frontend
+|   +-- src/
+|       |-- components/
+|       |   |-- app/        # 18 app page components
+|       |   |-- landing/    # Landing page sections
+|       |   |-- docs/       # Documentation page
+|       |   |-- layout/     # Sidebar, header
+|       |   +-- shared/     # Reusable UI components
+|       |-- hooks/          # Custom React hooks (wallet, records)
+|       |-- stores/         # Zustand state management
+|       |-- utils/          # Constants, helpers, formatters
+|       +-- styles/         # Global CSS, Tailwind config
+|-- backend/                # Express.js automation backend
+|   +-- src/
+|       |-- automation/     # 6 bot implementations + orchestrator
+|       |-- oracle/         # 5-source price aggregation
+|       |-- liquidation/    # Position scanning + execution
+|       |-- api/            # REST endpoints
+|       +-- utils/          # Aleo client, config, TX builder
+|-- contract/               # 7 Leo smart contracts
+|   |-- dara_lend_v8/       # Core lending (12 transitions)
+|   |-- dara_lend_v8_credits/ # Reverse lending (12 transitions)
+|   |-- dara_lend_v8_vault/ # Yield vault + transfers (10 transitions)
+|   |-- dara_lend_v8_gov_v3/ # Governance (12 transitions)
+|   |-- dara_dark_pool_v1/  # Dark pool (9 transitions)
+|   |-- dara_auction_v1/    # Auctions (10 transitions)
+|   +-- dara_flash_v1/      # Flash loans (11 transitions)
++-- README.md
+```
 
-### Frontend (Complete Redesign)
-- **"Obsidian Ledger" design system** — luxury dark theme, glass-morphism, 4 typefaces, signature gradients
-- **13 app pages**: Dashboard, Supply, Borrow, Repay, Withdraw, Positions, Liquidate, Yield Vault, Private Transfer, Analytics, History, Stats, Admin
-- **Landing page**: 9 sections — Hero with video background, Architecture, How It Works, Privacy Pipeline, Technical Edge, Protocol Numbers, Testimonials, CTA
-- **Docs page**: Full protocol documentation with transitions, records, privacy model, FAQ
-- **Private record UI**: Token record selectors for all operations, PoolShare listing, wallet syncing indicators
+---
 
-### Backend
-- 5-source oracle aggregator with median + outlier rejection
-- **Automated bot orchestrator** (Provable DPS): oracle writes, liquidation execution, interest accrual, yield distribution
-- Solvency proof dashboard with live bot health monitoring
-- Liquidation monitoring sentinel for both programs
-- Analytics API: TVL, vault stats, multi-asset prices, interest rates
+## Wave 5 Changelog (Wave 3 -> Wave 5)
+
+### Wave 3
+- Single program, 6 transitions  basic supply/borrow/repay/liquidate/withdraw
+- Single collateral (ALEO only), single borrow (USDCx only)
+
+### Wave 4
+- 4-program architecture (lending + credits + vault + governance)
+- Multi-collateral (ALEO, USDCx, USAD), yield vault, private transfers
+- 45 transitions, ~3.5M compiled variables
+- Complete frontend redesign  14 pages
+- Provable DPS automation  4 bots
+
+### Wave 5
+- **3 new DeFi modules**: Dark Pool, Sealed-Bid Auctions, Flash Loans
+- Dark Pool  epoch-based batch trading, oracle mid-price settlement, anti-MEV
+- Sealed-Bid Auctions  BHP256 commitments, configurable bid/reveal windows (15 min to 7 days)
+- Flash Loans  0.09% fee, 102% collateral, bidirectional ALEO/USDCx, 4-step atomic flow
+- 7 programs, 76 transitions, ~5M compiled variables
+- 18 app pages (added Dark Pool, Auctions, Flash Loans, Rate Curve)
+- 6 automated bots (added DarkPool Bot, Auction Bot)
+- 17+ bug fixes and UX improvements across all modules
+- Complete landing page and docs redesign
 
 ---
 
 ## License
 
 MIT
+
+---
+
+**Built with zero-knowledge proofs on Aleo.**
