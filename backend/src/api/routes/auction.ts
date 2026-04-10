@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { config } from '../../utils/config.js';
 import { getMappingValue, getLatestBlockHeight } from '../../utils/aleoClient.js';
-import { execSync } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const router = Router();
 
@@ -291,7 +288,7 @@ router.post('/cancel/:index', async (req, res) => {
 });
 
 // POST /api/auction/commitment — compute BHP256 commitment for sealed bid
-// Uses Leo CLI because WASM SDK BHP256 doesn't match AVM on-chain hashing
+// Uses @provablehq/sdk WASM — no Leo CLI needed on server
 router.post('/commitment', async (req, res) => {
   try {
     const { bid, secret } = req.body;
@@ -312,31 +309,25 @@ router.post('/commitment', async (req, res) => {
       return;
     }
 
-    // Resolve path to the test_syntax Leo program
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    const leoDir = path.resolve(__dirname, '..', '..', '..', '..', 'tmp_test', 'test_syntax');
+    // Compute BHP256(BHP256(bid_u128) + secret_field) matching on-chain logic
+    const sdk = await import('@provablehq/sdk');
+    const bhp = new sdk.BHP256();
 
-    const cmd = `leo run compute_commitment ${bidNum}u128 ${secretStr}field`;
-    console.log(`[auction-api] Computing commitment: ${cmd}`);
+    // Step 1: bid_field = BHP256::hash_to_field(actual_bid as u128)
+    const bidPlaintext = sdk.Plaintext.fromString(`${bidNum}u128`);
+    const bidHash = bhp.hash(bidPlaintext.toBitsLe());
 
-    const output = execSync(cmd, {
-      cwd: leoDir,
-      encoding: 'utf-8',
-      timeout: 60000,
-    });
+    // Step 2: sum = bid_field + secret
+    const secretField = sdk.Field.fromString(`${secretStr}field`);
+    const sum = bidHash.add(secretField);
 
-    // Parse the output field value from Leo CLI output
-    const fieldMatch = output.match(/•\s*(\d+field)/);
-    if (!fieldMatch) {
-      console.error('[auction-api] Could not parse Leo output:', output.slice(-500));
-      res.status(500).json({ error: 'Failed to parse commitment result' });
-      return;
-    }
+    // Step 3: commitment = BHP256::hash_to_field(sum)
+    const sumPlaintext = sdk.Plaintext.fromString(sum.toString());
+    const commitment = bhp.hash(sumPlaintext.toBitsLe());
 
-    const commitment = fieldMatch[1];
-    console.log(`[auction-api] Commitment computed: ${commitment.slice(0, 30)}...`);
-    res.json({ commitment });
+    const commitmentStr = commitment.toString();
+    console.log(`[auction-api] Commitment computed: ${commitmentStr.slice(0, 30)}...`);
+    res.json({ commitment: commitmentStr });
   } catch (err) {
     console.error('[auction-api] commitment error:', err);
     res.status(500).json({ error: 'Failed to compute commitment' });
