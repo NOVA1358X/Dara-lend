@@ -360,6 +360,10 @@ export function Auctions({ wallet }: AuctionsProps) {
         : 'No SealedBid record found. Select an auction and place a bid first.');
       return;
     }
+    if (selectedAuction?.phase === 'bidding') {
+      toast.error('Cannot reveal during bidding phase. Wait for the reveal window to open.');
+      return;
+    }
     if (selectedAuction?.phase === 'settled' || selectedAuction?.phase === 'cancelled') {
       toast.error('This auction is already settled/cancelled. You cannot reveal after settlement — your deposit is forfeited.');
       return;
@@ -923,6 +927,14 @@ export function Auctions({ wallet }: AuctionsProps) {
                       </p>
                     </div>
                   );
+                  if (hasSealed && selectedAuction?.phase === 'bidding') return (
+                    <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg p-3 mb-2">
+                      <p className="text-text-secondary text-xs leading-relaxed">
+                        <strong className="text-blue-400">⏳ Bidding still open.</strong> You cannot reveal until the bid window closes.
+                        Come back after the bidding phase ends to reveal your bid.
+                      </p>
+                    </div>
+                  );
                   if (hasSealed) return (
                     <div className="bg-accent-warning/5 border border-accent-warning/10 rounded-lg p-3 mb-2">
                       <p className="text-text-secondary text-xs leading-relaxed">
@@ -1097,6 +1109,8 @@ export function Auctions({ wallet }: AuctionsProps) {
               const alreadyRedeemable = tab === 'redeem' && hasWin;
               // Already revealed, waiting for settlement on claim
               const waitingForSettlement = tab === 'claim' && hasRevealed && phase !== 'settled';
+              // Reveal too early (still in bidding phase)
+              const revealTooEarly = tab === 'reveal' && phase === 'bidding';
               // Reveal too late
               const revealTooLate = tab === 'reveal' && hasSealed && isSettledOrCancelled;
               // Already revealed and auction settled: ready to claim
@@ -1111,6 +1125,7 @@ export function Auctions({ wallet }: AuctionsProps) {
                 transactionPending ||
                 (tab === 'bid' && !auctionId) ||
                 isForfeited ||
+                revealTooEarly ||
                 revealTooLate ||
                 waitingForSettlement;
 
@@ -1121,6 +1136,8 @@ export function Auctions({ wallet }: AuctionsProps) {
                 buttonLabel = 'Connect Wallet';
               } else if (isForfeited) {
                 buttonLabel = 'Deposit Forfeited — Cannot Claim';
+              } else if (revealTooEarly) {
+                buttonLabel = 'Bidding Still Open — Reveal Later';
               } else if (revealTooLate) {
                 buttonLabel = 'Reveal Window Closed';
               } else if (waitingForSettlement) {
@@ -1173,6 +1190,8 @@ export function Auctions({ wallet }: AuctionsProps) {
                   className={`w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all border disabled:cursor-not-allowed ${
                     isForfeited || revealTooLate
                       ? 'bg-red-500/5 text-red-400/60 border-red-500/10 opacity-60'
+                      : revealTooEarly
+                      ? 'bg-blue-500/5 text-blue-400/60 border-blue-500/10 opacity-60'
                       : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 disabled:opacity-40'
                   }`}
                 >
