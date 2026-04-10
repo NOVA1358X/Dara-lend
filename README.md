@@ -12,8 +12,6 @@ DeFi Without Being Watched. Seven smart contracts, 76 transitions, and ~5 millio
 [![Transitions](https://img.shields.io/badge/Transitions-76-C9DDFF?style=flat-square)](#smart-contracts)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](#license)
 
-**Aleo Privacy Buildathon  Wave 5**
-
 [Live App](https://dara-lend.vercel.app)  [API](https://dara-lend-api.onrender.com/api/health)  [Docs](https://dara-lend.vercel.app/docs)  [Main](https://testnet.aleo.info/program/dara_lend_v8.aleo)  [Credits](https://testnet.aleo.info/program/dara_lend_v8_credits.aleo)  [Vault](https://testnet.aleo.info/program/dara_lend_v8_vault.aleo)  [Gov](https://testnet.aleo.info/program/dara_lend_v8_gov_v3.aleo)  [Dark Pool](https://testnet.aleo.info/program/dara_dark_pool_v1.aleo)  [Auctions](https://testnet.aleo.info/program/dara_auction_v1.aleo)  [Flash](https://testnet.aleo.info/program/dara_flash_v1.aleo)
 
 </div>
@@ -26,7 +24,7 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 
 ## The Solution
 
-**DARA** is a complete DeFi suite where every position, trade, bid, flash loan, and vote is encrypted inside zero-knowledge proofs. The protocol remains publicly verifiable for solvency while keeping individual activity invisible. Built from scratch across Waves 35 with 7 deployed programs.
+**DARA** is a complete DeFi suite where every position, trade, bid, flash loan, and vote is encrypted inside zero-knowledge proofs. The protocol remains publicly verifiable for solvency while keeping individual activity invisible.
 
 ---
 
@@ -178,7 +176,7 @@ All deposits use private token records. The vault also powers private transfers.
 
 ## Governance
 
-On-chain governance with full voter privacy through ZK proofs. The governance system evolved through three iterations during Wave 5 development:
+On-chain governance with full voter privacy through ZK proofs. The governance system was iterated through three versions to achieve production-grade privacy:
 
 - **v1**: Leaked voter identity through finalize — voter address visible on-chain
 - **v2**: Fixed privacy but hardcoded 200-block voting window — inflexible
@@ -401,7 +399,7 @@ DARA-Lend/
 |       +-- styles/         # Global CSS, Tailwind config
 |-- backend/                # Express.js automation backend
 |   +-- src/
-|       |-- automation/     # 6 bot implementations + orchestrator
+|       |-- automation/     # 7 bot implementations + orchestrator
 |       |-- oracle/         # 5-source price aggregation
 |       |-- liquidation/    # Position scanning + execution
 |       |-- api/            # REST endpoints
@@ -416,34 +414,6 @@ DARA-Lend/
 |   +-- dara_flash_v1/      # Flash loans (11 transitions)
 +-- README.md
 ```
-
----
-
-## Wave 5 Changelog (Wave 3 -> Wave 5)
-
-### Wave 3
-- Single program, 6 transitions  basic supply/borrow/repay/liquidate/withdraw
-- Single collateral (ALEO only), single borrow (USDCx only)
-
-### Wave 4
-- 3-program architecture (lending + credits + vault)
-- Multi-collateral (ALEO, USDCx, USAD), yield vault, private transfers
-- 34 transitions, ~2.4M compiled variables
-- Complete frontend redesign  14 pages
-- Provable DPS automation  4 bots
-
-### Wave 5
-- **4 new DeFi modules**: Dark Pool, Sealed-Bid Auctions, Flash Loans, Private Governance
-- **Governance v1→v2→v3 evolution**: v1 leaked voter identity via finalize, v2 had hardcoded 200-block voting, v3 (production) delivers configurable 1–30 day voting with `vote()` having NO finalize — zero on-chain trace of voter identity
-- Dark Pool  epoch-based batch trading, oracle mid-price settlement, anti-MEV
-- Sealed-Bid Auctions  BHP256 commitments, configurable bid/reveal windows (15 min to 7 days)
-- Flash Loans  0.09% fee, 102% collateral, bidirectional ALEO/USDCx, 4-step atomic flow
-- Governance v3  ZK-encrypted voting, delegation, 20% quorum, timelock, the first truly private DAO on Aleo
-- 7 programs, 76 transitions, ~5M compiled variables
-- 18 app pages (added Dark Pool, Auctions, Flash Loans, Governance, Rate Curve)
-- 7 automated bots via Provable DPS (added DarkPool, Auction, Flash Oracle)
-- 17+ bug fixes and UX improvements across all modules
-- Complete landing page and docs redesign
 
 ---
 
