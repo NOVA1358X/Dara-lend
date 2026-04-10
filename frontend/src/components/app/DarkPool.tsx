@@ -117,13 +117,17 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch TradeIntent records from dark pool program
-  useEffect(() => {
+  const refetchIntentRecords = useCallback(() => {
     if (!wallet.connected || !wallet.requestRecords) return;
     wallet.requestRecords(DARKPOOL_PROGRAM_ID, true)
       .then((recs: any[]) => setIntentRecords(recs.filter((r: any) => !r.spent)))
       .catch(() => setIntentRecords([]));
-  }, [wallet.connected]);
+  }, [wallet.connected, wallet.requestRecords]);
+
+  // Fetch TradeIntent records from dark pool program
+  useEffect(() => {
+    refetchIntentRecords();
+  }, [refetchIntentRecords]);
 
   // Parse TradeIntent records
   const parsedIntents = intentRecords.map((r: any) => {
@@ -197,7 +201,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         await claimSellFill(intent.plaintext, fillUsdcx);
         toast.success(`Sell fill claimed! Receiving ~${(fillUsdcx / PRECISION).toFixed(2)} USDCx privately. Transaction confirming...`);
       }
-      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }, 3000);
+      setTimeout(refetchIntentRecords, 8000);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Claim failed';
       if (errMsg.includes('rejected') || errMsg.includes('REJECTED')) {
@@ -217,7 +222,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         await cancelSell(intent.plaintext);
       }
       toast.success('Intent cancelled! Funds returned.');
-      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }, 3000);
+      setTimeout(refetchIntentRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Cancel failed');
     }
@@ -266,7 +272,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       } else {
         toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} intent submitted to Epoch #${epoch}! Waiting for ${tab === 'buy' ? 'sellers' : 'buyers'} to match. Settlement happens once both sides have orders.`);
       }
-      setTimeout(() => { fetchEpochData(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }, 3000);
+      setTimeout(refetchIntentRecords, 8000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Transaction failed';
       toast.error(msg);
@@ -331,7 +338,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { fetchEpochData(); refetchRecords(); }}
+              onClick={() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }}
               className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
             >
               Refresh

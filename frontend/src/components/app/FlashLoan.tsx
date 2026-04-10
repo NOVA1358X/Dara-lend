@@ -68,13 +68,17 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
     return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
   }).filter(Boolean) as { amount: number; plaintext: string }[];
 
-  // Fetch flash loan program records (FlashLoanReceipt, FlashRepayReceipt)
-  useEffect(() => {
+  const refetchFlashRecords = useCallback(() => {
     if (!wallet.connected || !wallet.requestRecords) return;
     wallet.requestRecords(FLASH_PROGRAM_ID, true)
       .then((recs: any[]) => setFlashRecords(recs.filter((r: any) => !r.spent)))
       .catch(() => setFlashRecords([]));
-  }, [wallet.connected, step]);
+  }, [wallet.connected, wallet.requestRecords, step]);
+
+  // Fetch flash loan program records (FlashLoanReceipt, FlashRepayReceipt)
+  useEffect(() => {
+    refetchFlashRecords();
+  }, [refetchFlashRecords]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -146,7 +150,8 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
 
       toast.success('Flash loan initiated! Proceed to Claim.');
       setStep('claim');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchStats(); refetchRecords(); refetchFlashRecords(); }, 3000);
+      setTimeout(refetchFlashRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Borrow failed');
     }
@@ -174,7 +179,8 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
       }
       toast.success('Tokens claimed! Proceed to Repay.');
       setStep('repay');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchStats(); refetchRecords(); refetchFlashRecords(); }, 3000);
+      setTimeout(refetchFlashRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Claim failed');
     }
@@ -214,7 +220,8 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
       }
       toast.success('Loan repaid! Proceed to Withdraw collateral.');
       setStep('withdraw');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchStats(); refetchRecords(); refetchFlashRecords(); }, 3000);
+      setTimeout(refetchFlashRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Repay failed');
     }
@@ -244,7 +251,8 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
       setStep('borrow');
       setAmount('');
       setBorrowAmount('');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchStats(); refetchRecords(); refetchFlashRecords(); }, 3000);
+      setTimeout(refetchFlashRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Withdraw failed');
     }
@@ -270,7 +278,7 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { fetchStats(); refetchRecords(); }}
+              onClick={() => { fetchStats(); refetchRecords(); refetchFlashRecords(); }}
               className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
             >
               Refresh

@@ -64,13 +64,17 @@ export function Auctions({ wallet }: AuctionsProps) {
     return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
   }).filter(Boolean) as { amount: number; plaintext: string }[];
 
-  // Fetch auction program records (SealedBid, RevealedBid, etc.)
-  useEffect(() => {
+  const refetchAuctionRecords = useCallback(() => {
     if (!wallet.connected || !wallet.requestRecords) return;
     wallet.requestRecords(AUCTION_PROGRAM_ID, true)
       .then((recs: any[]) => setAuctionRecords(recs.filter((r: any) => !r.spent)))
       .catch(() => setAuctionRecords([]));
-  }, [wallet.connected]);
+  }, [wallet.connected, wallet.requestRecords]);
+
+  // Fetch auction program records (SealedBid, RevealedBid, etc.)
+  useEffect(() => {
+    refetchAuctionRecords();
+  }, [refetchAuctionRecords]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -121,7 +125,8 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.success('Auction started!');
       setAdminCollateral('');
       setAdminMinBid('');
-      setTimeout(fetchStats, 3000);
+      setTimeout(() => { fetchStats(); refetchAuctionRecords(); }, 3000);
+      setTimeout(refetchAuctionRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start auction');
     }
@@ -163,7 +168,8 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.success('Sealed bid submitted! Save your secret — you need it to reveal.');
       setBidAmount('');
       setAuctionId('');
-      setTimeout(() => { fetchStats(); refetchRecords(); }, 3000);
+      setTimeout(() => { fetchStats(); refetchRecords(); refetchAuctionRecords(); }, 3000);
+      setTimeout(refetchAuctionRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Bid submission failed');
     }
@@ -192,7 +198,8 @@ export function Auctions({ wallet }: AuctionsProps) {
       toast.success('Bid revealed! Wait for settlement to claim.');
       setBidAmount('');
       setSecret('');
-      setTimeout(fetchStats, 3000);
+      setTimeout(() => { fetchStats(); refetchAuctionRecords(); }, 3000);
+      setTimeout(refetchAuctionRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Reveal failed');
     }
@@ -216,7 +223,8 @@ export function Auctions({ wallet }: AuctionsProps) {
       await claimAuctionCollateral(revealedPlaintext);
       toast.success('Collateral claimed!');
       setAuctionId('');
-      setTimeout(fetchStats, 3000);
+      setTimeout(() => { fetchStats(); refetchRecords(); refetchAuctionRecords(); }, 3000);
+      setTimeout(refetchAuctionRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Claim failed');
     }
@@ -236,7 +244,7 @@ export function Auctions({ wallet }: AuctionsProps) {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { fetchStats(); refetchRecords(); }}
+              onClick={() => { fetchStats(); refetchRecords(); refetchAuctionRecords(); }}
               className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
             >
               Refresh
