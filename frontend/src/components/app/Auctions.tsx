@@ -43,6 +43,7 @@ export function Auctions({ wallet }: AuctionsProps) {
   const [auctionRecords, setAuctionRecords] = useState<any[]>([]);
   // Admin state
   const isAdmin = wallet.address === ADMIN_ADDRESS;
+  const [activeAction, setActiveAction] = useState<'tab' | 'admin' | null>(null);
   const [adminCollateral, setAdminCollateral] = useState('');
   const [adminMinBid, setAdminMinBid] = useState('');
   const [adminBidBlocks, setAdminBidBlocks] = useState('100');
@@ -122,6 +123,7 @@ export function Auctions({ wallet }: AuctionsProps) {
     }
     try {
       await startAuction(record.plaintext, microCollateral, microMinBid, bidBlocks, revealBlocks);
+      setActiveAction('admin');
       toast.success('Auction started!');
       setAdminCollateral('');
       setAdminMinBid('');
@@ -134,6 +136,7 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleSubmitBid = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    setActiveAction('tab');
     const parsedAmount = parseFloat(bidAmount);
     const parsedAuction = parseInt(auctionId);
     if (!parsedAmount || parsedAmount <= 0) { toast.error('Enter a valid bid amount'); return; }
@@ -178,6 +181,7 @@ export function Auctions({ wallet }: AuctionsProps) {
   const handleRevealBid = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
     if (!secret) { toast.error('Enter the secret from your sealed bid'); return; }
+    setActiveAction('tab');
     const parsedAmount = parseFloat(bidAmount);
     if (!parsedAmount) { toast.error('Enter your actual bid amount'); return; }
 
@@ -207,6 +211,7 @@ export function Auctions({ wallet }: AuctionsProps) {
 
   const handleClaimCollateral = async () => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    setActiveAction('tab');
 
     // Find RevealedBid record from auction program records
     const revealedRecord = auctionRecords.find((r: any) => {
@@ -350,6 +355,19 @@ export function Auctions({ wallet }: AuctionsProps) {
             >
               Start Auction
             </button>
+            {transactionPending && activeAction === 'admin' && (
+              <div className="mt-4">
+                <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+              </div>
+            )}
+            {transactionStep === 'confirmed' && activeAction === 'admin' && (
+              <button
+                onClick={() => { resetTransaction(); setActiveAction(null); }}
+                className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                Done
+              </button>
+            )}
           </SpotlightCard>
         </FadeInView>
       )}
@@ -453,7 +471,7 @@ export function Auctions({ wallet }: AuctionsProps) {
             </div>
 
             {/* Transaction Flow */}
-            {transactionPending && (
+            {transactionPending && activeAction === 'tab' && (
               <div className="mb-2">
                 <TransactionFlow currentStep={transactionStep} txId={transactionId} />
               </div>
@@ -467,9 +485,9 @@ export function Auctions({ wallet }: AuctionsProps) {
               {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : tab === 'bid' ? 'Submit Sealed Bid' : tab === 'reveal' ? 'Reveal Bid' : 'Claim Collateral'}
             </button>
 
-            {transactionStep === 'confirmed' && (
+            {transactionStep === 'confirmed' && activeAction === 'tab' && (
               <button
-                onClick={resetTransaction}
+                onClick={() => { resetTransaction(); setActiveAction(null); }}
                 className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
                 New Action

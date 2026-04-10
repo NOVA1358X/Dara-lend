@@ -141,6 +141,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
   const [mintAmount, setMintAmount] = useState('');
 
   const isAdmin = wallet.address === ADMIN_ADDRESS;
+  const [activeAction, setActiveAction] = useState<'admin' | 'overview' | 'propose' | 'delegate' | null>(null);
 
   const fetchGovernanceData = useCallback(async () => {
     setLoading(true);
@@ -288,6 +289,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
     }
 
     try {
+      setActiveAction('admin');
       setTxPending(true);
       setTransactionPending(true);
       setTransactionStep('encrypting');
@@ -334,6 +336,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
     }
 
     try {
+      setActiveAction('propose');
       setTxPending(true);
       setTransactionPending(true);
       setTransactionStep('encrypting');
@@ -378,6 +381,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
     const amount = Math.min(votingPower, 100);
 
     try {
+      setActiveAction('overview');
       setTxPending(true);
       setTransactionPending(true);
       setTransactionStep('encrypting');
@@ -438,6 +442,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
       return;
     }
     try {
+      setActiveAction('overview');
       setTxPending(true);
       setTransactionPending(true);
       setTransactionStep('encrypting');
@@ -485,6 +490,7 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
       return;
     }
     try {
+      setActiveAction('delegate');
       setTxPending(true);
       setTransactionPending(true);
       setTransactionStep('encrypting');
@@ -580,32 +586,6 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
         </motion.div>
       </div>
 
-      {/* Transaction Flow */}
-      {transactionPending && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/5 rounded-xl p-5 border border-white/10"
-        >
-          <TransactionFlow currentStep={transactionStep} txId={transactionId} />
-        </motion.div>
-      )}
-
-      {transactionStep === 'confirmed' && !transactionPending && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex justify-center"
-        >
-          <button
-            onClick={resetTransaction}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Dismiss
-          </button>
-        </motion.div>
-      )}
-
       {/* Claim GOV Tokens — visible to ALL connected users */}
       {wallet.connected && (
         <motion.div
@@ -678,6 +658,21 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
               {txPending ? 'Minting...' : 'Mint Tokens'}
             </button>
           </div>
+          {transactionPending && activeAction === 'admin' && (
+            <div className="mt-4">
+              <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+            </div>
+          )}
+          {transactionStep === 'confirmed' && activeAction === 'admin' && (
+            <div className="flex justify-center mt-3">
+              <button
+                onClick={() => { resetTransaction(); setActiveAction(null); }}
+                className="text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -860,6 +855,25 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
                 );
               })
             )}
+            {transactionPending && activeAction === 'overview' && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/5 rounded-xl p-5 border border-white/10"
+              >
+                <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+              </motion.div>
+            )}
+            {transactionStep === 'confirmed' && activeAction === 'overview' && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => { resetTransaction(); setActiveAction(null); }}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -969,6 +983,21 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
                 ) : 'Submit Proposal'}
               </button>
             </div>
+            {transactionPending && activeAction === 'propose' && (
+              <div className="mt-4">
+                <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+              </div>
+            )}
+            {transactionStep === 'confirmed' && activeAction === 'propose' && (
+              <div className="flex justify-center mt-3">
+                <button
+                  onClick={() => { resetTransaction(); setActiveAction(null); }}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1032,6 +1061,21 @@ export function GovernancePanel({ wallet }: GovernanceProps) {
                 ) : 'Delegate Votes'}
               </button>
             </div>
+            {transactionPending && activeAction === 'delegate' && (
+              <div className="mt-4">
+                <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+              </div>
+            )}
+            {transactionStep === 'confirmed' && activeAction === 'delegate' && (
+              <div className="flex justify-center mt-3">
+                <button
+                  onClick={() => { resetTransaction(); setActiveAction(null); }}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

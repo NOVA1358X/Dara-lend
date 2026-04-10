@@ -51,6 +51,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   const [poolBalance, setPoolBalance] = useState({ aleo: 0, usdcx: 0 });
   const [intentRecords, setIntentRecords] = useState<any[]>([]);
   const isAdmin = wallet.address === ADMIN_ADDRESS;
+  const [activeAction, setActiveAction] = useState<'submit' | 'claim' | null>(null);
 
   // Parse wallet records
   const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
@@ -147,6 +148,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
   const handleClaimFill = async (intent: typeof parsedIntents[0]) => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    setActiveAction('claim');
 
     // Fetch the settlement price for this intent's epoch (may differ from current epoch)
     let price = 0;
@@ -215,6 +217,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
   const handleCancelIntent = async (intent: typeof parsedIntents[0]) => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    setActiveAction('claim');
     try {
       if (intent.intentType === 0) {
         await cancelBuy(intent.plaintext);
@@ -245,6 +248,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     crypto.getRandomValues(randomBytes);
     const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
     const microAmount = Math.floor(parsedAmount * PRECISION);
+    setActiveAction('submit');
 
     try {
       if (tab === 'buy') {
@@ -482,7 +486,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             </div>
 
             {/* Transaction Flow */}
-            {transactionPending && (
+            {transactionPending && activeAction === 'submit' && (
               <div className="mb-2">
                 <TransactionFlow currentStep={transactionStep} txId={transactionId} />
               </div>
@@ -496,9 +500,9 @@ export function DarkPool({ wallet }: DarkPoolProps) {
               {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : `Submit ${tab === 'buy' ? 'Buy' : 'Sell'} Intent`}
             </button>
 
-            {transactionStep === 'confirmed' && (
+            {transactionStep === 'confirmed' && activeAction === 'submit' && (
               <button
-                onClick={resetTransaction}
+                onClick={() => { resetTransaction(); setActiveAction(null); }}
                 className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
                 New Intent
@@ -557,6 +561,26 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 );
               })}
             </div>
+          </SpotlightCard>
+        </FadeInView>
+      )}
+
+      {/* Claim/Cancel Transaction Flow */}
+      {activeAction === 'claim' && (transactionPending || transactionStep === 'confirmed') && (
+        <FadeInView delay={0.25}>
+          <SpotlightCard className="p-6">
+            <h3 className="font-headline text-lg text-text-primary mb-4">
+              {transactionStep === 'confirmed' ? 'Transaction Confirmed' : 'Processing...'}
+            </h3>
+            <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+            {transactionStep === 'confirmed' && (
+              <button
+                onClick={() => { resetTransaction(); setActiveAction(null); }}
+                className="w-full mt-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                Done
+              </button>
+            )}
           </SpotlightCard>
         </FadeInView>
       )}

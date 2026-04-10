@@ -348,18 +348,15 @@ export function FlashLoan({ wallet }: FlashLoanProps) {
         </div>
       </FadeInView>
 
-      {/* Transaction Flow */}
-      {transactionPending && (
-        <FadeInView delay={0.18}>
-          <SpotlightCard className="p-6">
-            <TransactionFlow currentStep={transactionStep} txId={transactionId} />
-          </SpotlightCard>
-        </FadeInView>
-      )}
-
       {/* Flash Loan Form */}
       <FadeInView delay={0.2}>
         <SpotlightCard className="p-6">
+          {/* Transaction Flow */}
+          {transactionPending && (
+            <div className="mb-4">
+              <TransactionFlow currentStep={transactionStep} txId={transactionId} />
+            </div>
+          )}
           {step === 'borrow' && (
             <>
               <div className="flex gap-2 mb-6">
