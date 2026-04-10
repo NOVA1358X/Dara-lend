@@ -1005,6 +1005,24 @@ export function useTransaction(wallet: WalletExecute) {
     [executeTransaction],
   );
 
+  const settleAuction = useCallback(
+    async (auctionIdField: string) => {
+      return executeTransaction(AUCTION_TRANSITIONS.SETTLE_AUCTION, [
+        auctionIdField,
+      ], TX_FEE, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
+  const cancelAuction = useCallback(
+    async (auctionIdField: string) => {
+      return executeTransaction(AUCTION_TRANSITIONS.CANCEL_AUCTION, [
+        auctionIdField,
+      ], TX_FEE, AUCTION_PROGRAM_ID);
+    },
+    [executeTransaction],
+  );
+
   // ── Flash Loan Transactions ──
 
   const flashBorrowUsdcx = useCallback(
@@ -1139,6 +1157,8 @@ export function useTransaction(wallet: WalletExecute) {
     claimAuctionCollateral,
     redeemAuctionCollateral,
     refundBid,
+    settleAuction,
+    cancelAuction,
     // Flash Loan operations
     flashBorrowUsdcx,
     flashClaimUsdcx,

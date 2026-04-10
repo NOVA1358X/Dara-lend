@@ -223,4 +223,68 @@ router.get('/:index', async (req, res) => {
   }
 });
 
+// POST /api/auction/settle/:index — admin settles auction via DPS
+router.post('/settle/:index', async (req, res) => {
+  try {
+    const index = parseInt(req.params.index, 10);
+    if (isNaN(index) || index < 0 || index > 9) {
+      res.status(400).json({ error: 'Invalid auction index (0-9)' });
+      return;
+    }
+
+    const idHash = AUCTION_ID_HASHES[index];
+    if (!idHash) {
+      res.status(400).json({ error: 'No precomputed hash for this index' });
+      return;
+    }
+
+    const { buildAndBroadcastTransaction } = await import('../../utils/transactionBuilder.js');
+    const programId = config.auctionProgramId;
+
+    console.log(`[auction-api] Admin settling auction #${index} via DPS`);
+    const txId = await buildAndBroadcastTransaction(programId, 'settle_auction', [idHash]);
+
+    if (txId) {
+      res.json({ success: true, txId, index, action: 'settle' });
+    } else {
+      res.status(500).json({ error: 'DPS submission failed' });
+    }
+  } catch (err) {
+    console.error('[auction-api] settle error:', err);
+    res.status(500).json({ error: 'Failed to settle auction' });
+  }
+});
+
+// POST /api/auction/cancel/:index — admin cancels auction via DPS
+router.post('/cancel/:index', async (req, res) => {
+  try {
+    const index = parseInt(req.params.index, 10);
+    if (isNaN(index) || index < 0 || index > 9) {
+      res.status(400).json({ error: 'Invalid auction index (0-9)' });
+      return;
+    }
+
+    const idHash = AUCTION_ID_HASHES[index];
+    if (!idHash) {
+      res.status(400).json({ error: 'No precomputed hash for this index' });
+      return;
+    }
+
+    const { buildAndBroadcastTransaction } = await import('../../utils/transactionBuilder.js');
+    const programId = config.auctionProgramId;
+
+    console.log(`[auction-api] Admin cancelling auction #${index} via DPS`);
+    const txId = await buildAndBroadcastTransaction(programId, 'cancel_auction', [idHash]);
+
+    if (txId) {
+      res.json({ success: true, txId, index, action: 'cancel' });
+    } else {
+      res.status(500).json({ error: 'DPS submission failed' });
+    }
+  } catch (err) {
+    console.error('[auction-api] cancel error:', err);
+    res.status(500).json({ error: 'Failed to cancel auction' });
+  }
+});
+
 export default router;

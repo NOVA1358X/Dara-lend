@@ -107,7 +107,7 @@ function phaseLabel(phase: string): string {
 export function Auctions({ wallet }: AuctionsProps) {
   const {
     startAuction, submitSealedBid, revealBid, claimAuctionCollateral,
-    redeemAuctionCollateral, refundBid, resetTransaction,
+    redeemAuctionCollateral, refundBid, settleAuction, cancelAuction, resetTransaction,
   } = useTransaction(wallet as any);
   const { usdcxRecords, creditsRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
@@ -226,6 +226,51 @@ export function Auctions({ wallet }: AuctionsProps) {
       refreshAll();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start auction');
+    }
+  };
+
+  const handleSettleAuction = async (index: number) => {
+    if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    if (!isAdmin) { toast.error('Only admin can settle auctions'); return; }
+    const idHash = AUCTION_ID_TABLE[index];
+    if (!idHash) { toast.error('Invalid auction index'); return; }
+    setActiveAction('admin');
+    try {
+      // Use backend DPS endpoint (admin key is on backend)
+      const res = await fetch(`${BACKEND_API}/auction/settle/${index}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Auction #${index} settlement submitted! TX: ${data.txId?.slice(0, 20)}... (~30s to confirm)`);
+      } else {
+        toast.error(data.error || 'Settlement failed');
+      }
+      refreshAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Settlement failed');
+    } finally {
+      setActiveAction(null);
+    }
+  };
+
+  const handleCancelAuction = async (index: number) => {
+    if (!wallet.connected) { toast.error('Connect wallet first'); return; }
+    if (!isAdmin) { toast.error('Only admin can cancel auctions'); return; }
+    const idHash = AUCTION_ID_TABLE[index];
+    if (!idHash) { toast.error('Invalid auction index'); return; }
+    setActiveAction('admin');
+    try {
+      const res = await fetch(`${BACKEND_API}/auction/cancel/${index}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Auction #${index} cancellation submitted! TX: ${data.txId?.slice(0, 20)}... (~30s to confirm)`);
+      } else {
+        toast.error(data.error || 'Cancellation failed');
+      }
+      refreshAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Cancellation failed');
+    } finally {
+      setActiveAction(null);
     }
   };
 
@@ -504,6 +549,28 @@ export function Auctions({ wallet }: AuctionsProps) {
                         </span>
                       </div>
                     </div>
+                    {/* Admin: Settle / Cancel buttons for awaiting_settlement */}
+                    {isAdmin && auction.phase === 'awaiting_settlement' && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+                        {auction.bidCount > 0 ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSettleAuction(auction.index); }}
+                            disabled={transactionPending}
+                            className="flex-1 py-2 rounded-lg text-xs font-label uppercase tracking-wider bg-accent-success/10 text-accent-success border border-accent-success/20 hover:bg-accent-success/20 disabled:opacity-40 transition-all"
+                          >
+                            {transactionPending && activeAction === 'admin' ? 'Processing...' : 'Settle Auction'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleCancelAuction(auction.index); }}
+                            disabled={transactionPending}
+                            className="flex-1 py-2 rounded-lg text-xs font-label uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-40 transition-all"
+                          >
+                            {transactionPending && activeAction === 'admin' ? 'Processing...' : 'Cancel (No Bids)'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </SpotlightCard>
                   </div>
                 );
