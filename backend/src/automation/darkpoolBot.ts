@@ -67,6 +67,8 @@ export function getDarkPoolBotStatus() {
 
 /**
  * Run one dark pool bot cycle across ALL markets sequentially.
+ * Processes every market in a single tick — DPS handles nonces server-side,
+ * and sequential awaits prevent conflicts.
  * Returns true if any transaction was submitted.
  */
 export async function runDarkPoolBotCycle(): Promise<boolean> {
@@ -74,11 +76,7 @@ export async function runDarkPoolBotCycle(): Promise<boolean> {
 
   for (const market of darkpoolMarkets) {
     const submitted = await runSingleMarketCycle(market);
-    if (submitted) {
-      anySubmitted = true;
-      // One TX per tick to avoid nonce conflicts — return after first successful submission
-      return anySubmitted;
-    }
+    if (submitted) anySubmitted = true;
   }
 
   return anySubmitted;
@@ -108,10 +106,7 @@ async function runSingleMarketCycle(market: DarkPoolMarketConfig): Promise<boole
 
     // ─── Step 1: Oracle Price Update ──────────────────────────
     const oracleSubmitted = await stepOracleUpdate(programId, market, state, tag);
-    if (oracleSubmitted) {
-      submitted = true;
-      return submitted;
-    }
+    if (oracleSubmitted) submitted = true;
 
     // Steps 2–4 disabled: single-key bot cannot complete 2-of-3 approval.
     // approve_settlement rejects when caller === proposer (operator_approved_batch hash collision).

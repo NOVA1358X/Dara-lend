@@ -471,7 +471,9 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                   Limit Price (optional)
                 </label>
                 <span className="text-text-muted text-xs">
-                  Oracle: ${oraclePrice > 0 ? oraclePrice.toFixed(4) : '—'}
+                  {realPrice > 0
+                    ? `Market: $${realPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4 })}`
+                    : `Oracle: $${oraclePrice > 0 ? oraclePrice.toFixed(4) : '—'}`}
                 </span>
               </div>
               <input
