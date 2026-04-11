@@ -121,7 +121,7 @@ function Field({
   value: string;
   mono?: boolean;
   copyValue?: string;
-  icon?: 'ALEO' | 'USDCx' | 'USAD';
+  icon?: TokenIconLabel;
 }) {
   return (
     <div>

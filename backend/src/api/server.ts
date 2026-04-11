@@ -12,6 +12,7 @@ import governanceRouter from './routes/governance.js';
 import darkpoolRouter from './routes/darkpool.js';
 import auctionRouter from './routes/auction.js';
 import flashRouter from './routes/flash.js';
+import faucetRouter from './routes/faucet.js';
 
 export function createServer() {
   const app = express();
@@ -40,6 +41,7 @@ export function createServer() {
   app.use('/api/darkpool', darkpoolRouter);
   app.use('/api/auction', auctionRouter);
   app.use('/api/flash', flashRouter);
+  app.use('/api/faucet', faucetRouter);
 
   app.get('/', (_req, res) => {
     res.json({
@@ -52,7 +54,7 @@ export function createServer() {
         config.auctionProgramId, config.flashProgramId,
       ],
       darkpoolMarkets: darkpoolMarkets.map(m => ({ id: m.id, label: m.label, programId: m.programId })),
-      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info', '/api/darkpool/markets', '/api/darkpool/batch', '/api/darkpool/stats', '/api/darkpool/:market/batch', '/api/darkpool/:market/stats', '/api/darkpool/:market/twap', '/api/auction/active', '/api/auction/stats', '/api/auction/list', '/api/auction/:index', '/api/flash/stats', '/api/flash/available'],
+      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info', '/api/darkpool/markets', '/api/darkpool/batch', '/api/darkpool/stats', '/api/darkpool/:market/batch', '/api/darkpool/:market/stats', '/api/darkpool/:market/twap', '/api/auction/active', '/api/auction/stats', '/api/auction/list', '/api/auction/:index', '/api/flash/stats', '/api/flash/available', '/api/faucet/claim', '/api/faucet/status/:address'],
     });
   });
 

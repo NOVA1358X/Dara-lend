@@ -61,6 +61,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   const [orderRecords, setOrderRecords] = useState<any[]>([]);
   const isAdmin = wallet.address === ADMIN_ADDRESS;
   const [activeAction, setActiveAction] = useState<'submit' | 'cancel' | null>(null);
+  const [faucetLoading, setFaucetLoading] = useState<string | null>(null);
+  const [faucetStatus, setFaucetStatus] = useState<Record<string, number>>({ BTC: 5, ETH: 5, SOL: 5 });
 
   const activeProgramId = selectedMarket.programId;
 
@@ -141,6 +143,44 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   useEffect(() => {
     refetchOrderRecords();
   }, [refetchOrderRecords]);
+
+  // Fetch faucet status for connected wallet
+  useEffect(() => {
+    if (!wallet.connected || !wallet.address) return;
+    fetch(`${BACKEND_API}/faucet/status/${wallet.address}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.tokens) {
+          const status: Record<string, number> = {};
+          data.tokens.forEach((t: { token: string; remaining: number }) => { status[t.token] = t.remaining; });
+          setFaucetStatus(status);
+        }
+      })
+      .catch(() => {});
+  }, [wallet.connected, wallet.address]);
+
+  const handleFaucetClaim = async (token: string) => {
+    if (!wallet.connected || !wallet.address) { toast.error('Connect wallet first'); return; }
+    setFaucetLoading(token);
+    try {
+      const res = await fetch(`${BACKEND_API}/faucet/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: wallet.address, token }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `10 ${token} claimed!`);
+        setFaucetStatus(prev => ({ ...prev, [token]: data.remaining ?? (prev[token] - 1) }));
+      } else {
+        toast.error(data.error || 'Claim failed');
+      }
+    } catch {
+      toast.error('Faucet request failed');
+    } finally {
+      setFaucetLoading(null);
+    }
+  };
 
   // Parse OrderCommitment records (v2)
   const parsedOrders = orderRecords.map((r: any) => {
@@ -426,6 +466,34 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           )}
         </SpotlightCard>
       </FadeInView>
+
+      {/* Test Token Faucet */}
+      {wallet.connected && (
+        <FadeInView delay={0.18}>
+          <SpotlightCard className="p-6 border border-accent-success/20">
+            <h3 className="font-headline text-lg text-accent-success mb-2">Test Token Faucet</h3>
+            <p className="text-text-muted text-xs mb-4">
+              Claim free test tokens to trade on the dark pool. 10 tokens per claim, up to 5 claims per token per day.
+            </p>
+            <div className="flex gap-3">
+              {(['BTC', 'ETH', 'SOL'] as const).map((token) => (
+                <button
+                  key={token}
+                  onClick={() => handleFaucetClaim(token)}
+                  disabled={faucetLoading !== null || (faucetStatus[token] ?? 0) <= 0}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-label text-xs uppercase tracking-wider transition-all bg-white/[0.04] text-text-secondary border border-white/[0.08] hover:bg-accent-success/10 hover:text-accent-success hover:border-accent-success/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <TokenIcon token={token} size={16} />
+                  {faucetLoading === token ? 'Sending...' : `Claim 10 ${token}`}
+                </button>
+              ))}
+            </div>
+            <p className="text-text-muted text-[10px] mt-2">
+              Daily remaining: BTC ({faucetStatus.BTC ?? 0}/5) · ETH ({faucetStatus.ETH ?? 0}/5) · SOL ({faucetStatus.SOL ?? 0}/5)
+            </p>
+          </SpotlightCard>
+        </FadeInView>
+      )}
 
       {/* Trade Form */}
       <FadeInView delay={0.2}>

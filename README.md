@@ -46,11 +46,11 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 |  |  12 trans.    | |  12 trans.    | |  10 trans.    |       |
 |  +---------------+ +---------------+ +---------------+       |
 |  +---------------+ +---------------+                         |
-|  |   _gov_v3     | |_dark_pool_v2 |                         |
+|  |   _gov_v3     | |_dark_pool_v3 |                         |
 |  |  12 trans.    | |  16 trans.   |                         |
 |  +---------------+ +---------------+                         |
 |  +---------------+ +---------------+ +---------------+       |
-|  | _dp_btc_v1   | |  _dp_eth_v1  | |  _dp_sol_v1  |       |
+|  | _dp_btc_v2   | |  _dp_eth_v2  | |  _dp_sol_v2  |       |
 |  |  16 trans.    | |  16 trans.   | |  16 trans.   |       |
 |  +---------------+ +---------------+ +---------------+       |
 |  +---------------+ +---------------+ +---------------+       |
@@ -297,7 +297,7 @@ Seven bots managed by a unified orchestrator, all deployed on **Provable DPS** (
 | Interest Bot | 1 hr | `accrue_interest` | `dara_lend_v8.aleo` |
 | Yield Bot | 6 hr | `distribute_yield` | `dara_lend_v8_vault.aleo` |
 | Liquidation Bot | 1 min | `liquidate_*` | `dara_lend_v8.aleo` |
-| Dark Pool Bot | 5 min / 60s | Oracle updates across 4 markets with ±14% convergence clamping; settlement steps disabled (single-key) | All 4 dark pool programs |
+| Dark Pool Bot | 5 min / 15s catch-up | Oracle updates across 4 markets with ±14.5% convergence clamping. 7-source median price per asset (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CMC). Catch-up mode when deviation > 20% | All 4 dark pool programs |
 | Auction Bot | 5 min | `settle_auction` | `dara_auction_v1.aleo` |
 | Flash Oracle Bot | 30 min | `update_oracle_price` | `dara_flash_v1.aleo` |
 
@@ -307,6 +307,29 @@ Seven bots managed by a unified orchestrator, all deployed on **Provable DPS** (
 - Proving via `POST /prove/testnet/prove` with `useFeeMaster: true` (zero gas cost)
 - Sequential nonce queue prevents transaction conflicts across all 7 bots
 - WASM SDK warmed at startup for instant first-transaction readiness
+
+### Dark Pool Bot — Detailed Oracle Flow
+
+The dark pool bot manages real-time oracle price feeds across 4 independent markets:
+
+1. **Fetch real prices** from 7 sources (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap) per asset
+2. **Median filter** with outlier rejection (>2 sigma) to resist manipulation
+3. **Scale price** by market's `priceScale` divisor (BTC÷1000, ETH÷100, SOL÷10, ALEO÷1) to fit contract's `MAX_PRICE` (100,000,000u64 = $100 at 6 decimals)
+4. **Clamp to ±14.5%** of current on-chain price (contract enforces `MAX_DEVIATION_BPS = 1500` = 15% anti-manipulation cap)
+5. **Push `update_oracle_price`** via Provable DPS to the correct market program with incremented round counter
+6. **Catch-up mode**: When price deviation > 20%, interval drops from 5 min → 15s for rapid convergence to real market price
+7. **Turbo convergence**: `backend/src/turboConverge.ts` utility pushes consecutive 14.5% changes with 3s delay for emergency convergence (e.g., BTC $100 → $73,512 in 29 rounds)
+
+### Test Token Faucet
+
+Users can claim free test tokens (BTC, ETH, SOL) to trade on the dark pool:
+
+- **Endpoint**: `POST /api/faucet/claim` with `{ address, token }`
+- **Amount**: 10 tokens per claim (10,000,000u64 at 6 decimals)
+- **Daily limit**: 5 claims per token per address per day
+- **Mechanism**: Admin wallet calls `transfer_public` on the test token program via Provable DPS
+- **Frontend**: "Test Token Faucet" card on Dark Pool page with one-click claim buttons
+- **Status check**: `GET /api/faucet/status/:address` returns remaining claims per token
 
 ---
 
@@ -459,7 +482,7 @@ DARA-Lend/
 |       |-- automation/     # 7 bot implementations + orchestrator
 |       |-- oracle/         # 7-source price aggregation
 |       |-- liquidation/    # Position scanning + execution
-|       |-- api/            # REST endpoints
+|       |-- api/            # REST endpoints (stats, oracle, darkpool, faucet, auction, flash)
 |       +-- utils/          # Aleo client, config, TX builder
 |-- contract/               # 14 Leo smart contracts
 |   |-- dara_lend_v8/       # Core lending (12 transitions)
