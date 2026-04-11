@@ -1,7 +1,7 @@
 import test_btc_v1.aleo;
 import test_usdcx_stablecoin.aleo;
 
-program dara_dp_btc_v1.aleo {
+program dara_dp_btc_v2.aleo {
 
     // CONSTANTS
     const SCALE: u128 = 1_000_000u128;

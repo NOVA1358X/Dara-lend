@@ -1,7 +1,7 @@
-import test_btc_v1.aleo;
+import test_eth_v1.aleo;
 import test_usdcx_stablecoin.aleo;
 
-program dara_dp_btc_v1.aleo {
+program dara_dp_eth_v2.aleo {
 
     // CONSTANTS
     const SCALE: u128 = 1_000_000u128;
@@ -237,9 +237,9 @@ program dara_dp_btc_v1.aleo {
         });
     }
 
-    // 4. SUBMIT SELL ORDER (locks BTC)
+    // 4. SUBMIT SELL ORDER (locks ETH)
     fn submit_sell_order(
-        input_token: test_btc_v1.aleo::Token,
+        input_token: test_eth_v1.aleo::Token,
         amount: u64,
         limit_price: u64,
         expiry_block: u32,
@@ -275,8 +275,8 @@ program dara_dp_btc_v1.aleo {
             expiry_block: expiry_block,
         };
 
-        let (change_token, token_future): (test_btc_v1.aleo::Token, Final) =
-            test_btc_v1.aleo::transfer_private_to_public(input_token, self.address, amount);
+        let (change_token, token_future): (test_eth_v1.aleo::Token, Final) =
+            test_eth_v1.aleo::transfer_private_to_public(input_token, self.address, amount);
 
         return (commitment, auth, final {
             token_future.run();
@@ -388,7 +388,7 @@ program dara_dp_btc_v1.aleo {
         };
     }
 
-    // 7. EXECUTE MATCH (BTC to buyer, USDCx to seller)
+    // 7. EXECUTE MATCH (ETH to buyer, USDCx to seller)
     fn execute_match(
         buy_auth: OrderAuth,
         sell_auth: OrderAuth,
@@ -440,8 +440,8 @@ program dara_dp_btc_v1.aleo {
         let (compliance_rec, usdcx_tok, usdcx_future): (test_usdcx_stablecoin.aleo::ComplianceRecord, test_usdcx_stablecoin.aleo::Token, Final) =
             test_usdcx_stablecoin.aleo::transfer_public_to_private(sell_trader, net_to_seller);
 
-        let (return_token, token_future): (test_btc_v1.aleo::Token, Final) =
-            test_btc_v1.aleo::transfer_public_to_private(buy_trader, token_to_buyer);
+        let (return_token, token_future): (test_eth_v1.aleo::Token, Final) =
+            test_eth_v1.aleo::transfer_public_to_private(buy_trader, token_to_buyer);
 
         return (buy_receipt, sell_receipt, final {
             usdcx_future.run();
@@ -557,8 +557,8 @@ program dara_dp_btc_v1.aleo {
         let (compliance_rec, usdcx_tok, usdcx_future): (test_usdcx_stablecoin.aleo::ComplianceRecord, test_usdcx_stablecoin.aleo::Token, Final) =
             test_usdcx_stablecoin.aleo::transfer_public_to_private(sell_trader, net_to_seller);
 
-        let (return_token, token_future): (test_btc_v1.aleo::Token, Final) =
-            test_btc_v1.aleo::transfer_public_to_private(buy_trader, token_to_buyer);
+        let (return_token, token_future): (test_eth_v1.aleo::Token, Final) =
+            test_eth_v1.aleo::transfer_public_to_private(buy_trader, token_to_buyer);
 
         return (buy_receipt, sell_receipt, residual, residual_auth, final {
             usdcx_future.run();
@@ -635,15 +635,15 @@ program dara_dp_btc_v1.aleo {
         };
     }
 
-    // 11. CANCEL SELL ORDER (refunds BTC)
+    // 11. CANCEL SELL ORDER (refunds ETH)
     fn cancel_sell_order(commitment: OrderCommitment) -> Final {
         assert(commitment.direction == 1u8);
         let refund_token: u64 = commitment.size as u64;
         let order_id: field = commitment.order_id;
         let caller: address = self.caller;
 
-        let (return_token, refund_future): (test_btc_v1.aleo::Token, Final) =
-            test_btc_v1.aleo::transfer_public_to_private(caller, refund_token);
+        let (return_token, refund_future): (test_eth_v1.aleo::Token, Final) =
+            test_eth_v1.aleo::transfer_public_to_private(caller, refund_token);
 
         return final {
             refund_future.run();

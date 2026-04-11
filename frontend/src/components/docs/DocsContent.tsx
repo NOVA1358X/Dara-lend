@@ -74,7 +74,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
           <strong className="text-text-primary">dara_lend_v8_credits.aleo</strong> (stablecoin-collateral lending),{' '}
           <strong className="text-text-primary">dara_lend_v8_vault.aleo</strong> (yield vault + private transfers),{' '}
           <strong className="text-text-primary">dara_lend_v8_gov_v3.aleo</strong> (private governance),{' '}
-          <strong className="text-text-primary">dara_dark_pool_v1.aleo</strong> (batch dark pool trading),{' '}
+          <strong className="text-text-primary">dara_dark_pool_v3.aleo</strong> (batch dark pool trading),{' '}
           <strong className="text-text-primary">dara_auction_v1.aleo</strong> (sealed-bid auctions), and{' '}
           <strong className="text-text-primary">dara_flash_v1.aleo</strong> (flash loans).
           Together: 76 transitions, ~5M compiled variables, 11+ private record types.
@@ -133,11 +133,11 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             {' · '}
             <strong className="text-primary">Dark Pool:</strong>{' '}
             <a
-              href="https://testnet.explorer.provable.com/program/dara_dark_pool_v1.aleo"
+              href="https://testnet.explorer.provable.com/program/dara_dark_pool_v3.aleo"
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-primary hover:underline"
-            >dara_dark_pool_v1.aleo</a>
+            >dara_dark_pool_v3.aleo</a>
             {' · '}
             <strong className="text-primary">Auctions:</strong>{' '}
             <a
@@ -626,7 +626,7 @@ merkle_tree.aleo                 → Freeze-list compliance verification`}</Code
           Dark Pool
         </h2>
         <p className="text-text-secondary leading-relaxed mb-4">
-          The DARA Dark Pool (<strong className="text-text-primary">dara_dark_pool_v1.aleo</strong>, 9 transitions)
+          The DARA Dark Pool (<strong className="text-text-primary">dara_dark_pool_v3.aleo</strong>, 9 transitions)
           enables private, MEV-resistant trading of ALEO/USDCx pairs. Trades are submitted as encrypted intents
           and batch-settled at the oracle mid-price — no order book, no front-running, no price manipulation.
         </p>
@@ -1209,7 +1209,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'What network is DARA deployed on?',
-              a: 'Currently on Aleo Testnet with 7 deployed contracts: dara_lend_v8, dara_lend_v8_credits, dara_lend_v8_vault, dara_lend_v8_gov_v3, dara_dark_pool_v1, dara_auction_v1, and dara_flash_v1. All are live and verifiable on the Aleo explorer. Mainnet deployment planned after audits.',
+              a: 'Currently on Aleo Testnet with 14 deployed contracts: dara_lend_v8, dara_lend_v8_credits, dara_lend_v8_vault, dara_lend_v8_gov_v3, dara_dark_pool_v3, dara_dp_btc_v2, dara_dp_eth_v2, dara_dp_sol_v2, dara_auction_v1, dara_flash_v1, test_btc_v1, test_eth_v1, test_sol_v1, and test_usdcx_stablecoin. All are live and verifiable on the Aleo explorer. Mainnet deployment planned after audits.',
             },
             {
               q: 'What is the Yield Vault?',

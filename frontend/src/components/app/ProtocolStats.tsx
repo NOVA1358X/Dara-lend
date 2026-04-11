@@ -642,7 +642,7 @@ export function ProtocolStats({ wallet }: ProtocolStatsProps) {
             <div className="space-y-1 text-xs">
               <div className="flex justify-between text-text-secondary"><span>Transitions</span><span>9</span></div>
               <div className="flex justify-between text-text-secondary"><span>Privacy</span><span className="text-accent-success">Full</span></div>
-              <div className="flex justify-between text-text-secondary"><span>Program</span><span className="font-mono text-[10px]">dara_dark_pool_v1</span></div>
+              <div className="flex justify-between text-text-secondary"><span>Program</span><span className="font-mono text-[10px]">dara_dark_pool_v3</span></div>
             </div>
           </div>
           <div className="rounded-xl glass-panel p-5">

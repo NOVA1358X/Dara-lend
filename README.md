@@ -12,7 +12,7 @@ DeFi Without Being Watched. Fourteen smart contracts, 131 transitions, and ~10 m
 [![Transitions](https://img.shields.io/badge/Transitions-131-C9DDFF?style=flat-square)](#smart-contracts)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](#license)
 
-[Live App](https://dara-lend.vercel.app)  [API](https://dara-lend-api.onrender.com/api/health)  [Docs](https://dara-lend.vercel.app/docs)  [Main](https://testnet.aleo.info/program/dara_lend_v8.aleo)  [Credits](https://testnet.aleo.info/program/dara_lend_v8_credits.aleo)  [Vault](https://testnet.aleo.info/program/dara_lend_v8_vault.aleo)  [Gov](https://testnet.aleo.info/program/dara_lend_v8_gov_v3.aleo)  [Dark Pool v2](https://testnet.aleo.info/program/dara_dark_pool_v2.aleo)  [DP-BTC](https://testnet.aleo.info/program/dara_dp_btc_v1.aleo)  [DP-ETH](https://testnet.aleo.info/program/dara_dp_eth_v1.aleo)  [DP-SOL](https://testnet.aleo.info/program/dara_dp_sol_v1.aleo)  [Auctions](https://testnet.aleo.info/program/dara_auction_v1.aleo)  [Flash](https://testnet.aleo.info/program/dara_flash_v1.aleo)
+[Live App](https://dara-lend.vercel.app)  [API](https://dara-lend-api.onrender.com/api/health)  [Docs](https://dara-lend.vercel.app/docs)  [Main](https://testnet.aleo.info/program/dara_lend_v8.aleo)  [Credits](https://testnet.aleo.info/program/dara_lend_v8_credits.aleo)  [Vault](https://testnet.aleo.info/program/dara_lend_v8_vault.aleo)  [Gov](https://testnet.aleo.info/program/dara_lend_v8_gov_v3.aleo)  [Dark Pool v3](https://testnet.aleo.info/program/dara_dark_pool_v3.aleo)  [DP-BTC](https://testnet.aleo.info/program/dara_dp_btc_v2.aleo)  [DP-ETH](https://testnet.aleo.info/program/dara_dp_eth_v2.aleo)  [DP-SOL](https://testnet.aleo.info/program/dara_dp_sol_v2.aleo)  [Auctions](https://testnet.aleo.info/program/dara_auction_v1.aleo)  [Flash](https://testnet.aleo.info/program/dara_flash_v1.aleo)
 
 </div>
 
@@ -74,10 +74,10 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 | `dara_lend_v8_credits.aleo` | 12 | ~920K | Reverse lending  stablecoin collateral -> borrow ALEO |
 | `dara_lend_v8_vault.aleo` | 10 | ~575K | Yield vault, private transfers, PoolShare management |
 | `dara_lend_v8_gov_v3.aleo` | 12 | ~860K | Governance proposals, delegation, ZK voting |
-| `dara_dark_pool_v2.aleo` | 16 | ~1.4M | ALEO/USDCx dark pool  batch TWAP settlement, threshold operators |
-| `dara_dp_btc_v1.aleo` | 16 | ~1.4M | BTC/USDCx dark pool  7-source BTC oracle, same architecture |
-| `dara_dp_eth_v1.aleo` | 16 | ~1.4M | ETH/USDCx dark pool  7-source ETH oracle, same architecture |
-| `dara_dp_sol_v1.aleo` | 16 | ~1.4M | SOL/USDCx dark pool  7-source SOL oracle, same architecture |
+| `dara_dark_pool_v3.aleo` | 16 | ~1.4M | ALEO/USDCx dark pool  batch TWAP settlement, threshold operators |
+| `dara_dp_btc_v2.aleo` | 16 | ~1.4M | BTC/USDCx dark pool  7-source BTC oracle, same architecture |
+| `dara_dp_eth_v2.aleo` | 16 | ~1.4M | ETH/USDCx dark pool  7-source ETH oracle, same architecture |
+| `dara_dp_sol_v2.aleo` | 16 | ~1.4M | SOL/USDCx dark pool  7-source SOL oracle, same architecture |
 | `test_btc_v1.aleo` | 6 | ~277K | Test BTC token for BTC/USDCx market |
 | `test_eth_v1.aleo` | 6 | ~277K | Test ETH token for ETH/USDCx market |
 | `test_sol_v1.aleo` | 6 | ~277K | Test SOL token for SOL/USDCx market |
@@ -118,10 +118,10 @@ Multi-asset private OTC trading with batch-based TWAP pricing, 2-of-3 threshold 
 **Markets:**
 | Market | Program | Oracle | Base Token |
 |--------|---------|--------|------------|
-| ALEO/USDCx | `dara_dark_pool_v2.aleo` | 7-source ALEO | `credits.aleo` |
-| BTC/USDCx | `dara_dp_btc_v1.aleo` | 7-source BTC | `test_btc_v1.aleo` |
-| ETH/USDCx | `dara_dp_eth_v1.aleo` | 7-source ETH | `test_eth_v1.aleo` |
-| SOL/USDCx | `dara_dp_sol_v1.aleo` | 7-source SOL | `test_sol_v1.aleo` |
+| ALEO/USDCx | `dara_dark_pool_v3.aleo` | 7-source ALEO | `credits.aleo` |
+| BTC/USDCx | `dara_dp_btc_v2.aleo` | 7-source BTC | `test_btc_v1.aleo` |
+| ETH/USDCx | `dara_dp_eth_v2.aleo` | 7-source ETH | `test_eth_v1.aleo` |
+| SOL/USDCx | `dara_dp_sol_v2.aleo` | 7-source SOL | `test_sol_v1.aleo` |
 
 Each market has independent batch management, oracle pricing, and operator consensus — all running in parallel with per-market 7-source price aggregation from Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, and CoinMarketCap.
 
@@ -341,11 +341,11 @@ All positions and receipts are encrypted Aleo records  only the owner can decryp
 | `LiquidationAuth` | dara_lend_v8 | Authorizes third-party liquidation |
 | `PoolShare` | dara_lend_v8_vault | Yield vault deposit receipt |
 | `GovernanceToken` | dara_lend_v8_gov_v3 | Voting power |
-| `OrderCommitment` | dara_dark_pool_v2 | Private buy/sell order with optional limit price |
-| `OrderAuth` | dara_dark_pool_v2 | Authorization token for order management |
-| `FillReceipt` | dara_dark_pool_v2 | Matched trade settlement receipt |
-| `ResidualOrder` | dara_dark_pool_v2 | Unfilled portion of partially matched order |
-| `ResidualAuth` | dara_dark_pool_v2 | Authorization for residual re-submission |
+| `OrderCommitment` | dara_dark_pool_v3 | Private buy/sell order with optional limit price |
+| `OrderAuth` | dara_dark_pool_v3 | Authorization token for order management |
+| `FillReceipt` | dara_dark_pool_v3 | Matched trade settlement receipt |
+| `ResidualOrder` | dara_dark_pool_v3 | Unfilled portion of partially matched order |
+| `ResidualAuth` | dara_dark_pool_v3 | Authorization for residual re-submission |
 | `SealedBid` | dara_auction_v1 | Committed bid hash |
 | `RevealedBid` | dara_auction_v1 | Revealed bid amount |
 | `AuctionWin` | dara_auction_v1 | Winner receipt |
@@ -366,13 +366,21 @@ All 14 programs are deployed on **Aleo Testnet**.
 | `dara_lend_v8_vault.aleo` | `at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t` |
 | `dara_lend_v8_gov_v3.aleo` | `at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d` |
 | `dara_dark_pool_v2.aleo` | `at1emu8kcs4q8yj6jx9med4v2hamzajsw6dsc0nwcaa5dzyhfpzqvpsm39w68` |
+| `dara_dark_pool_v3.aleo` | `at17wenhr6jgjydaussmkmt467hedkw0awugsyqp9sl6tx3dmgs9yxs7jeywg` |
+| `dara_dp_btc_v2.aleo` | `at1zms0sahft6su2xvtdem8djq5uza97gv9zc2cuq8rfe828aca3qrqv9cqkj` |
+| `dara_dp_eth_v2.aleo` | `at1l2aewv0je0fpp26h5pj8zg9ykkwuw0z9guffnzhntzg3hdnlqvxs2y0ysg` |
+| `dara_dp_sol_v2.aleo` | `at1qmuqlsvm2kwqghgda24amc2jry0w3vsehevzje60c97yc3sktqqqe4ynzt` |
 | `dara_dp_btc_v1.aleo` | `at1h75lfvpc2avxha2dg5l589j7z42w9f56nfm4n4560h5fwqvasvzqdmxkpf` |
 | `dara_dp_eth_v1.aleo` | `at10jcztp884yg6ua6kz39u2akl04t6r2kkmwns5kgzrmxpnsr2msrqs2w4g4` |
 | `dara_dp_sol_v1.aleo` | `at123gqgtm2p2qm3ajuupneff00qhh3cylssdtjs5q333zfqp2flyrspg0ff2` |
 | `test_btc_v1.aleo` | `at19a4ylpeyjykqf84z586r869wvy6hmxlnpnyw8kvr6um8huu3u5gsxpfuzg` |
 | `test_eth_v1.aleo` | `at1uvwm5p53r445vc9xzjgynee6msdxu7zaframt96tf5rvl40e8q8q26ucxr` |
 | `test_sol_v1.aleo` | `at1azee54349kq0ccgdkxtxrrd0nzpynnz82gwe9qpvudmeae0xhuzq2zcl4q` |
-| ~~`dara_dark_pool_v1.aleo`~~ | ~~`at1xr06dkaermzl6hfm5syqzkrtw950hhe0rsttl06qp9gksuey2vxqh0ww4l`~~ (superseded) |
+| ~~`dara_dark_pool_v1.aleo`~~ | ~~`at1xr06dkaermzl6hfm5syqzkrtw950hhe0rsttl06qp9gksuey2vxqh0ww4l`~~ (superseded by v2) |
+| ~~`dara_dark_pool_v2.aleo`~~ | ~~superseded by v3 (oracle fix)~~ |
+| ~~`dara_dp_btc_v1.aleo`~~ | ~~superseded by v2 (oracle fix)~~ |
+| ~~`dara_dp_eth_v1.aleo`~~ | ~~superseded by v2 (oracle fix)~~ |
+| ~~`dara_dp_sol_v1.aleo`~~ | ~~superseded by v2 (oracle fix)~~ |
 | `dara_auction_v1.aleo` | `at1xjkazhxpy76m97lvkj3ex0l3lvn32vzwfv9vt09j6zvey9dlxqyqpkvxp6` |
 | `dara_flash_v1.aleo` | `at128zjzny542ty3z2kf74u2vne22gahemp2eadtjkurjf4dguxwgyquvuv7m` |
 
@@ -458,10 +466,10 @@ DARA-Lend/
 |   |-- dara_lend_v8_credits/ # Reverse lending (12 transitions)
 |   |-- dara_lend_v8_vault/ # Yield vault + transfers (10 transitions)
 |   |-- dara_lend_v8_gov_v3/ # Governance (12 transitions)
-|   |-- dara_dark_pool_v2/  # Dark pool v2 — ALEO/USDCx (16 transitions)
-|   |-- dara_dp_btc_v1/     # Dark pool — BTC/USDCx (16 transitions)
-|   |-- dara_dp_eth_v1/     # Dark pool — ETH/USDCx (16 transitions)
-|   |-- dara_dp_sol_v1/     # Dark pool — SOL/USDCx (16 transitions)
+|   |-- dara_dark_pool_v3/  # Dark pool v3 — ALEO/USDCx (16 transitions)
+|   |-- dara_dp_btc_v2/     # Dark pool — BTC/USDCx (16 transitions)
+|   |-- dara_dp_eth_v2/     # Dark pool — ETH/USDCx (16 transitions)
+|   |-- dara_dp_sol_v2/     # Dark pool — SOL/USDCx (16 transitions)
 |   |-- test_btc_v1/        # Test BTC token (6 transitions)
 |   |-- test_eth_v1/        # Test ETH token (6 transitions)
 |   |-- test_sol_v1/        # Test SOL token (6 transitions)

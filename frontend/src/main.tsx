@@ -33,7 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         wallets={wallets}
         decryptPermission={DecryptPermission.AutoDecrypt}
         network={Network.TESTNET}
-        programs={['dara_lend_v8.aleo', 'dara_lend_v8_vault.aleo', 'dara_lend_v8_credits.aleo', 'dara_lend_v8_gov_v3.aleo', 'credits.aleo', 'test_usdcx_stablecoin.aleo', 'test_usad_stablecoin.aleo', 'dara_dark_pool_v2.aleo', 'dara_dp_btc_v1.aleo', 'dara_dp_eth_v1.aleo', 'dara_dp_sol_v1.aleo', 'test_btc_v1.aleo', 'test_eth_v1.aleo', 'test_sol_v1.aleo', 'dara_auction_v1.aleo', 'dara_flash_v1.aleo']}
+        programs={['dara_lend_v8.aleo', 'dara_lend_v8_vault.aleo', 'dara_lend_v8_credits.aleo', 'dara_lend_v8_gov_v3.aleo', 'credits.aleo', 'test_usdcx_stablecoin.aleo', 'test_usad_stablecoin.aleo', 'dara_dark_pool_v3.aleo', 'dara_dp_btc_v2.aleo', 'dara_dp_eth_v2.aleo', 'dara_dp_sol_v2.aleo', 'test_btc_v1.aleo', 'test_eth_v1.aleo', 'test_sol_v1.aleo', 'dara_auction_v1.aleo', 'dara_flash_v1.aleo']}
       >
         <WalletModalProvider>
           <App />

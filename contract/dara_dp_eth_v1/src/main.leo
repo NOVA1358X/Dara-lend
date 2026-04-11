@@ -148,7 +148,12 @@ program dara_dp_eth_v1.aleo {
 
             let last_price: u64 = Mapping::get_or_use(oracle_price, 0u8, 0u64);
             if (last_price > 0u64) {
-                let diff: u64 = new_price > last_price ? new_price - last_price : last_price - new_price;
+                // Safe absolute difference: compute higher/lower first, then ONE subtraction.
+                // Leo eagerly evaluates both ternary branches, so `a > b ? a-b : b-a`
+                // causes underflow on the unused branch. This pattern avoids that.
+                let higher: u64 = new_price >= last_price ? new_price : last_price;
+                let lower: u64 = new_price < last_price ? new_price : last_price;
+                let diff: u64 = higher - lower;
                 let max_move: u64 = last_price * MAX_DEVIATION_BPS / 10_000u64;
                 assert(diff <= max_move);
             }
@@ -324,7 +329,10 @@ program dara_dp_eth_v1.aleo {
                 let twap: u128 = cum_price / (cum_count as u128);
                 let max_dev: u64 = Mapping::get_or_use(twap_max_deviation_bps, 0u8, DEFAULT_TWAP_DEVIATION);
                 let proposed_128: u128 = proposed_price as u128;
-                let diff: u128 = proposed_128 > twap ? proposed_128 - twap : twap - proposed_128;
+                // Safe absolute difference (see update_oracle_price comment)
+                let higher_128: u128 = proposed_128 >= twap ? proposed_128 : twap;
+                let lower_128: u128 = proposed_128 < twap ? proposed_128 : twap;
+                let diff: u128 = higher_128 - lower_128;
                 let max_allowed: u128 = twap * (max_dev as u128) / 10_000u128;
                 assert(diff <= max_allowed);
             }
