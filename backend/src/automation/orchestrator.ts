@@ -1,4 +1,4 @@
-import { config } from '../utils/config.js';
+import { config, darkpoolMarkets } from '../utils/config.js';
 import { runOracleBotCycle, getOracleBotStatus } from '../oracle/oracleBot.js';
 import { runLiquidationBotCycle, getLiquidationBotStatus } from '../liquidation/liquidationBot.js';
 import { runInterestBotCycle, getInterestBotStatus } from './interestBot.js';

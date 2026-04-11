@@ -1,0 +1,6 @@
+{
+  "program": "test_eth_v1.aleo",
+  "version": "1.0.0",
+  "description": "Test ETH Token for DARA Dark Pool multi-market expansion",
+  "license": "MIT"
+}

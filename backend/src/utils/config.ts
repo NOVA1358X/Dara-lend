@@ -13,7 +13,13 @@ export const config = {
   vaultProgramId: 'dara_lend_v8_vault.aleo',
   creditsProgramId: 'dara_lend_v8_credits.aleo',
   govProgramId: 'dara_lend_v8_gov_v3.aleo',
-  darkpoolProgramId: 'dara_dark_pool_v1.aleo',
+  darkpoolProgramId: 'dara_dark_pool_v2.aleo',
+  dpBtcProgramId: 'dara_dp_btc_v1.aleo',
+  dpEthProgramId: 'dara_dp_eth_v1.aleo',
+  dpSolProgramId: 'dara_dp_sol_v1.aleo',
+  testBtcProgramId: 'test_btc_v1.aleo',
+  testEthProgramId: 'test_eth_v1.aleo',
+  testSolProgramId: 'test_sol_v1.aleo',
   auctionProgramId: 'dara_auction_v1.aleo',
   flashProgramId: 'dara_flash_v1.aleo',
   precision: 1_000_000,
@@ -36,3 +42,62 @@ export const config = {
   yieldDistributionInterval: parseInt(process.env.YIELD_DISTRIBUTION_INTERVAL || '21600000', 10), // 6 hr
   yieldDistributionMinAmount: parseInt(process.env.YIELD_MIN_AMOUNT || '10000', 10), // 0.01 token
 } as const;
+
+export interface DarkPoolMarketConfig {
+  id: string;
+  label: string;
+  programId: string;
+  baseAsset: string;          // e.g. 'ALEO', 'BTC', 'ETH', 'SOL'
+  quoteAsset: string;         // always 'USDCx'
+  oracleSymbol: string;       // symbol for oracle fetchers
+  tokenProgramId: string;     // base token program (credits.aleo or test_xxx_v1.aleo)
+  precision: number;
+  priceScale: number;         // divisor to fit real price into MAX_PRICE (100_000_000u64 = $100)
+}
+
+export const darkpoolMarkets: DarkPoolMarketConfig[] = [
+  {
+    id: 'aleo-usdcx',
+    label: 'ALEO/USDCx',
+    programId: config.darkpoolProgramId,
+    baseAsset: 'ALEO',
+    quoteAsset: 'USDCx',
+    oracleSymbol: 'ALEO',
+    tokenProgramId: 'credits.aleo',
+    precision: 1_000_000,
+    priceScale: 1,            // ALEO ~$0.50 fits within MAX_PRICE ($100)
+  },
+  {
+    id: 'btc-usdcx',
+    label: 'BTC/USDCx',
+    programId: config.dpBtcProgramId,
+    baseAsset: 'BTC',
+    quoteAsset: 'USDCx',
+    oracleSymbol: 'BTC',
+    tokenProgramId: config.testBtcProgramId,
+    precision: 1_000_000,
+    priceScale: 1000,         // BTC ~$100K / 1000 = $100 fits MAX_PRICE
+  },
+  {
+    id: 'eth-usdcx',
+    label: 'ETH/USDCx',
+    programId: config.dpEthProgramId,
+    baseAsset: 'ETH',
+    quoteAsset: 'USDCx',
+    oracleSymbol: 'ETH',
+    tokenProgramId: config.testEthProgramId,
+    precision: 1_000_000,
+    priceScale: 100,          // ETH ~$2.5K / 100 = $25 fits MAX_PRICE
+  },
+  {
+    id: 'sol-usdcx',
+    label: 'SOL/USDCx',
+    programId: config.dpSolProgramId,
+    baseAsset: 'SOL',
+    quoteAsset: 'USDCx',
+    oracleSymbol: 'SOL',
+    tokenProgramId: config.testSolProgramId,
+    precision: 1_000_000,
+    priceScale: 10,           // SOL ~$150 / 10 = $15 fits MAX_PRICE
+  },
+];

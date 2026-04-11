@@ -1,0 +1,28 @@
+{
+  "program": "dara_dark_pool_v2.aleo",
+  "version": "1.0.0",
+  "description": "DARA Dark Pool v2 — Limit orders, 2-of-3 threshold operators, TWAP-validated settlement, partial fills, 0.05% fee vault (Leo v4.0)",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "credits.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usad_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}

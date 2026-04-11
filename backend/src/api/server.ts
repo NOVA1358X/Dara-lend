@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { config } from '../utils/config.js';
+import { config, darkpoolMarkets } from '../utils/config.js';
 import statsRouter from './routes/stats.js';
 import solvencyRouter from './routes/solvency.js';
 import healthRouter from './routes/health.js';
@@ -44,9 +44,15 @@ export function createServer() {
   app.get('/', (_req, res) => {
     res.json({
       name: 'DARA Lend API',
-      version: '4.0.0',
-      programs: [config.programId, config.vaultProgramId, config.creditsProgramId, config.govProgramId, config.darkpoolProgramId, config.auctionProgramId, config.flashProgramId],
-      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info', '/api/darkpool/epoch', '/api/darkpool/stats', '/api/auction/active', '/api/auction/stats', '/api/auction/list', '/api/auction/:index', '/api/flash/stats', '/api/flash/available'],
+      version: '5.0.0',
+      programs: [
+        config.programId, config.vaultProgramId, config.creditsProgramId, config.govProgramId,
+        config.darkpoolProgramId, config.dpBtcProgramId, config.dpEthProgramId, config.dpSolProgramId,
+        config.testBtcProgramId, config.testEthProgramId, config.testSolProgramId,
+        config.auctionProgramId, config.flashProgramId,
+      ],
+      darkpoolMarkets: darkpoolMarkets.map(m => ({ id: m.id, label: m.label, programId: m.programId })),
+      endpoints: ['/api/stats', '/api/solvency', '/api/health', '/api/transaction/:txId', '/api/oracle/status', '/api/analytics/tvl', '/api/analytics/price-history', '/api/analytics/interest-rates', '/api/analytics/overview', '/api/analytics/vault', '/api/analytics/multi-price', '/api/governance/claim', '/api/governance/info', '/api/darkpool/markets', '/api/darkpool/batch', '/api/darkpool/stats', '/api/darkpool/:market/batch', '/api/darkpool/:market/stats', '/api/darkpool/:market/twap', '/api/auction/active', '/api/auction/stats', '/api/auction/list', '/api/auction/:index', '/api/flash/stats', '/api/flash/available'],
     });
   });
 

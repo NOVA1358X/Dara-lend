@@ -2,12 +2,77 @@ export const PROGRAM_ID = 'dara_lend_v8.aleo';
 export const VAULT_PROGRAM_ID = 'dara_lend_v8_vault.aleo';
 export const CREDITS_PROGRAM_ID = 'dara_lend_v8_credits.aleo';
 export const GOV_PROGRAM_ID = 'dara_lend_v8_gov_v3.aleo';
-export const DARKPOOL_PROGRAM_ID = 'dara_dark_pool_v1.aleo';
+export const DARKPOOL_PROGRAM_ID = 'dara_dark_pool_v2.aleo';
+export const DP_BTC_PROGRAM_ID = 'dara_dp_btc_v1.aleo';
+export const DP_ETH_PROGRAM_ID = 'dara_dp_eth_v1.aleo';
+export const DP_SOL_PROGRAM_ID = 'dara_dp_sol_v1.aleo';
+export const TEST_BTC_PROGRAM = 'test_btc_v1.aleo';
+export const TEST_ETH_PROGRAM = 'test_eth_v1.aleo';
+export const TEST_SOL_PROGRAM = 'test_sol_v1.aleo';
 export const AUCTION_PROGRAM_ID = 'dara_auction_v1.aleo';
 export const FLASH_PROGRAM_ID = 'dara_flash_v1.aleo';
 export const CREDITS_PROGRAM = 'credits.aleo';
 export const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
 export const USAD_PROGRAM = 'test_usad_stablecoin.aleo';
+
+export interface DarkPoolMarket {
+  id: string;
+  label: string;
+  programId: string;
+  baseAsset: string;
+  quoteAsset: string;
+  tokenProgramId: string;
+  sellAmountType: string;   // 'u64' for all markets
+  buyAmountType: string;    // 'u128' for USDCx
+  priceScale: number;       // divisor: on-chain price × priceScale = real USD price
+}
+
+export const DARK_POOL_MARKETS: DarkPoolMarket[] = [
+  {
+    id: 'aleo-usdcx',
+    label: 'ALEO/USDCx',
+    programId: DARKPOOL_PROGRAM_ID,
+    baseAsset: 'ALEO',
+    quoteAsset: 'USDCx',
+    tokenProgramId: CREDITS_PROGRAM,
+    sellAmountType: 'u64',
+    buyAmountType: 'u128',
+    priceScale: 1,
+  },
+  {
+    id: 'btc-usdcx',
+    label: 'BTC/USDCx',
+    programId: DP_BTC_PROGRAM_ID,
+    baseAsset: 'BTC',
+    quoteAsset: 'USDCx',
+    tokenProgramId: TEST_BTC_PROGRAM,
+    sellAmountType: 'u64',
+    buyAmountType: 'u128',
+    priceScale: 1000,
+  },
+  {
+    id: 'eth-usdcx',
+    label: 'ETH/USDCx',
+    programId: DP_ETH_PROGRAM_ID,
+    baseAsset: 'ETH',
+    quoteAsset: 'USDCx',
+    tokenProgramId: TEST_ETH_PROGRAM,
+    sellAmountType: 'u64',
+    buyAmountType: 'u128',
+    priceScale: 100,
+  },
+  {
+    id: 'sol-usdcx',
+    label: 'SOL/USDCx',
+    programId: DP_SOL_PROGRAM_ID,
+    baseAsset: 'SOL',
+    quoteAsset: 'USDCx',
+    tokenProgramId: TEST_SOL_PROGRAM,
+    sellAmountType: 'u64',
+    buyAmountType: 'u128',
+    priceScale: 10,
+  },
+];
 
 export const ALEO_TESTNET_API = 'https://api.provable.com/v2/testnet';
 export const BACKEND_API = import.meta.env.VITE_BACKEND_URL || '/api';
@@ -212,30 +277,43 @@ export const VAULT_TRANSITIONS = {
   RESUME_VAULT: 'resume_vault',
 } as const;
 
-// Dark Pool transitions (DARKPOOL_PROGRAM_ID)
+// Dark Pool v2 transitions (DARKPOOL_PROGRAM_ID)
 export const DARKPOOL_TRANSITIONS = {
-  SUBMIT_BUY_INTENT: 'submit_buy_intent',
-  SUBMIT_SELL_INTENT: 'submit_sell_intent',
-  SETTLE_EPOCH: 'settle_epoch',
-  CLAIM_BUY_FILL: 'claim_buy_fill',
-  CLAIM_SELL_FILL: 'claim_sell_fill',
-  CANCEL_BUY: 'cancel_buy',
-  CANCEL_SELL: 'cancel_sell',
+  SET_OPERATORS: 'set_operators',
+  UPDATE_ORACLE_PRICE: 'update_oracle_price',
+  SUBMIT_BUY_ORDER: 'submit_buy_order',
+  SUBMIT_SELL_ORDER: 'submit_sell_order',
+  PROPOSE_SETTLEMENT: 'propose_settlement',
+  APPROVE_SETTLEMENT: 'approve_settlement',
+  EXECUTE_MATCH: 'execute_match',
+  EXECUTE_PARTIAL_FILL: 'execute_partial_fill',
+  RESUBMIT_RESIDUAL: 'resubmit_residual',
+  CANCEL_BUY_ORDER: 'cancel_buy_order',
+  CANCEL_SELL_ORDER: 'cancel_sell_order',
+  ADVANCE_BATCH: 'advance_batch',
+  WITHDRAW_FEES: 'withdraw_fees',
+  SET_FEE_BPS: 'set_fee_bps',
   PAUSE_DARKPOOL: 'pause_darkpool',
   RESUME_DARKPOOL: 'resume_darkpool',
 } as const;
 
-// Dark Pool mappings
+// Dark Pool v2 mappings
 export const DARKPOOL_MAPPINGS = {
-  DARKPOOL_ADMIN: 'darkpool_admin',
-  DARKPOOL_PAUSED: 'darkpool_paused',
-  CURRENT_EPOCH: 'current_epoch',
-  EPOCH_BUY_VOLUME: 'epoch_buy_volume',
-  EPOCH_SELL_VOLUME: 'epoch_sell_volume',
-  EPOCH_SETTLED: 'epoch_settled',
-  EPOCH_PRICE: 'epoch_price',
+  OPERATORS: 'operators',
+  POOL_PAUSED: 'pool_paused',
+  ORDER_CONSUMED: 'order_consumed',
+  FEE_VAULT: 'fee_vault',
+  FEE_BPS: 'fee_bps',
   TOTAL_TRADES: 'total_trades',
   TOTAL_VOLUME: 'total_volume',
+  ORACLE_PRICE: 'oracle_price',
+  ORACLE_ROUND: 'oracle_round',
+  TWAP_CUM_PRICE: 'twap_cum_price',
+  TWAP_CUM_COUNT: 'twap_cum_count',
+  CURRENT_BATCH: 'current_batch',
+  BATCH_APPROVED: 'batch_approved',
+  BATCH_PROPOSED_PRICE: 'batch_proposed_price',
+  BATCH_APPROVAL_COUNT: 'batch_approval_count',
 } as const;
 
 // Sealed-Bid Auction transitions (AUCTION_PROGRAM_ID)

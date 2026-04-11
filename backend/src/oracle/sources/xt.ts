@@ -1,13 +1,20 @@
 import type { PriceResult } from './types.js';
 
 // XT.com public ticker — no API key required
-const API_URL = 'https://sapi.xt.com/v4/public/ticker/price?symbol=aleo_usdt';
+const XT_SYMBOLS: Record<string, string> = {
+  ALEO: 'aleo_usdt',
+  BTC: 'btc_usdt',
+  ETH: 'eth_usdt',
+  SOL: 'sol_usdt',
+};
 
-export async function fetchFromXT(): Promise<PriceResult> {
+export async function fetchFromXT(symbol: string = 'ALEO'): Promise<PriceResult> {
+  const pair = XT_SYMBOLS[symbol] ?? `${symbol.toLowerCase()}_usdt`;
+  const url = `https://sapi.xt.com/v4/public/ticker/price?symbol=${pair}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(API_URL, { signal: controller.signal });
+    const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as {
       rc?: number;

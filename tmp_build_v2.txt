@@ -1,0 +1,10 @@
+?????? No network specified, defaulting to 'testnet'.
+?????? No endpoint specified, defaulting to 'https://api.explorer.provable.com/v1'.
+
+       Leo ???? Compiling 'dara_dark_pool_v2.aleo'
+       Leo     645 statements before dead code elimination.
+       Leo     627 statements after dead code elimination.
+       Leo     The program checksum is: '[138u8, 50u8, 246u8, 221u8, 167u8, 245u8, 219u8, 76u8, 44u8, 90u8, 194u8, 32u8, 145u8, 129u8, 196u8, 55u8, 141u8, 147u8, 253u8, 46u8, 186u8, 38u8, 224u8, 233u8, 73u8, 172u8, 105u8, 28u8, 147u8, 137u8, 128u8, 162u8]'.
+       Leo     Program size: 23.27 KB / 500.00 KB
+       Leo ??? Compiled 'dara_dark_pool_v2.aleo' into Aleo instructions.
+       Leo ??? Generated ABI at 'build/abi.json'.

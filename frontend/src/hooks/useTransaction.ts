@@ -790,57 +790,58 @@ export function useTransaction(wallet: WalletExecute) {
     [executeVaultTransaction],
   );
 
-  // ── Dark Pool Transactions ──
+  // ── Dark Pool v2 Transactions ──
 
-  const submitBuyIntent = useCallback(
-    async (usdcxRecord: string, amount: number, epoch: number, nonce: number) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.SUBMIT_BUY_INTENT, [
+  const submitBuyOrder = useCallback(
+    async (usdcxRecord: string, size: number, limitPrice: number, expiryBlock: number, operatorAddr: string, nonce: number, programId: string = DARKPOOL_PROGRAM_ID) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.SUBMIT_BUY_ORDER, [
         usdcxRecord,
         FREEZE_LIST_PROOF,
-        microCreditsToU128Input(amount),
-        `${epoch}u64`,
+        microCreditsToU128Input(size),
+        `${limitPrice}u64`,
+        `${expiryBlock}u32`,
+        operatorAddr,
         `${nonce}field`,
-      ], TX_FEE_HIGH, DARKPOOL_PROGRAM_ID);
+      ], TX_FEE_HIGH, programId);
     },
     [executeTransaction],
   );
 
-  const submitSellIntent = useCallback(
-    async (creditsRecord: string, amount: number, epoch: number, nonce: number) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.SUBMIT_SELL_INTENT, [
+  const submitSellOrder = useCallback(
+    async (creditsRecord: string, amount: number, limitPrice: number, expiryBlock: number, operatorAddr: string, nonce: number, programId: string = DARKPOOL_PROGRAM_ID) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.SUBMIT_SELL_ORDER, [
         creditsRecord,
         microCreditsToInput(amount),
-        `${epoch}u64`,
+        `${limitPrice}u64`,
+        `${expiryBlock}u32`,
+        operatorAddr,
         `${nonce}field`,
-      ], TX_FEE_HIGH, DARKPOOL_PROGRAM_ID);
+      ], TX_FEE_HIGH, programId);
     },
     [executeTransaction],
   );
 
-  const claimBuyFill = useCallback(
-    async (intentRecord: string, fillAleo: number) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_BUY_FILL, [intentRecord, microCreditsToInput(fillAleo)], TX_FEE, DARKPOOL_PROGRAM_ID);
+  const cancelBuyOrder = useCallback(
+    async (commitmentRecord: string, programId: string = DARKPOOL_PROGRAM_ID) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CANCEL_BUY_ORDER, [commitmentRecord], TX_FEE, programId);
     },
     [executeTransaction],
   );
 
-  const claimSellFill = useCallback(
-    async (intentRecord: string, fillUsdcx: number) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.CLAIM_SELL_FILL, [intentRecord, microCreditsToU128Input(fillUsdcx)], TX_FEE, DARKPOOL_PROGRAM_ID);
+  const cancelSellOrder = useCallback(
+    async (commitmentRecord: string, programId: string = DARKPOOL_PROGRAM_ID) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.CANCEL_SELL_ORDER, [commitmentRecord], TX_FEE, programId);
     },
     [executeTransaction],
   );
 
-  const cancelBuy = useCallback(
-    async (intentRecord: string) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.CANCEL_BUY, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
-    },
-    [executeTransaction],
-  );
-
-  const cancelSell = useCallback(
-    async (intentRecord: string) => {
-      return executeTransaction(DARKPOOL_TRANSITIONS.CANCEL_SELL, [intentRecord], TX_FEE, DARKPOOL_PROGRAM_ID);
+  const resubmitResidual = useCallback(
+    async (residualRecord: string, residualAuthRecord: string, operatorAddr: string, programId: string = DARKPOOL_PROGRAM_ID) => {
+      return executeTransaction(DARKPOOL_TRANSITIONS.RESUBMIT_RESIDUAL, [
+        residualRecord,
+        residualAuthRecord,
+        operatorAddr,
+      ], TX_FEE, programId);
     },
     [executeTransaction],
   );
@@ -1233,13 +1234,12 @@ export function useTransaction(wallet: WalletExecute) {
     distributeYield,
     pauseVault,
     resumeVault,
-    // Dark Pool operations
-    submitBuyIntent,
-    submitSellIntent,
-    claimBuyFill,
-    claimSellFill,
-    cancelBuy,
-    cancelSell,
+    // Dark Pool v2 operations
+    submitBuyOrder,
+    submitSellOrder,
+    cancelBuyOrder,
+    cancelSellOrder,
+    resubmitResidual,
     fundDarkPoolAleo,
     fundDarkPoolUsdcx,
     // Auction operations

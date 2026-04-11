@@ -4,7 +4,8 @@ import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
   DARKPOOL_PROGRAM_ID, DARKPOOL_TRANSITIONS, DARKPOOL_MAPPINGS,
   ALEO_TESTNET_API, BACKEND_API, PRECISION, CREDITS_PROGRAM,
-  TX_FEE, TX_FEE_HIGH, USDCX_PROGRAM, ADMIN_ADDRESS, DARKPOOL_ADDRESS,
+  TX_FEE, TX_FEE_HIGH, USDCX_PROGRAM, ADMIN_ADDRESS,
+  DARK_POOL_MARKETS, type DarkPoolMarket,
 } from '@/utils/constants';
 import { formatCredits } from '@/utils/formatting';
 import { SpotlightCard } from '@/components/shared/SpotlightCard';
@@ -25,33 +26,41 @@ interface DarkPoolProps {
   };
 }
 
-const FREEZE_LIST_PROOF = `[{siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}, {siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}]`;
-
-interface EpochData {
-  currentEpoch: number;
+interface BatchData {
+  currentBatch: number;
   paused: boolean;
-  buyVolume: string;
-  sellVolume: string;
-  settled: boolean;
-  epochPrice: string;
+  approved: boolean;
+  proposedPrice: string;
+  approvalCount: number;
+  oraclePrice: string;
+  oracleRound: string;
+  twap: string;
+  feeBps: string;
+  feeVault: string;
   totalTrades: string;
   totalVolume: string;
 }
 
+const OPERATOR_ADDRESS = ADMIN_ADDRESS;
+
 export function DarkPool({ wallet }: DarkPoolProps) {
-  const { submitBuyIntent, submitSellIntent, claimBuyFill, claimSellFill, cancelBuy, cancelSell, fundDarkPoolAleo, fundDarkPoolUsdcx, resetTransaction } = useTransaction(wallet as any);
+  const { submitBuyOrder, submitSellOrder, cancelBuyOrder, cancelSellOrder, resubmitResidual, fundDarkPoolAleo, fundDarkPoolUsdcx, resetTransaction } = useTransaction(wallet as any);
   const { creditsRecords, usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
-  const [epochData, setEpochData] = useState<EpochData | null>(null);
+  const [selectedMarket, setSelectedMarket] = useState<DarkPoolMarket>(DARK_POOL_MARKETS[0]);
+  const [batchData, setBatchData] = useState<BatchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('');
+  const [limitPrice, setLimitPrice] = useState('');
   const [fundAmount, setFundAmount] = useState('');
   const [fundToken, setFundToken] = useState<'aleo' | 'usdcx'>('aleo');
   const [poolBalance, setPoolBalance] = useState({ aleo: 0, usdcx: 0 });
-  const [intentRecords, setIntentRecords] = useState<any[]>([]);
+  const [orderRecords, setOrderRecords] = useState<any[]>([]);
   const isAdmin = wallet.address === ADMIN_ADDRESS;
-  const [activeAction, setActiveAction] = useState<'submit' | 'claim' | null>(null);
+  const [activeAction, setActiveAction] = useState<'submit' | 'cancel' | null>(null);
+
+  const activeProgramId = selectedMarket.programId;
 
   // Parse wallet records
   const parsedUsdcx = (usdcxRecords || []).filter((r: any) => !r.spent).map((r: any) => {
@@ -68,19 +77,25 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
   }).filter(Boolean) as { amount: number; plaintext: string }[];
 
-  const fetchEpochData = useCallback(async () => {
+  const fetchBatchData = useCallback(async () => {
     try {
-      const [epochRes, statsRes] = await Promise.all([
-        fetch(`${BACKEND_API}/darkpool/epoch`).then(r => r.json()).catch(() => null),
-        fetch(`${BACKEND_API}/darkpool/stats`).then(r => r.json()).catch(() => null),
+      const marketId = selectedMarket.id;
+      const [batchRes, statsRes, twapRes] = await Promise.all([
+        fetch(`${BACKEND_API}/darkpool/${marketId}/batch`).then(r => r.json()).catch(() => null),
+        fetch(`${BACKEND_API}/darkpool/${marketId}/stats`).then(r => r.json()).catch(() => null),
+        fetch(`${BACKEND_API}/darkpool/${marketId}/twap`).then(r => r.json()).catch(() => null),
       ]);
-      setEpochData({
-        currentEpoch: epochRes?.currentEpoch ?? 1,
-        paused: epochRes?.paused ?? false,
-        buyVolume: epochRes?.buyVolume ?? '0',
-        sellVolume: epochRes?.sellVolume ?? '0',
-        settled: epochRes?.settled ?? false,
-        epochPrice: epochRes?.price ?? '0',
+      setBatchData({
+        currentBatch: batchRes?.currentBatch ?? 1,
+        paused: batchRes?.paused ?? false,
+        approved: batchRes?.approved ?? false,
+        proposedPrice: batchRes?.proposedPrice ?? '0',
+        approvalCount: batchRes?.approvalCount ?? 0,
+        oraclePrice: statsRes?.oraclePrice ?? '0',
+        oracleRound: statsRes?.oracleRound ?? '0',
+        twap: twapRes?.twap ?? '0',
+        feeBps: statsRes?.feeBps ?? '0',
+        feeVault: statsRes?.feeVault ?? '0',
         totalTrades: statsRes?.totalTrades ?? '0',
         totalVolume: statsRes?.totalVolume ?? '0',
       });
@@ -89,150 +104,101 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedMarket]);
 
   useEffect(() => {
-    fetchEpochData();
-    const interval = setInterval(fetchEpochData, 30000);
+    fetchBatchData();
+    const interval = setInterval(fetchBatchData, 30000);
     return () => clearInterval(interval);
-  }, [fetchEpochData]);
+  }, [fetchBatchData]);
 
-  // Fetch dark pool on-chain balances (ALEO + USDCx)
+  // Fetch dark pool on-chain balances (base token + USDCx) via backend stats
   useEffect(() => {
     const fetchPoolBalance = async () => {
       try {
-        const [aleoRaw, usdcxRaw] = await Promise.all([
-          fetch(`${ALEO_TESTNET_API}/program/${CREDITS_PROGRAM}/mapping/account/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
-          fetch(`${ALEO_TESTNET_API}/program/${USDCX_PROGRAM}/mapping/balances/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
-        ]);
-        const parseVal = (raw: string) => {
-          if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return 0;
-          const cleaned = raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
-          return parseInt(cleaned, 10) || 0;
-        };
-        setPoolBalance({ aleo: parseVal(aleoRaw), usdcx: parseVal(usdcxRaw) });
+        const statsRes = await fetch(`${BACKEND_API}/darkpool/${selectedMarket.id}/stats`).then(r => r.json()).catch(() => null);
+        setPoolBalance({
+          aleo: parseInt(statsRes?.feeVault ?? '0', 10),
+          usdcx: parseInt(statsRes?.totalVolume ?? '0', 10),
+        });
       } catch { /* silent */ }
     };
     fetchPoolBalance();
     const interval = setInterval(fetchPoolBalance, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedMarket]);
 
-  const refetchIntentRecords = useCallback(() => {
+  const refetchOrderRecords = useCallback(() => {
     if (!wallet.connected || !wallet.requestRecords) return;
-    wallet.requestRecords(DARKPOOL_PROGRAM_ID, true)
-      .then((recs: any[]) => setIntentRecords(recs.filter((r: any) => !r.spent)))
-      .catch(() => setIntentRecords([]));
-  }, [wallet.connected, wallet.requestRecords]);
+    wallet.requestRecords(activeProgramId, true)
+      .then((recs: any[]) => setOrderRecords(recs.filter((r: any) => !r.spent)))
+      .catch(() => setOrderRecords([]));
+  }, [wallet.connected, wallet.requestRecords, activeProgramId]);
 
-  // Fetch TradeIntent records from dark pool program
   useEffect(() => {
-    refetchIntentRecords();
-  }, [refetchIntentRecords]);
+    refetchOrderRecords();
+  }, [refetchOrderRecords]);
 
-  // Parse TradeIntent records
-  const parsedIntents = intentRecords.map((r: any) => {
+  // Parse OrderCommitment records (v2)
+  const parsedOrders = orderRecords.map((r: any) => {
     const pt = (r.recordPlaintext ?? r.plaintext ?? '') as string;
-    if (!pt.includes('nonce_hash')) return null; // Not a TradeIntent
-    const typeMatch = pt.match(/intent_type\s*:\s*(\d+)u8/);
-    const amountMatch = pt.match(/amount\s*:\s*(\d+)u128/);
-    const epochMatch = pt.match(/epoch\s*:\s*(\d+)u64/);
-    if (!typeMatch || !amountMatch || !epochMatch) return null;
+    if (!pt.includes('order_id')) return null;
+    // Detect record type
+    const isCommitment = pt.includes('OrderCommitment') || (pt.includes('direction') && pt.includes('size'));
+    const isFill = pt.includes('FillReceipt') || pt.includes('fill_size');
+    const isResidual = pt.includes('ResidualOrder') || pt.includes('residual_size');
+    if (!isCommitment && !isFill && !isResidual) return null;
+
+    const orderIdMatch = pt.match(/order_id\s*:\s*(\d+field|\w+)/);
+    const directionMatch = pt.match(/direction\s*:\s*(\d+)u8/);
+    const sizeMatch = pt.match(/(?:size|fill_size|residual_size)\s*:\s*(\d+)u128/);
+    const limitMatch = pt.match(/limit_price\s*:\s*(\d+)u64/);
+    const batchMatch = pt.match(/batch_id\s*:\s*(\d+)u64/);
+    const expiryMatch = pt.match(/expiry_block\s*:\s*(\d+)u32/);
+
     return {
-      intentType: parseInt(typeMatch[1], 10), // 0=buy, 1=sell
-      amount: parseInt(amountMatch[1], 10),
-      epoch: parseInt(epochMatch[1], 10),
+      type: isCommitment ? 'commitment' as const : isFill ? 'fill' as const : 'residual' as const,
+      orderId: orderIdMatch?.[1] ?? '',
+      direction: directionMatch ? parseInt(directionMatch[1], 10) : -1, // 0=buy, 1=sell
+      size: sizeMatch ? parseInt(sizeMatch[1], 10) : 0,
+      limitPrice: limitMatch ? parseInt(limitMatch[1], 10) : 0,
+      batchId: batchMatch ? parseInt(batchMatch[1], 10) : 0,
+      expiryBlock: expiryMatch ? parseInt(expiryMatch[1], 10) : 0,
       plaintext: pt,
     };
-  }).filter(Boolean) as { intentType: number; amount: number; epoch: number; plaintext: string }[];
+  }).filter(Boolean) as {
+    type: 'commitment' | 'fill' | 'residual';
+    orderId: string;
+    direction: number;
+    size: number;
+    limitPrice: number;
+    batchId: number;
+    expiryBlock: number;
+    plaintext: string;
+  }[];
 
-  const handleClaimFill = async (intent: typeof parsedIntents[0]) => {
+  const commitments = parsedOrders.filter(o => o.type === 'commitment');
+  const fills = parsedOrders.filter(o => o.type === 'fill');
+  const residuals = parsedOrders.filter(o => o.type === 'residual');
+
+  const handleCancelOrder = async (order: typeof commitments[0]) => {
     if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    setActiveAction('claim');
-
-    // Fetch the settlement price for this intent's epoch (may differ from current epoch)
-    let price = 0;
+    setActiveAction('cancel');
     try {
-      const epochRes = await fetch(`${BACKEND_API}/darkpool/epoch/${intent.epoch}`).then(r => r.json());
-      price = parseInt(epochRes?.price || '0', 10);
-      if (!epochRes?.settled) {
-        const bv = parseInt(epochRes?.buyVolume || '0', 10);
-        const sv = parseInt(epochRes?.sellVolume || '0', 10);
-        const waitingFor = bv === 0 && sv === 0 ? 'orders on both sides' : bv === 0 ? 'buy orders' : sv === 0 ? 'sell orders' : 'the bot to finalize';
-        toast.error(`Epoch #${intent.epoch} is not settled yet. Waiting for ${waitingFor}. You can cancel this intent if you don't want to wait.`);
-        return;
-      }
-    } catch {
-      // Fallback to current epoch price
-      price = parseInt(epochData?.epochPrice || '0', 10);
-    }
-    if (!price) { toast.error('Epoch price not available yet. Wait for settlement.'); return; }
-
-    // Check actual pool balance — pool must hold the output token (admin may have funded it)
-    try {
-      const [aleoRaw, usdcxRaw] = await Promise.all([
-        fetch(`${ALEO_TESTNET_API}/program/${CREDITS_PROGRAM}/mapping/account/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
-        fetch(`${ALEO_TESTNET_API}/program/${USDCX_PROGRAM}/mapping/balances/${DARKPOOL_ADDRESS}`).then(r => r.text()).catch(() => ''),
-      ]);
-      const parseVal = (raw: string) => {
-        if (!raw || raw.includes('null') || raw.includes('error') || raw.includes('NOT_FOUND')) return 0;
-        const cleaned = raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
-        return parseInt(cleaned, 10) || 0;
-      };
-      const liveAleo = parseVal(aleoRaw);
-      const liveUsdcx = parseVal(usdcxRaw);
-      if (intent.intentType === 0 && liveAleo === 0) {
-        toast.error('The dark pool currently has 0 ALEO. Your buy claim cannot be filled until the pool is funded with ALEO. You can cancel this intent to get your USDCx back.');
-        return;
-      }
-      if (intent.intentType === 1 && liveUsdcx === 0) {
-        toast.error('The dark pool currently has 0 USDCx. Your sell claim cannot be filled until the pool is funded with USDCx. You can cancel this intent to get your ALEO back.');
-        return;
-      }
-    } catch { /* proceed anyway */ }
-
-    try {
-      if (intent.intentType === 0) {
-        // Buy intent: fill_aleo = amount * SCALE / price
-        const fillAleo = Math.floor(Number(BigInt(intent.amount) * BigInt(PRECISION) / BigInt(price)));
-        await claimBuyFill(intent.plaintext, fillAleo);
-        toast.success(`Buy fill claimed! Receiving ~${(fillAleo / PRECISION).toFixed(6)} ALEO privately. Transaction confirming...`);
+      if (order.direction === 0) {
+        await cancelBuyOrder(order.plaintext, activeProgramId);
       } else {
-        // Sell intent: fill_usdcx = amount * price / SCALE
-        const fillUsdcx = Math.floor(Number(BigInt(intent.amount) * BigInt(price) / BigInt(PRECISION)));
-        await claimSellFill(intent.plaintext, fillUsdcx);
-        toast.success(`Sell fill claimed! Receiving ~${(fillUsdcx / PRECISION).toFixed(2)} USDCx privately. Transaction confirming...`);
+        await cancelSellOrder(order.plaintext, activeProgramId);
       }
-      setTimeout(() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }, 3000);
-      setTimeout(refetchIntentRecords, 8000);
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Claim failed';
-      if (errMsg.includes('rejected') || errMsg.includes('REJECTED')) {
-        toast.error('Claim transaction was rejected. The pool may not have enough balance for your fill. Try again or contact admin.');
-      } else {
-        toast.error(errMsg);
-      }
-    }
-  };
-
-  const handleCancelIntent = async (intent: typeof parsedIntents[0]) => {
-    if (!wallet.connected) { toast.error('Connect wallet first'); return; }
-    setActiveAction('claim');
-    try {
-      if (intent.intentType === 0) {
-        await cancelBuy(intent.plaintext);
-      } else {
-        await cancelSell(intent.plaintext);
-      }
-      toast.success('Intent cancelled! Funds returned.');
-      setTimeout(() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }, 3000);
-      setTimeout(refetchIntentRecords, 8000);
+      toast.success('Order cancelled! Funds returned.');
+      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
+      setTimeout(refetchOrderRecords, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Cancel failed');
     }
   };
 
-  const handleSubmitIntent = async () => {
+  const handleSubmitOrder = async () => {
     if (!wallet.connected) {
       toast.error('Connect wallet first');
       return;
@@ -243,7 +209,14 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       return;
     }
 
-    const epoch = epochData?.currentEpoch ?? 1;
+    // Limit price: default to 0 (market order — no limit)
+    // Scale down by priceScale to fit contract's MAX_PRICE range
+    const parsedLimit = parseFloat(limitPrice || '0');
+    const limitMicro = Math.floor(parsedLimit * PRECISION / selectedMarket.priceScale);
+
+    // Expiry block: default to current + 1000 blocks (~50 min)
+    const expiryBlock = 999_999_999;
+
     const randomBytes = new Uint8Array(8);
     crypto.getRandomValues(randomBytes);
     const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
@@ -252,82 +225,64 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
     try {
       if (tab === 'buy') {
-        // Find USDCx record with sufficient balance
         const record = parsedUsdcx.find(r => r.amount >= microAmount);
         if (!record) {
-          toast.error(`No USDCx record with enough balance. Largest: ${parsedUsdcx.length > 0 ? (parsedUsdcx[0].amount / PRECISION).toFixed(2) : '0'} USDCx`);
+          toast.error(`No USDCx record with enough balance. Largest: ${parsedUsdcx.length > 0 ? (Math.max(...parsedUsdcx.map(r => r.amount)) / PRECISION).toFixed(2) : '0'} USDCx`);
           return;
         }
-        await submitBuyIntent(record.plaintext, microAmount, epoch, nonce);
+        await submitBuyOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
       } else {
-        // Find credits record with sufficient balance
         const record = parsedCredits.find(r => r.amount >= microAmount);
         if (!record) {
-          toast.error(`No ALEO record with enough balance. Largest: ${parsedCredits.length > 0 ? (parsedCredits[0].amount / PRECISION).toFixed(6) : '0'} ALEO`);
+          toast.error(`No ALEO record with enough balance. Largest: ${parsedCredits.length > 0 ? (Math.max(...parsedCredits.map(r => r.amount)) / PRECISION).toFixed(6) : '0'} ${selectedMarket.baseAsset}`);
           return;
         }
-        await submitSellIntent(record.plaintext, microAmount, epoch, nonce);
+        await submitSellOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
       }
 
       setAmount('');
-      const otherSideVol = tab === 'buy' ? (Number(epochData?.sellVolume) || 0) : (Number(epochData?.buyVolume) || 0);
-      if (otherSideVol > 0) {
-        toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} intent submitted to Epoch #${epoch}! Both sides have volume — the bot will settle automatically.`);
-      } else {
-        toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} intent submitted to Epoch #${epoch}! Waiting for ${tab === 'buy' ? 'sellers' : 'buyers'} to match. Settlement happens once both sides have orders.`);
-      }
-      setTimeout(() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }, 3000);
-      setTimeout(refetchIntentRecords, 8000);
+      setLimitPrice('');
+      toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}! The operator will match when the batch settles.`);
+      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
+      setTimeout(refetchOrderRecords, 8000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Transaction failed';
       toast.error(msg);
     }
   };
 
-  const buyVol = (Number(epochData?.buyVolume) || 0) / PRECISION;
-  const sellVol = (Number(epochData?.sellVolume) || 0) / PRECISION;
-  const totalTrades = Number(epochData?.totalTrades) || 0;
-  const totalVolume = (Number(epochData?.totalVolume) || 0) / PRECISION;
+  const oraclePrice = ((Number(batchData?.oraclePrice) || 0) / PRECISION) * selectedMarket.priceScale;
+  const twapPrice = ((Number(batchData?.twap) || 0) / PRECISION) * selectedMarket.priceScale;
+  const totalTrades = Number(batchData?.totalTrades) || 0;
+  const totalVolume = (Number(batchData?.totalVolume) || 0) / PRECISION;
+  const feeBps = Number(batchData?.feeBps) || 0;
 
-  // Epoch matching state — tells users what's happening
-  const epochMatchState: 'settled' | 'matched' | 'buy-only' | 'sell-only' | 'empty' = (() => {
-    if (!epochData || epochData.settled) return 'settled';
-    const bv = Number(epochData.buyVolume) || 0;
-    const sv = Number(epochData.sellVolume) || 0;
-    if (bv === 0 && sv === 0) return 'empty';
-    if (bv > 0 && sv > 0) return 'matched';
-    if (bv > 0) return 'buy-only';
-    return 'sell-only';
+  // Batch state
+  const batchState: 'collecting' | 'proposed' | 'approved' | 'settling' = (() => {
+    if (!batchData) return 'collecting';
+    if (batchData.approved) return 'approved';
+    if (Number(batchData.proposedPrice) > 0) return 'proposed';
+    return 'collecting';
   })();
 
-  const epochStatusConfig = {
-    settled: { color: 'bg-accent-success', text: 'Settled — claim your fills', textColor: 'text-accent-success' },
-    matched: { color: 'bg-primary', text: 'Both sides matched — settlement in progress', textColor: 'text-primary' },
-    'buy-only': { color: 'bg-accent-warning', text: 'Buy orders waiting — needs sellers to settle', textColor: 'text-accent-warning' },
-    'sell-only': { color: 'bg-accent-warning', text: 'Sell orders waiting — needs buyers to settle', textColor: 'text-accent-warning' },
-    empty: { color: 'bg-white/20', text: 'No orders yet — submit an intent to start', textColor: 'text-text-muted' },
+  const batchStatusConfig = {
+    collecting: { color: 'bg-primary', text: 'Collecting orders — submit your order now', textColor: 'text-primary' },
+    proposed: { color: 'bg-accent-warning', text: `Settlement proposed at $${((Number(batchData?.proposedPrice || 0) / PRECISION) * selectedMarket.priceScale).toFixed(2)} — awaiting 2-of-3 approval`, textColor: 'text-accent-warning' },
+    approved: { color: 'bg-accent-success', text: 'Batch approved — operator executing matches', textColor: 'text-accent-success' },
+    settling: { color: 'bg-accent-success', text: 'Batch settled — advancing to next batch', textColor: 'text-accent-success' },
   };
 
-  const getIntentStatus = (intent: typeof parsedIntents[0]) => {
-    if (epochData && intent.epoch < epochData.currentEpoch) {
-      return { label: 'Settled', detail: 'Ready to claim your fill', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canClaim: true, canCancel: false };
+  const getOrderStatus = (order: typeof commitments[0]) => {
+    if (batchData && order.batchId < batchData.currentBatch) {
+      return { label: 'Matched', detail: 'Operator has settled this batch', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canCancel: false };
     }
-    if (epochData?.settled && intent.epoch === epochData.currentEpoch) {
-      return { label: 'Settled', detail: 'Ready to claim your fill', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canClaim: true, canCancel: false };
+    if (batchState === 'approved') {
+      return { label: 'Settling', detail: 'Batch approved — matches executing soon', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canCancel: false };
     }
-    // Current epoch, not settled
-    const bv = Number(epochData?.buyVolume) || 0;
-    const sv = Number(epochData?.sellVolume) || 0;
-    if (bv > 0 && sv > 0) {
-      return { label: 'Matching', detail: 'Both sides have volume — bot will settle soon', color: 'text-primary', bgColor: 'bg-primary/10', canClaim: false, canCancel: true };
+    if (batchState === 'proposed') {
+      return { label: 'Pending', detail: 'Settlement proposed — waiting for operator approval', color: 'text-accent-warning', bgColor: 'bg-accent-warning/10', canCancel: true };
     }
-    if (intent.intentType === 0 && sv === 0) {
-      return { label: 'Waiting', detail: 'Waiting for sellers to match your buy order', color: 'text-accent-warning', bgColor: 'bg-accent-warning/10', canClaim: false, canCancel: true };
-    }
-    if (intent.intentType === 1 && bv === 0) {
-      return { label: 'Waiting', detail: 'Waiting for buyers to match your sell order', color: 'text-accent-warning', bgColor: 'bg-accent-warning/10', canClaim: false, canCancel: true };
-    }
-    return { label: 'Open', detail: 'Epoch collecting intents — cancel or wait', color: 'text-text-muted', bgColor: 'bg-white/[0.04]', canClaim: false, canCancel: true };
+    return { label: 'Open', detail: 'Batch collecting orders — cancel anytime', color: 'text-text-muted', bgColor: 'bg-white/[0.04]', canCancel: true };
   };
 
   return (
@@ -337,45 +292,64 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           <div>
             <h1 className="font-headline text-2xl text-text-primary tracking-wide">Dark Pool</h1>
             <p className="text-text-muted text-sm mt-1">
-              Private epoch-based batch trading — intents are encrypted, settlement at oracle mid-price
+              Private batch trading with TWAP settlement — orders are encrypted, matched by 2-of-3 threshold operators
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { fetchEpochData(); refetchRecords(); refetchIntentRecords(); }}
+              onClick={() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }}
               className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
             >
               Refresh
             </button>
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${epochData?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
+              <div className={`w-2 h-2 rounded-full ${batchData?.paused ? 'bg-red-500' : 'bg-accent-success'}`} />
               <span className="text-text-muted text-xs font-label uppercase tracking-wider">
-                {epochData?.paused ? 'Paused' : 'Active'}
+                {batchData?.paused ? 'Paused' : 'Active'}
               </span>
             </div>
           </div>
         </div>
       </FadeInView>
 
+      {/* Market Selector */}
+      <FadeInView delay={0.05}>
+        <div className="flex gap-2">
+          {DARK_POOL_MARKETS.map((market) => (
+            <button
+              key={market.id}
+              onClick={() => { setSelectedMarket(market); setLoading(true); }}
+              className={`px-4 py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
+                selectedMarket.id === market.id
+                  ? 'bg-primary/20 text-primary border border-primary/30'
+                  : 'bg-white/[0.03] text-text-muted hover:text-text-secondary border border-transparent'
+              }`}
+            >
+              {market.label}
+            </button>
+          ))}
+        </div>
+      </FadeInView>
+
       {/* Stats Grid */}
       <FadeInView delay={0.1}>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <SpotlightCard className="p-4">
-            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Current Epoch</p>
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Current Batch</p>
             {loading ? <LoadingSkeleton className="h-6 w-16 mt-1" /> : (
-              <p className="text-xl font-headline text-primary mt-1">#{epochData?.currentEpoch}</p>
+              <p className="text-xl font-headline text-primary mt-1">#{batchData?.currentBatch}</p>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
-            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Buy Volume</p>
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Oracle Price</p>
             {loading ? <LoadingSkeleton className="h-6 w-24 mt-1" /> : (
-              <p className="text-xl font-headline text-accent-success mt-1">{buyVol.toFixed(2)} USDCx</p>
+              <p className="text-xl font-headline text-accent-success mt-1">${oraclePrice.toFixed(4)}</p>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
-            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Sell Volume</p>
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">TWAP Price</p>
             {loading ? <LoadingSkeleton className="h-6 w-24 mt-1" /> : (
-              <p className="text-xl font-headline text-accent-warning mt-1">{sellVol.toFixed(2)} ALEO</p>
+              <p className="text-xl font-headline text-accent-warning mt-1">${twapPrice > 0 ? twapPrice.toFixed(4) : '—'}</p>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
@@ -384,43 +358,59 @@ export function DarkPool({ wallet }: DarkPoolProps) {
               <p className="text-xl font-headline text-text-primary mt-1">{totalTrades}</p>
             )}
           </SpotlightCard>
+          <SpotlightCard className="p-4">
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Fee</p>
+            {loading ? <LoadingSkeleton className="h-6 w-16 mt-1" /> : (
+              <p className="text-xl font-headline text-text-primary mt-1">{(feeBps / 100).toFixed(2)}%</p>
+            )}
+          </SpotlightCard>
         </div>
       </FadeInView>
 
-      {/* Pool Liquidity & Epoch Status — visible to all users */}
+      {/* Pool Liquidity & Batch Status */}
       <FadeInView delay={0.15}>
         <SpotlightCard className="p-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex items-center gap-4">
               <div>
-                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Pool ALEO</p>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Fee Vault</p>
                 <p className="text-sm font-headline text-accent-success">{(poolBalance.aleo / PRECISION).toFixed(4)}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
-                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Pool USDCx</p>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Volume</p>
                 <p className="text-sm font-headline text-primary">{(poolBalance.usdcx / PRECISION).toFixed(2)}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
-                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Epoch #{epochData?.currentEpoch ?? '—'}</p>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Approval</p>
+                <p className="text-sm font-headline text-text-primary">{batchData?.approvalCount ?? 0}/2</p>
+              </div>
+              <div className="h-6 w-px bg-white/[0.06]" />
+              <div>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Batch #{batchData?.currentBatch ?? '—'}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${epochStatusConfig[epochMatchState].color}`} />
-                  <span className={`text-xs ${epochStatusConfig[epochMatchState].textColor}`}>
-                    {epochStatusConfig[epochMatchState].text}
+                  <div className={`w-1.5 h-1.5 rounded-full ${batchStatusConfig[batchState].color}`} />
+                  <span className={`text-xs ${batchStatusConfig[batchState].textColor}`}>
+                    {batchStatusConfig[batchState].text}
                   </span>
                 </div>
               </div>
             </div>
           </div>
-          {(epochMatchState === 'buy-only' || epochMatchState === 'sell-only') && (
+          {batchState === 'collecting' && (
             <p className="text-text-muted text-[10px] mt-2 border-t border-white/[0.04] pt-2">
-              The dark pool requires both buy and sell orders in the same epoch before settlement. The bot automatically settles once both sides have volume. You can cancel your intent anytime before settlement.
+              The batch is open for orders. Submit buy or sell orders with optional limit prices. Once sufficient volume accumulates, operators propose a TWAP settlement price for 2-of-3 approval.
             </p>
           )}
-          {epochMatchState === 'matched' && (
+          {batchState === 'proposed' && (
             <p className="text-text-muted text-[10px] mt-2 border-t border-white/[0.04] pt-2">
-              Both buy and sell orders are matched. The settlement bot will execute within 60 seconds using the 5-source oracle mid-price.
+              A settlement price has been proposed. Waiting for threshold operator approval (2-of-3). Once approved, the operator will execute order matches automatically.
+            </p>
+          )}
+          {batchState === 'approved' && (
+            <p className="text-text-muted text-[10px] mt-2 border-t border-white/[0.04] pt-2">
+              Batch approved! The operator is executing matches. Matching pairs receive private FillReceipt records. Unmatched residuals carry forward.
             </p>
           )}
         </SpotlightCard>
@@ -436,7 +426,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 tab === 'buy' ? 'bg-accent-success/20 text-accent-success border border-accent-success/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
               }`}
             >
-              Buy ALEO
+              Buy {selectedMarket.baseAsset}
             </button>
             <button
               onClick={() => setTab('sell')}
@@ -444,7 +434,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 tab === 'sell' ? 'bg-accent-warning/20 text-accent-warning border border-accent-warning/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
               }`}
             >
-              Sell ALEO
+              Sell {selectedMarket.baseAsset}
             </button>
           </div>
 
@@ -452,12 +442,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-text-muted text-xs font-label uppercase tracking-wider">
-                  {tab === 'buy' ? 'USDCx Amount' : 'ALEO Amount'}
+                  {tab === 'buy' ? 'USDCx Amount' : `${selectedMarket.baseAsset} Amount`}
                 </label>
                 <span className="text-text-muted text-xs">
                   {tab === 'buy'
                     ? `Balance: ${parsedUsdcx.length > 0 ? (parsedUsdcx.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(2) : '0.00'} USDCx (${parsedUsdcx.length} records)`
-                    : `Balance: ${parsedCredits.length > 0 ? (parsedCredits.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(6) : '0.000000'} ALEO (${parsedCredits.length} records)`
+                    : `Balance: ${parsedCredits.length > 0 ? (parsedCredits.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(6) : '0.000000'} ${selectedMarket.baseAsset} (${parsedCredits.length} records)`
                   }
                 </span>
               </div>
@@ -465,23 +455,45 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder={tab === 'buy' ? 'Amount of USDCx to spend' : 'Amount of ALEO to sell'}
+                placeholder={tab === 'buy' ? 'Amount of USDCx to spend' : `Amount of ${selectedMarket.baseAsset} to sell`}
+                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-text-muted text-xs font-label uppercase tracking-wider">
+                  Limit Price (optional)
+                </label>
+                <span className="text-text-muted text-xs">
+                  Oracle: ${oraclePrice > 0 ? oraclePrice.toFixed(4) : '—'}
+                </span>
+              </div>
+              <input
+                type="number"
+                value={limitPrice}
+                onChange={(e) => setLimitPrice(e.target.value)}
+                placeholder="Leave empty for market order (no limit)"
                 className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
               />
             </div>
 
             <div className="bg-white/[0.02] rounded-lg p-3 space-y-1">
               <div className="flex justify-between text-xs text-text-muted">
-                <span>Epoch</span>
-                <span>#{epochData?.currentEpoch ?? '—'}</span>
+                <span>Batch</span>
+                <span>#{batchData?.currentBatch ?? '—'}</span>
               </div>
               <div className="flex justify-between text-xs text-text-muted">
                 <span>Settlement</span>
-                <span>Oracle mid-price (5-source)</span>
+                <span>TWAP-validated oracle price (2-of-3 threshold)</span>
+              </div>
+              <div className="flex justify-between text-xs text-text-muted">
+                <span>Fee</span>
+                <span>{(feeBps / 100).toFixed(2)}%</span>
               </div>
               <div className="flex justify-between text-xs text-text-muted">
                 <span>Privacy</span>
-                <span className="text-accent-success">Fully encrypted intent</span>
+                <span className="text-accent-success">Fully encrypted ZK order</span>
               </div>
             </div>
 
@@ -493,11 +505,11 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             )}
 
             <button
-              onClick={handleSubmitIntent}
+              onClick={handleSubmitOrder}
               disabled={!wallet.connected || !amount || transactionPending}
               className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : `Submit ${tab === 'buy' ? 'Buy' : 'Sell'} Intent`}
+              {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : `Submit ${tab === 'buy' ? 'Buy' : 'Sell'} ${selectedMarket.baseAsset} Order`}
             </button>
 
             {transactionStep === 'confirmed' && activeAction === 'submit' && (
@@ -505,22 +517,22 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 onClick={() => { resetTransaction(); setActiveAction(null); }}
                 className="w-full mt-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
-                New Intent
+                New Order
               </button>
             )}
           </div>
         </SpotlightCard>
       </FadeInView>
 
-      {/* Your Active Intents */}
-      {parsedIntents.length > 0 && (
+      {/* Your Active Orders */}
+      {commitments.length > 0 && (
         <FadeInView delay={0.25}>
           <SpotlightCard className="p-6">
-            <h3 className="font-headline text-lg text-text-primary mb-4">Your Active Intents</h3>
+            <h3 className="font-headline text-lg text-text-primary mb-4">Your Active Orders</h3>
             <div className="space-y-3">
-              {parsedIntents.map((intent, i) => {
-                const isBuy = intent.intentType === 0;
-                const status = getIntentStatus(intent);
+              {commitments.map((order, i) => {
+                const isBuy = order.direction === 0;
+                const status = getOrderStatus(order);
                 return (
                   <div key={i} className="bg-white/[0.02] rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
@@ -529,22 +541,17 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                           {isBuy ? 'BUY' : 'SELL'}
                         </span>
                         <span className="text-text-primary text-sm font-medium">
-                          {(intent.amount / PRECISION).toFixed(isBuy ? 2 : 6)} {isBuy ? 'USDCx' : 'ALEO'}
+                          {(order.size / PRECISION).toFixed(isBuy ? 2 : 6)} {isBuy ? 'USDCx' : selectedMarket.baseAsset}
                         </span>
-                        <span className="text-text-muted text-xs">Epoch #{intent.epoch}</span>
+                        {order.limitPrice > 0 && (
+                          <span className="text-text-muted text-xs">@ ${(order.limitPrice / PRECISION).toFixed(4)}</span>
+                        )}
+                        <span className="text-text-muted text-xs">Batch #{order.batchId}</span>
                       </div>
                       <div className="flex gap-2">
-                        {status.canClaim && (
-                          <button
-                            onClick={() => handleClaimFill(intent)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-label uppercase tracking-wider bg-accent-success/10 text-accent-success border border-accent-success/20 hover:bg-accent-success/20 transition-all"
-                          >
-                            Claim Fill
-                          </button>
-                        )}
                         {status.canCancel && (
                           <button
-                            onClick={() => handleCancelIntent(intent)}
+                            onClick={() => handleCancelOrder(order)}
                             className="px-3 py-1.5 rounded-lg text-xs font-label uppercase tracking-wider bg-white/[0.04] text-text-muted border border-white/[0.06] hover:bg-white/[0.08] transition-all"
                           >
                             Cancel
@@ -565,8 +572,65 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         </FadeInView>
       )}
 
-      {/* Claim/Cancel Transaction Flow */}
-      {activeAction === 'claim' && (transactionPending || transactionStep === 'confirmed') && (
+      {/* Fill Receipts */}
+      {fills.length > 0 && (
+        <FadeInView delay={0.25}>
+          <SpotlightCard className="p-6">
+            <h3 className="font-headline text-lg text-text-primary mb-4">Fill Receipts</h3>
+            <div className="space-y-3">
+              {fills.map((fill, i) => {
+                const isBuy = fill.direction === 0;
+                return (
+                  <div key={i} className="bg-white/[0.02] rounded-lg p-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-label uppercase tracking-wider px-2 py-0.5 rounded ${isBuy ? 'bg-accent-success/10 text-accent-success' : 'bg-accent-warning/10 text-accent-warning'}`}>
+                        {isBuy ? 'BUY FILL' : 'SELL FILL'}
+                      </span>
+                      <span className="text-text-primary text-sm font-medium">
+                        {(fill.size / PRECISION).toFixed(isBuy ? 6 : 2)} {isBuy ? selectedMarket.baseAsset : 'USDCx'}
+                      </span>
+                      <span className="text-text-muted text-xs">Batch #{fill.batchId}</span>
+                      <span className="text-accent-success text-[11px]">Filled</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SpotlightCard>
+        </FadeInView>
+      )}
+
+      {/* Residual Orders */}
+      {residuals.length > 0 && (
+        <FadeInView delay={0.25}>
+          <SpotlightCard className="p-6">
+            <h3 className="font-headline text-lg text-accent-warning mb-4">Residual Orders</h3>
+            <p className="text-text-muted text-xs mb-3">Partially filled orders that can be resubmitted to the next batch.</p>
+            <div className="space-y-3">
+              {residuals.map((residual, i) => {
+                const isBuy = residual.direction === 0;
+                return (
+                  <div key={i} className="bg-white/[0.02] rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-label uppercase tracking-wider px-2 py-0.5 rounded ${isBuy ? 'bg-accent-success/10 text-accent-success' : 'bg-accent-warning/10 text-accent-warning'}`}>
+                          {isBuy ? 'BUY' : 'SELL'} RESIDUAL
+                        </span>
+                        <span className="text-text-primary text-sm font-medium">
+                          {(residual.size / PRECISION).toFixed(isBuy ? 2 : 6)} {isBuy ? 'USDCx' : selectedMarket.baseAsset}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SpotlightCard>
+        </FadeInView>
+      )}
+
+      {/* Cancel Transaction Flow */}
+      {activeAction === 'cancel' && (transactionPending || transactionStep === 'confirmed') && (
         <FadeInView delay={0.25}>
           <SpotlightCard className="p-6">
             <h3 className="font-headline text-lg text-text-primary mb-4">
@@ -592,28 +656,28 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">1</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Submit Intent</h4>
-              <p className="text-text-muted text-xs">Choose Buy ALEO (pay with USDCx) or Sell ALEO (receive USDCx). Your intent is encrypted in a ZK record — no one can see your amount or identity. Only aggregate epoch volume is visible on-chain.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Submit Order</h4>
+              <p className="text-text-muted text-xs">Choose Buy {selectedMarket.baseAsset} (pay with USDCx) or Sell {selectedMarket.baseAsset} (receive USDCx). Set an optional limit price. Your order is encrypted in a ZK record — no one can see your size, price or identity.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">2</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Wait for Match</h4>
-              <p className="text-text-muted text-xs">The epoch needs <strong className="text-text-secondary">both buy and sell orders</strong> before it can settle. If only one side has volume, the status shows "Waiting for buyers/sellers". You can cancel anytime while waiting.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Batch Collection</h4>
+              <p className="text-text-muted text-xs">Orders accumulate in the current batch. The oracle continually pushes TWAP-validated prices on-chain. Once sufficient volume exists, an operator proposes the settlement price.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">3</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Settlement</h4>
-              <p className="text-text-muted text-xs">Once both sides have orders, the bot settles automatically within 60 seconds using the 7-source oracle mid-price (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CMC, CryptoCompare). No manual action needed.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Threshold Approval</h4>
+              <p className="text-text-muted text-xs">Settlement requires <strong className="text-text-secondary">2-of-3 threshold operators</strong> to approve the proposed price. This prevents single-operator manipulation and ensures fair pricing.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">4</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Claim Fill</h4>
-              <p className="text-text-muted text-xs">After settlement, click "Claim Fill" on your intent. Buyers receive private ALEO, sellers receive private USDCx — calculated from the settlement price. Your trade details remain private forever.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Auto-Matching</h4>
+              <p className="text-text-muted text-xs">Once approved, the operator executes matches automatically. Full matches produce FillReceipt records. Partial fills produce ResidualOrder records that carry into the next batch.</p>
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">5</div>
               <h4 className="text-text-primary text-sm font-medium mb-1">Cancel Anytime</h4>
-              <p className="text-text-muted text-xs">Before settlement, you can cancel your intent at any time using the Cancel button to get your full tokens back. After settlement, only Claim is available — your tokens have been matched.</p>
+              <p className="text-text-muted text-xs">Before the batch is approved, cancel your order anytime to get your full tokens back. After approval, your order is matched by the operator and you receive your fill privately.</p>
             </div>
           </div>
         </SpotlightCard>
@@ -622,7 +686,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       {/* Total Volume */}
       <FadeInView delay={0.4}>
         <div className="text-center text-text-muted text-xs">
-          Total Dark Pool Volume: <span className="text-primary">${totalVolume.toFixed(2)}</span> &middot; Program: <span className="text-text-secondary font-mono text-[10px]">{DARKPOOL_PROGRAM_ID}</span>
+          {selectedMarket.label} Volume: <span className="text-primary">${totalVolume.toFixed(2)}</span> &middot; Program: <span className="text-text-secondary font-mono text-[10px]">{activeProgramId}</span>
         </div>
       </FadeInView>
 
@@ -632,18 +696,18 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           <SpotlightCard className="p-6 border border-primary/20">
             <h3 className="font-headline text-lg text-primary mb-4">Admin — Fund Dark Pool</h3>
             <p className="text-text-muted text-xs mb-4">
-              Transfer ALEO or USDCx to the dark pool's on-chain balance. Buyers claim ALEO, sellers claim USDCx — the pool must hold enough of each.
+              Transfer ALEO or USDCx to the dark pool's on-chain balance. The pool must hold liquidity for operator-executed matches.
             </p>
 
             {/* Pool Balance Display */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-white/[0.02] rounded-lg p-3">
-                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Pool ALEO Balance</p>
-                <p className="text-lg font-headline text-accent-success mt-1">{(poolBalance.aleo / PRECISION).toFixed(6)} ALEO</p>
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Fee Vault Balance</p>
+                <p className="text-lg font-headline text-accent-success mt-1">{(poolBalance.aleo / PRECISION).toFixed(6)}</p>
               </div>
               <div className="bg-white/[0.02] rounded-lg p-3">
-                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Pool USDCx Balance</p>
-                <p className="text-lg font-headline text-primary mt-1">{(poolBalance.usdcx / PRECISION).toFixed(2)} USDCx</p>
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Total Volume</p>
+                <p className="text-lg font-headline text-primary mt-1">{(poolBalance.usdcx / PRECISION).toFixed(2)}</p>
               </div>
             </div>
 
@@ -694,7 +758,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 Fund {fundToken === 'aleo' ? 'ALEO' : 'USDCx'}
               </button>
             </div>
-            <p className="text-text-muted text-[10px] mt-2 font-mono break-all">Pool: {DARKPOOL_ADDRESS}</p>
+            <p className="text-text-muted text-[10px] mt-2 font-mono break-all">Program: {activeProgramId}</p>
           </SpotlightCard>
         </FadeInView>
       )}

@@ -1,12 +1,11 @@
 import type { PriceResult } from './types.js';
 
-const API_URL = 'https://min-api.cryptocompare.com/data/price?fsym=ALEO&tsyms=USD';
-
-export async function fetchFromCryptoCompare(): Promise<PriceResult> {
+export async function fetchFromCryptoCompare(symbol: string = 'ALEO'): Promise<PriceResult> {
+  const url = `https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USD`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(API_URL, { signal: controller.signal });
+    const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as { USD?: number; Response?: string; Message?: string };
     // CryptoCompare returns 200 with { Response: 'Error' } when symbol is unknown or rate-limited

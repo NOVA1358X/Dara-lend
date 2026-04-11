@@ -4,4 +4,4 @@ export interface PriceResult {
   timestamp: number;
 }
 
-export type PriceFetcher = () => Promise<PriceResult>;
+export type PriceFetcher = (symbol?: string) => Promise<PriceResult>;

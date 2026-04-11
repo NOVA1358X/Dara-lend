@@ -52,8 +52,8 @@ function getConfidence(successCount: number, totalSources: number): Confidence {
   return 'none';
 }
 
-export async function aggregatePrices(): Promise<AggregatedPrice> {
-  const results = await Promise.allSettled(FETCHERS.map((fn) => fn()));
+export async function aggregatePrices(symbol: string = 'ALEO'): Promise<AggregatedPrice> {
+  const results = await Promise.allSettled(FETCHERS.map((fn) => fn(symbol)));
 
   const successful: PriceResult[] = [];
   const failedSources: string[] = [];
