@@ -16,7 +16,7 @@ function copyToClipboard(value: string) {
   );
 }
 
-type TokenIconLabel = 'ALEO' | 'USDCx' | 'USAD';
+type TokenIconLabel = 'ALEO' | 'USDCx' | 'USAD' | 'BTC' | 'ETH' | 'SOL';
 
 export function PositionCard({ record }: PositionCardProps) {
   const renderFields = () => {

@@ -12,6 +12,7 @@ import { SpotlightCard } from '@/components/shared/SpotlightCard';
 import { FadeInView } from '@/components/shared/FadeInView';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { TransactionFlow } from '@/components/shared/TransactionFlow';
+import { TokenIcon } from '@/components/shared/TokenIcon';
 import { useAppStore } from '@/stores/appStore';
 import toast from 'react-hot-toast';
 
@@ -321,13 +322,14 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           {DARK_POOL_MARKETS.map((market) => (
             <button
               key={market.id}
-              onClick={() => { setSelectedMarket(market); setLoading(true); }}
-              className={`px-4 py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
+              onClick={() => { setBatchData(null); setSelectedMarket(market); setLoading(true); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
                 selectedMarket.id === market.id
                   ? 'bg-primary/20 text-primary border border-primary/30'
                   : 'bg-white/[0.03] text-text-muted hover:text-text-secondary border border-transparent'
               }`}
             >
+              <TokenIcon token={market.baseAsset as any} size={16} />
               {market.label}
             </button>
           ))}
@@ -354,7 +356,11 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           <SpotlightCard className="p-4">
             <p className="text-text-muted text-xs font-label uppercase tracking-wider">On-Chain Oracle</p>
             {loading ? <LoadingSkeleton className="h-6 w-24 mt-1" /> : (
-              <p className="text-xl font-headline text-accent-warning mt-1">${oraclePrice > 0 ? oraclePrice.toFixed(4) : '—'}</p>
+              <p className="text-xl font-headline text-accent-warning mt-1">
+                {oraclePrice > 0
+                  ? `$${oraclePrice.toLocaleString(undefined, { minimumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4, maximumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4 })}`
+                  : '—'}
+              </p>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
@@ -431,7 +437,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 tab === 'buy' ? 'bg-accent-success/20 text-accent-success border border-accent-success/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
               }`}
             >
-              Buy {selectedMarket.baseAsset}
+              <span className="flex items-center justify-center gap-1.5"><TokenIcon token={selectedMarket.baseAsset as any} size={14} /> Buy {selectedMarket.baseAsset}</span>
             </button>
             <button
               onClick={() => setTab('sell')}
@@ -439,7 +445,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 tab === 'sell' ? 'bg-accent-warning/20 text-accent-warning border border-accent-warning/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
               }`}
             >
-              Sell {selectedMarket.baseAsset}
+              <span className="flex items-center justify-center gap-1.5"><TokenIcon token={selectedMarket.baseAsset as any} size={14} /> Sell {selectedMarket.baseAsset}</span>
             </button>
           </div>
 

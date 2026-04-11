@@ -51,11 +51,11 @@ function getOrCreateState(marketId: string): DarkPoolBotState {
   return s;
 }
 
-// Oracle timing: 5 min normal, 60s catch-up when price deviation > 50%
+// Oracle timing: 5 min normal, 15s catch-up when price deviation > 20%
 const MIN_ORACLE_INTERVAL_MS      = 300_000;  // 5 min between oracle updates per market
-const CATCHUP_ORACLE_INTERVAL_MS  =  60_000;  // 60s when price needs rapid convergence
-const CATCHUP_DEVIATION_THRESHOLD =    0.50;  // 50% deviation triggers catch-up mode
-const MAX_PRICE_MOVE_RATIO        =    0.14;  // 14% max per step (contract allows 15%)
+const CATCHUP_ORACLE_INTERVAL_MS  =  15_000;  // 15s when price needs rapid convergence
+const CATCHUP_DEVIATION_THRESHOLD =    0.20;  // 20% deviation triggers catch-up mode
+const MAX_PRICE_MOVE_RATIO        =    0.145; // 14.5% max per step (contract allows 15%)
 
 export function getDarkPoolBotStatus() {
   const perMarket: Record<string, DarkPoolBotState> = {};
