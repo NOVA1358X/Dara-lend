@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { config, darkpoolMarkets } from '../../utils/config.js';
+import { aggregatePrices } from '../../oracle/aggregator.js';
 
 const router = Router();
 
@@ -214,13 +215,18 @@ router.get('/:market/batch', async (req, res) => {
 router.get('/:market/stats', async (req, res) => {
   try {
     const pid = resolveProgramId(req.params.market);
-    const [tradesRaw, volumeRaw, oraclePriceRaw, oracleRoundRaw, feeVaultRaw, feeBpsRaw] = await Promise.all([
+    const marketConfig = darkpoolMarkets.find(m => m.id === req.params.market);
+    const oracleSymbol = marketConfig?.oracleSymbol ?? 'ALEO';
+    const priceScale = marketConfig?.priceScale ?? 1;
+
+    const [tradesRaw, volumeRaw, oraclePriceRaw, oracleRoundRaw, feeVaultRaw, feeBpsRaw, aggregated] = await Promise.all([
       fetchMapping('total_trades', '0u8', pid),
       fetchMapping('total_volume', '0u8', pid),
       fetchMapping('oracle_price', '0u8', pid),
       fetchMapping('oracle_round', '0u8', pid),
       fetchMapping('fee_vault', '0u8', pid),
       fetchMapping('fee_bps', '0u8', pid),
+      aggregatePrices(oracleSymbol).catch(() => null),
     ]);
 
     res.json({
@@ -231,6 +237,8 @@ router.get('/:market/stats', async (req, res) => {
       oracleRound: safeParse(oracleRoundRaw),
       feeVault: safeParse(feeVaultRaw),
       feeBps: safeParse(feeBpsRaw),
+      realPrice: aggregated?.medianPrice ?? 0,
+      priceScale,
       programId: pid,
     });
   } catch (err) {

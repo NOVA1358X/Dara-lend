@@ -39,6 +39,7 @@ interface BatchData {
   feeVault: string;
   totalTrades: string;
   totalVolume: string;
+  realPrice: number;
 }
 
 const OPERATOR_ADDRESS = ADMIN_ADDRESS;
@@ -98,6 +99,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         feeVault: statsRes?.feeVault ?? '0',
         totalTrades: statsRes?.totalTrades ?? '0',
         totalVolume: statsRes?.totalVolume ?? '0',
+        realPrice: statsRes?.realPrice ?? 0,
       });
     } catch {
       // silent
@@ -253,6 +255,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
   const oraclePrice = ((Number(batchData?.oraclePrice) || 0) / PRECISION) * selectedMarket.priceScale;
   const twapPrice = ((Number(batchData?.twap) || 0) / PRECISION) * selectedMarket.priceScale;
+  const realPrice = batchData?.realPrice ?? 0;
   const totalTrades = Number(batchData?.totalTrades) || 0;
   const totalVolume = (Number(batchData?.totalVolume) || 0) / PRECISION;
   const feeBps = Number(batchData?.feeBps) || 0;
@@ -341,15 +344,17 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
-            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Oracle Price</p>
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">Market Price</p>
             {loading ? <LoadingSkeleton className="h-6 w-24 mt-1" /> : (
-              <p className="text-xl font-headline text-accent-success mt-1">${oraclePrice.toFixed(4)}</p>
+              <p className="text-xl font-headline text-accent-success mt-1">
+                {realPrice > 0 ? `$${realPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4 })}` : `$${oraclePrice.toFixed(4)}`}
+              </p>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
-            <p className="text-text-muted text-xs font-label uppercase tracking-wider">TWAP Price</p>
+            <p className="text-text-muted text-xs font-label uppercase tracking-wider">On-Chain Oracle</p>
             {loading ? <LoadingSkeleton className="h-6 w-24 mt-1" /> : (
-              <p className="text-xl font-headline text-accent-warning mt-1">${twapPrice > 0 ? twapPrice.toFixed(4) : '—'}</p>
+              <p className="text-xl font-headline text-accent-warning mt-1">${oraclePrice > 0 ? oraclePrice.toFixed(4) : '—'}</p>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
