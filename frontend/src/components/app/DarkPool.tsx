@@ -62,7 +62,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   const [limitPrice, setLimitPrice] = useState('');
   const [fundAmount, setFundAmount] = useState('');
   const [fundToken, setFundToken] = useState<'aleo' | 'usdcx'>('aleo');
-  const [poolBalance, setPoolBalance] = useState({ aleo: 0, usdcx: 0 });
+  const [poolLiquidity, setPoolLiquidity] = useState<{ usdcx: number; token: number }>({ usdcx: 0, token: 0 });
+  const [liquidityLoaded, setLiquidityLoaded] = useState(false);
   const [orderRecords, setOrderRecords] = useState<any[]>([]);
   const isAdmin = wallet.address === ADMIN_ADDRESS;
   const [activeAction, setActiveAction] = useState<'submit' | 'cancel' | null>(null);
@@ -221,21 +222,27 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     return () => clearInterval(interval);
   }, [batchData, currentBlock]);
 
-  // Fetch dark pool on-chain balances (ALEO credits + USDCx) from public account mappings
+  // Fetch per-market pool liquidity (USDCx + base token balance for THIS market's program)
   useEffect(() => {
-    const fetchPoolBalance = async () => {
+    // Reset on market switch so stale data from another market doesn't show
+    setPoolLiquidity({ usdcx: 0, token: 0 });
+    setLiquidityLoaded(false);
+    const fetchLiquidity = async () => {
       try {
-        const res = await fetch(`${BACKEND_API}/darkpool/pool-balance`).then(r => r.json()).catch(() => null);
-        setPoolBalance({
-          aleo: parseInt(res?.aleo ?? '0', 10),
-          usdcx: parseInt(res?.usdcx ?? '0', 10),
-        });
+        const res = await fetch(`${BACKEND_API}/darkpool/${selectedMarket.id}/pool-liquidity`).then(r => r.json()).catch(() => null);
+        if (res) {
+          setPoolLiquidity({
+            usdcx: parseInt(res.usdcx ?? '0', 10),
+            token: parseInt(res.token ?? '0', 10),
+          });
+          setLiquidityLoaded(true);
+        }
       } catch { /* silent */ }
     };
-    fetchPoolBalance();
-    const interval = setInterval(fetchPoolBalance, 30000);
+    fetchLiquidity();
+    const interval = setInterval(fetchLiquidity, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedMarket.id]);
 
   const refetchOrderRecords = useCallback(() => {
     if (!wallet.connected || !wallet.requestRecords) return;
@@ -390,6 +397,36 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     crypto.getRandomValues(randomBytes);
     const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
     const microAmount = Math.floor(parsedAmount * PRECISION);
+
+    // Pool liquidity check: warn if pool can't cover the payout at match time
+    if (liquidityLoaded) {
+      if (tab === 'sell') {
+        // Seller receives USDCx from pool. Estimated payout = amount * price / SCALE
+        const estimatedUsdcxPayout = Math.floor(microAmount * limitMicro / PRECISION);
+        if (estimatedUsdcxPayout > poolLiquidity.usdcx) {
+          const available = (poolLiquidity.usdcx / PRECISION).toFixed(2);
+          const needed = (estimatedUsdcxPayout / PRECISION).toFixed(2);
+          toast.error(
+            `Pool only has ${available} USDCx available but your sell requires ~${needed} USDCx to fill. ` +
+            `Reduce your sell amount or wait for more buy orders to add USDCx liquidity.`
+          );
+          return;
+        }
+      } else {
+        // Buyer receives base tokens from pool. Size = usdcx * SCALE / price
+        const buySize = Math.floor(microAmount * PRECISION / limitMicro);
+        if (buySize > poolLiquidity.token) {
+          const available = (poolLiquidity.token / PRECISION).toFixed(6);
+          const needed = (buySize / PRECISION).toFixed(6);
+          toast.error(
+            `Pool only has ${available} ${selectedMarket.baseAsset} available but your buy requires ~${needed} ${selectedMarket.baseAsset}. ` +
+            `Reduce your buy amount or wait for more sell orders to add ${selectedMarket.baseAsset} liquidity.`
+          );
+          return;
+        }
+      }
+    }
+
     setActiveAction('submit');
 
     // Submit via Shield wallet directly
@@ -463,12 +500,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
   const getOrderStatus = (order: typeof commitments[0]) => {
     // batch_id=0 is a placeholder in OrderCommitment records — not a real batch indicator
-    // Only show "Matched" if we have fill receipts for this order or the batch was truly advanced past
+    // Only show "Settled" if we have fill receipts for this order or the batch was truly advanced past
     if (batchData && order.batchId > 0 && order.batchId < batchData.currentBatch) {
-      return { label: 'Matched', detail: 'Operator has settled this batch', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canCancel: false };
+      return { label: 'Settled', detail: 'Tokens deposited to your wallet — check Shield PRIVATE tab', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canCancel: false };
     }
     if (batchState === 'approved') {
-      return { label: 'Settling', detail: 'Batch approved — matches executing soon', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canCancel: false };
+      return { label: 'Settling', detail: 'Batch approved — matches executing soon. Tokens will be deposited automatically.', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canCancel: false };
     }
     if (batchState === 'proposed') {
       return { label: 'Pending', detail: 'Settlement proposed — waiting for operator approval', color: 'text-accent-warning', bgColor: 'bg-accent-warning/10', canCancel: true };
@@ -571,13 +608,13 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex items-center gap-4">
               <div>
-                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">ALEO Balance</p>
-                <p className="text-sm font-headline text-accent-success">{(poolBalance.aleo / PRECISION).toFixed(4)}</p>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">{selectedMarket.baseAsset} in Pool</p>
+                <p className="text-sm font-headline text-accent-success">{(poolLiquidity.token / PRECISION).toFixed(4)}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
-                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">USDCx Balance</p>
-                <p className="text-sm font-headline text-primary">{(poolBalance.usdcx / PRECISION).toFixed(2)}</p>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">USDCx in Pool</p>
+                <p className="text-sm font-headline text-primary">{(poolLiquidity.usdcx / PRECISION).toFixed(2)}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
@@ -761,6 +798,10 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 <span>Privacy</span>
                 <span className="text-accent-success">Fully encrypted ZK order</span>
               </div>
+              <div className="flex justify-between text-xs text-text-muted">
+                <span>After Match</span>
+                <span className="text-accent-success">Tokens auto-deposited to wallet</span>
+              </div>
             </div>
 
             {/* Transaction Flow */}
@@ -847,8 +888,11 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       {/* Fill Receipts */}
       {fills.length > 0 && (
         <FadeInView delay={0.25}>
-          <SpotlightCard className="p-6">
-            <h3 className="font-headline text-lg text-text-primary mb-4">Fill Receipts</h3>
+          <SpotlightCard className="p-6 border border-accent-success/20">
+            <h3 className="font-headline text-lg text-accent-success mb-2">Fill Receipts — Tokens Deposited</h3>
+            <p className="text-text-muted text-xs mb-4">
+              These orders were matched and settled. Your tokens have been <strong className="text-accent-success">automatically deposited</strong> as private records in your Shield wallet. Check the PRIVATE tab to see your {selectedMarket.baseAsset} and USDCx balances.
+            </p>
             <div className="space-y-3">
               {fills.map((fill, i) => {
                 const isBuy = fill.direction === 0;
@@ -948,8 +992,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             </div>
             <div className="bg-white/[0.02] rounded-lg p-4">
               <div className="text-primary font-headline text-lg mb-2">5</div>
-              <h4 className="text-text-primary text-sm font-medium mb-1">Cancel Anytime</h4>
-              <p className="text-text-muted text-xs">Before the batch is approved, cancel your order anytime to get your full tokens back. After approval, your order is matched by the operator and you receive your fill privately.</p>
+              <h4 className="text-text-primary text-sm font-medium mb-1">Auto Settlement</h4>
+              <p className="text-text-muted text-xs">After approval, the operator matches orders automatically. <strong className="text-accent-success">Tokens are deposited directly</strong> to your wallet as private records — no claim step needed. Check Shield's PRIVATE tab for your fill tokens.</p>
             </div>
           </div>
         </SpotlightCard>
@@ -974,12 +1018,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             {/* Pool Balance Display */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-white/[0.02] rounded-lg p-3">
-                <p className="text-text-muted text-xs font-label uppercase tracking-wider">ALEO Pool Balance</p>
-                <p className="text-lg font-headline text-accent-success mt-1">{(poolBalance.aleo / PRECISION).toFixed(6)}</p>
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">{selectedMarket.baseAsset} Pool Balance</p>
+                <p className="text-lg font-headline text-accent-success mt-1">{(poolLiquidity.token / PRECISION).toFixed(6)}</p>
               </div>
               <div className="bg-white/[0.02] rounded-lg p-3">
                 <p className="text-text-muted text-xs font-label uppercase tracking-wider">USDCx Pool Balance</p>
-                <p className="text-lg font-headline text-primary mt-1">{(poolBalance.usdcx / PRECISION).toFixed(2)}</p>
+                <p className="text-lg font-headline text-primary mt-1">{(poolLiquidity.usdcx / PRECISION).toFixed(2)}</p>
               </div>
             </div>
 

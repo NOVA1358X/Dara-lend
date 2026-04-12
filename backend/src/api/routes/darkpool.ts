@@ -283,6 +283,32 @@ router.get('/pool-balance', async (_req, res) => {
   }
 });
 
+// GET /api/darkpool/:market/pool-liquidity — per-market USDCx + base token balances
+router.get('/:market/pool-liquidity', async (req, res) => {
+  try {
+    const mkt = darkpoolMarkets.find(m => m.id === req.params.market);
+    if (!mkt) {
+      res.status(400).json({ error: `Invalid market. Options: ${darkpoolMarkets.map(m => m.id).join(', ')}` });
+      return;
+    }
+
+    const [usdcxRaw, tokenRaw] = await Promise.all([
+      fetchMapping('balances', mkt.programAddress, USDCX_PROGRAM),
+      fetchMapping(mkt.tokenBalanceMapping, mkt.programAddress, mkt.tokenProgramId),
+    ]);
+
+    res.json({
+      market: mkt.id,
+      programAddress: mkt.programAddress,
+      usdcx: safeParse(usdcxRaw),
+      token: safeParse(tokenRaw),
+      baseAsset: mkt.baseAsset,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch pool liquidity' });
+  }
+});
+
 // GET /api/darkpool/batch — current batch info
 router.get('/batch', async (_req, res) => {
   try {

@@ -2,6 +2,7 @@ import { config, darkpoolMarkets, type DarkPoolMarketConfig } from '../utils/con
 import { getMappingValue, parseAleoU64, getLatestBlockHeight, getTransaction } from '../utils/aleoClient.js';
 import { buildAndBroadcastTransaction } from '../utils/transactionBuilder.js';
 import { aggregatePrices } from '../oracle/aggregator.js';
+import { saveOrder, loadOrders, updateOrderRecord, markOrderMatched, cleanupMatchedOrders, isDbReady, type StoredOrder } from '../utils/orderStore.js';
 
 // ─── Multi-Market Batch-Based Dark Pool Bot ─────────────────────
 // Flow per tick per market:
@@ -57,6 +58,7 @@ async function getSdkModule() {
 
 /**
  * Register an order for tracking (called by API route when frontend reports an order).
+ * Saves to both in-memory Map and persistent database.
  */
 export function registerOrder(
   txId: string,
@@ -74,19 +76,51 @@ export function registerOrder(
   // Avoid duplicates
   if (list.some(o => o.txId === txId)) return;
 
-  list.push({
+  const order: TrackedOrder = {
     txId, programId, direction, trader,
     recordPlaintext: null, orderId: null,
     size, limitPrice, batchId: 0,
     matched: false, createdAt: Date.now(),
-  });
+  };
+  list.push(order);
   console.log(`[dp-bot] Registered ${direction} order ${txId} on ${marketId}`);
+
+  // Persist to database (fire-and-forget)
+  saveOrder({
+    tx_id: txId, market_id: marketId, program_id: programId,
+    direction, trader, record_plaintext: null, order_id: null,
+    size, limit_price: limitPrice, batch_id: 0, matched: false,
+    created_at: order.createdAt,
+  }).catch(() => {});
 }
 
 /**
  * Try to decrypt OrderAuth records from pending (unresolved) orders.
+ * Also loads orders from DB if in-memory list is empty (e.g. after restart).
  */
 async function resolveOrderRecords(marketId: string): Promise<void> {
+  // If in-memory is empty but DB has orders, reload from DB
+  if ((!pendingOrders.has(marketId) || pendingOrders.get(marketId)!.length === 0) && isDbReady()) {
+    const dbOrders = await loadOrders(marketId);
+    if (dbOrders.length > 0) {
+      console.log(`[dp-bot] Reloaded ${dbOrders.length} orders from DB for ${marketId}`);
+      const restored: TrackedOrder[] = dbOrders.map(o => ({
+        txId: o.tx_id,
+        programId: o.program_id,
+        direction: o.direction,
+        trader: o.trader,
+        recordPlaintext: o.record_plaintext,
+        orderId: o.order_id,
+        size: o.size,
+        limitPrice: o.limit_price,
+        batchId: o.batch_id,
+        matched: o.matched,
+        createdAt: o.created_at,
+      }));
+      pendingOrders.set(marketId, restored);
+    }
+  }
+
   const orders = pendingOrders.get(marketId);
   if (!orders) return;
 
@@ -120,6 +154,8 @@ async function resolveOrderRecords(marketId: string): Promise<void> {
               if (orderIdMatch) order.orderId = orderIdMatch[1];
 
               console.log(`[dp-bot] Resolved OrderAuth for ${order.direction} order ${order.txId}`);
+              // Persist resolved record to DB
+              updateOrderRecord(order.txId, plaintext, order.orderId).catch(() => {});
               break;
             }
           } catch { /* not our record, skip */ }
@@ -511,6 +547,9 @@ async function stepExecuteMatch(programId: string, marketId: string, state: Dark
     buy.matched = true;
     sell.matched = true;
     state.settlementCount++;
+    // Persist matched status to DB
+    markOrderMatched(buy.txId).catch(() => {});
+    markOrderMatched(sell.txId).catch(() => {});
     console.log(`${tag} Match executed: ${tx}`);
     return true;
   }
@@ -561,6 +600,8 @@ async function stepAdvanceBatch(programId: string, state: DarkPoolBotState, tag:
         const kept = orders.filter(o => !o.matched);
         pendingOrders.set(market.id, kept);
       }
+      // Also clean from DB
+      cleanupMatchedOrders(market.id).catch(() => {});
     }
 
     console.log(`${tag} Advanced to batch ${currentBatch + 1}: ${tx}`);

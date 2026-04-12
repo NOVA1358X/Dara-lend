@@ -25,6 +25,10 @@ export const config = {
   auctionProgramId: 'dara_auction_v1.aleo',
   flashProgramId: 'dara_flash_v1.aleo',
   precision: 1_000_000,
+
+  // Database (PostgreSQL on Render)
+  databaseUrl: process.env.DATABASE_URL || '',
+
   oracleUpdateCron: '*/2 * * * *',
   priceChangeThreshold: 0.001,
 
@@ -49,10 +53,12 @@ export interface DarkPoolMarketConfig {
   id: string;
   label: string;
   programId: string;
+  programAddress: string;       // on-chain program address (holds deposited funds)
   baseAsset: string;          // e.g. 'ALEO', 'BTC', 'ETH', 'SOL'
   quoteAsset: string;         // always 'USDCx'
   oracleSymbol: string;       // symbol for oracle fetchers
   tokenProgramId: string;     // base token program (credits.aleo or test_xxx_v1.aleo)
+  tokenBalanceMapping: string; // mapping name for token balance ('account' for credits.aleo, 'balances' for others)
   precision: number;
   priceScale: number;         // divisor to fit real price into MAX_PRICE (100_000_000u64 = $100)
 }
@@ -62,10 +68,12 @@ export const darkpoolMarkets: DarkPoolMarketConfig[] = [
     id: 'aleo-usdcx',
     label: 'ALEO/USDCx',
     programId: config.darkpoolProgramId,
+    programAddress: 'aleo1x5rmx8awkpq9v7kpyepvh38q2ym52yjg6hev96ce0l0pxrxnkg8qkqguva',
     baseAsset: 'ALEO',
     quoteAsset: 'USDCx',
     oracleSymbol: 'ALEO',
     tokenProgramId: 'credits.aleo',
+    tokenBalanceMapping: 'account',
     precision: 1_000_000,
     priceScale: 1,            // ALEO ~$0.50 fits within MAX_PRICE ($100)
   },
@@ -73,10 +81,12 @@ export const darkpoolMarkets: DarkPoolMarketConfig[] = [
     id: 'btc-usdcx',
     label: 'BTC/USDCx',
     programId: config.dpBtcProgramId,
+    programAddress: 'aleo1wkp5l49p5k4vddlp8x7z9njlz0cp35veq6ph7evftta3us57rqrs5t4dny',
     baseAsset: 'BTC',
     quoteAsset: 'USDCx',
     oracleSymbol: 'BTC',
     tokenProgramId: config.testBtcProgramId,
+    tokenBalanceMapping: 'balances',
     precision: 1_000_000,
     priceScale: 1000,         // BTC ~$100K / 1000 = $100 fits MAX_PRICE
   },
@@ -84,10 +94,12 @@ export const darkpoolMarkets: DarkPoolMarketConfig[] = [
     id: 'eth-usdcx',
     label: 'ETH/USDCx',
     programId: config.dpEthProgramId,
+    programAddress: 'aleo1s4sl3xkqhw525r2mdlyzkecjuka79aa08n5fq886snvlceppng8sz6dyhw',
     baseAsset: 'ETH',
     quoteAsset: 'USDCx',
     oracleSymbol: 'ETH',
     tokenProgramId: config.testEthProgramId,
+    tokenBalanceMapping: 'balances',
     precision: 1_000_000,
     priceScale: 100,          // ETH ~$2.5K / 100 = $25 fits MAX_PRICE
   },
@@ -95,10 +107,12 @@ export const darkpoolMarkets: DarkPoolMarketConfig[] = [
     id: 'sol-usdcx',
     label: 'SOL/USDCx',
     programId: config.dpSolProgramId,
+    programAddress: 'aleo1r4phj4vm9x7cna5tnm95a4tmjev8q7ulumdvw7xhmedjn9u69vfq6qw54z',
     baseAsset: 'SOL',
     quoteAsset: 'USDCx',
     oracleSymbol: 'SOL',
     tokenProgramId: config.testSolProgramId,
+    tokenBalanceMapping: 'balances',
     precision: 1_000_000,
     priceScale: 10,           // SOL ~$150 / 10 = $15 fits MAX_PRICE
   },
