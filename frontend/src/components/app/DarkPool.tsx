@@ -47,7 +47,7 @@ const OPERATOR_ADDRESS = ADMIN_ADDRESS;
 
 export function DarkPool({ wallet }: DarkPoolProps) {
   const { submitBuyOrder, submitSellOrder, cancelBuyOrder, cancelSellOrder, resubmitResidual, fundDarkPoolAleo, fundDarkPoolUsdcx, resetTransaction } = useTransaction(wallet as any);
-  const { creditsRecords, usdcxRecords, refetch: refetchRecords } = useWalletRecords(wallet);
+  const { creditsRecords, usdcxRecords, btcRecords, ethRecords, solRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const [selectedMarket, setSelectedMarket] = useState<DarkPoolMarket>(DARK_POOL_MARKETS[0]);
   const [batchData, setBatchData] = useState<BatchData | null>(null);
@@ -80,6 +80,29 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     const match = str.match(/microcredits\s*:\s*(\d+)u64/);
     return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
   }).filter(Boolean) as { amount: number; plaintext: string }[];
+
+  // Parse test token records (BTC/ETH/SOL) — Token { owner, amount: u64 }
+  const parseTokenRecords = (records: unknown[]) =>
+    (records || []).filter((r: any) => !r.spent).map((r: any) => {
+      const pt = (r.recordPlaintext ?? r.plaintext ?? r.data ?? '') as string;
+      const str = typeof pt === 'string' ? pt : JSON.stringify(pt);
+      const match = str.match(/amount\s*:\s*(\d+)u64/);
+      return match ? { amount: parseInt(match[1], 10), plaintext: str } : null;
+    }).filter(Boolean) as { amount: number; plaintext: string }[];
+
+  const parsedBtc = parseTokenRecords(btcRecords);
+  const parsedEth = parseTokenRecords(ethRecords);
+  const parsedSol = parseTokenRecords(solRecords);
+
+  // Get parsed sell records for the selected market
+  const getSellRecords = () => {
+    switch (selectedMarket.id) {
+      case 'btc-usdcx': return parsedBtc;
+      case 'eth-usdcx': return parsedEth;
+      case 'sol-usdcx': return parsedSol;
+      default: return parsedCredits; // ALEO market uses credits
+    }
+  };
 
   const fetchBatchData = useCallback(async () => {
     try {
@@ -242,6 +265,10 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   };
 
   const handleSubmitOrder = async () => {
+    if (!wallet.connected) {
+      toast.error('Connect wallet first');
+      return;
+    }
     const parsedAmount = parseFloat(amount);
     if (!parsedAmount || parsedAmount <= 0) {
       toast.error('Enter a valid amount');
@@ -253,39 +280,40 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     const parsedLimit = parseFloat(limitPrice || '0');
     const limitMicro = Math.floor(parsedLimit * PRECISION / selectedMarket.priceScale);
 
+    // Expiry block: default to current + 1000 blocks (~50 min)
+    const expiryBlock = 999_999_999;
+
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const nonce = Array.from(randomBytes).reduce((acc, b) => acc * 256 + b, 0);
     const microAmount = Math.floor(parsedAmount * PRECISION);
     setActiveAction('submit');
 
-    // Route through backend relay (Shield Wallet can't parse constructor blocks in dark pool programs)
-    const loadingId = toast.loading(`Submitting ${tab} order via operator relay — this takes ~1-2 min...`);
     try {
-      const res = await fetch(`${BACKEND_API}/darkpool/order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          market: selectedMarket.id,
-          direction: tab,
-          amount: microAmount,
-          limitPrice: limitMicro,
-        }),
-      });
-
-      const data = await res.json();
-      toast.dismiss(loadingId);
-
-      if (!res.ok) {
-        toast.error(data.error || 'Order submission failed');
-        return;
+      if (tab === 'buy') {
+        const record = parsedUsdcx.find(r => r.amount >= microAmount);
+        if (!record) {
+          toast.error(`No USDCx record with enough balance. Largest: ${parsedUsdcx.length > 0 ? (Math.max(...parsedUsdcx.map(r => r.amount)) / PRECISION).toFixed(2) : '0'} USDCx`);
+          return;
+        }
+        await submitBuyOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
+      } else {
+        const sellRecords = getSellRecords();
+        const record = sellRecords.find(r => r.amount >= microAmount);
+        if (!record) {
+          toast.error(`No ${selectedMarket.baseAsset} record with enough balance. Largest: ${sellRecords.length > 0 ? (Math.max(...sellRecords.map(r => r.amount)) / PRECISION).toFixed(6) : '0'} ${selectedMarket.baseAsset}`);
+          return;
+        }
+        await submitSellOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
       }
 
       setAmount('');
       setLimitPrice('');
-      toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} order submitted! TX: ${(data.orderTxId || '').substring(0, 16)}...`);
-      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 5000);
-      setTimeout(refetchOrderRecords, 10000);
+      toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}! The operator will match when the batch settles.`);
+      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
+      setTimeout(refetchOrderRecords, 8000);
     } catch (err) {
-      toast.dismiss(loadingId);
-      const msg = err instanceof Error ? err.message : 'Connection to backend failed';
+      const msg = err instanceof Error ? err.message : 'Transaction failed';
       toast.error(msg);
     }
   };

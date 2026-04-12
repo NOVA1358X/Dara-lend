@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { PROGRAM_ID, CREDITS_PROGRAM_ID, CREDITS_PROGRAM, USDCX_PROGRAM, USAD_PROGRAM } from '@/utils/constants';
+import { PROGRAM_ID, CREDITS_PROGRAM_ID, CREDITS_PROGRAM, USDCX_PROGRAM, USAD_PROGRAM, TEST_BTC_PROGRAM, TEST_ETH_PROGRAM, TEST_SOL_PROGRAM } from '@/utils/constants';
 import { parseRecord, DaraRecord, filterRecordsByType, getConsumedSet, CollateralReceiptRecord, DebtPositionRecord, RepaymentReceiptRecord, LiquidationAuthRecord, LiquidationReceiptRecord } from '@/utils/records';
 
 interface WalletHook {
@@ -150,6 +150,57 @@ export function useWalletRecords(wallet: WalletHook) {
     refetchOnWindowFocus: false,
   });
 
+  const btcQuery = useQuery<unknown[]>({
+    queryKey: ['btcRecords', wallet.connected],
+    queryFn: async () => {
+      if (!wallet.connected || !wallet.requestRecords) return [];
+      try {
+        return await wallet.requestRecords(TEST_BTC_PROGRAM, true);
+      } catch {
+        return [];
+      }
+    },
+    enabled: wallet.connected,
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const ethQuery = useQuery<unknown[]>({
+    queryKey: ['ethRecords', wallet.connected],
+    queryFn: async () => {
+      if (!wallet.connected || !wallet.requestRecords) return [];
+      try {
+        return await wallet.requestRecords(TEST_ETH_PROGRAM, true);
+      } catch {
+        return [];
+      }
+    },
+    enabled: wallet.connected,
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const solQuery = useQuery<unknown[]>({
+    queryKey: ['solRecords', wallet.connected],
+    queryFn: async () => {
+      if (!wallet.connected || !wallet.requestRecords) return [];
+      try {
+        return await wallet.requestRecords(TEST_SOL_PROGRAM, true);
+      } catch {
+        return [];
+      }
+    },
+    enabled: wallet.connected,
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const allRecords = daraRecordsQuery.data || [];
 
   const collateralReceipts = filterRecordsByType<CollateralReceiptRecord>(
@@ -187,12 +238,18 @@ export function useWalletRecords(wallet: WalletHook) {
     creditsRecords: creditsQuery.data || [],
     usdcxRecords: usdcxQuery.data || [],
     usadRecords: usadQuery.data || [],
+    btcRecords: btcQuery.data || [],
+    ethRecords: ethQuery.data || [],
+    solRecords: solQuery.data || [],
     isLoading: daraRecordsQuery.isLoading || creditsQuery.isLoading,
     refetch: () => {
       daraRecordsQuery.refetch();
       creditsQuery.refetch();
       usdcxQuery.refetch();
       usadQuery.refetch();
+      btcQuery.refetch();
+      ethQuery.refetch();
+      solQuery.refetch();
     },
   };
 }
