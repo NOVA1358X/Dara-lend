@@ -1,8 +1,177 @@
 import { Router } from 'express';
 import { config, darkpoolMarkets } from '../../utils/config.js';
 import { aggregatePrices } from '../../oracle/aggregator.js';
+import { buildAndBroadcastTransaction } from '../../utils/transactionBuilder.js';
+import { getTransaction } from '../../utils/aleoClient.js';
 
 const router = Router();
+
+// ─── Order Relay (bypasses Shield Wallet constructor parsing bug) ───
+
+const USDCX_PROGRAM = 'test_usdcx_stablecoin.aleo';
+const PRECISION = 1_000_000;
+
+// Freeze list non-inclusion proof (same constant as frontend)
+const FREEZE_LIST_PROOF = `[{siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}, {siblings: [0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field, 0field], leaf_index: 1u32}]`;
+
+// Serialize requests to prevent DPS nonce conflicts
+let orderQueue: Promise<unknown> = Promise.resolve();
+
+// SDK cache for record decryption
+let _sdkCache: typeof import('@provablehq/sdk') | null = null;
+async function getOrderSdk() {
+  if (!_sdkCache) _sdkCache = await import('@provablehq/sdk');
+  return _sdkCache;
+}
+
+function orderSleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+/**
+ * Poll a transaction until confirmed, then decrypt a record output.
+ * USDCx: [ComplianceRecord, Token] → index 1
+ * Test tokens / credits: [Token] → index 0
+ */
+async function waitForRecordFromTx(
+  txId: string,
+  tokenProgram: string,
+  recordIndex: number,
+): Promise<string> {
+  const sdk = await getOrderSdk();
+  const account = new sdk.Account({ privateKey: config.privateKey });
+
+  for (let i = 0; i < 90; i++) {
+    await orderSleep(5000);
+    const tx = await getTransaction(txId);
+    if (!tx) continue;
+
+    const execution = (tx as any).execution;
+    if (!execution?.transitions) continue;
+
+    for (const transition of execution.transitions) {
+      if (transition.program !== tokenProgram) continue;
+      const records = (transition.outputs || []).filter((o: any) => o.type === 'record');
+      if (records.length > recordIndex) {
+        try {
+          const plaintext = (account as any).decryptRecord(records[recordIndex].value);
+          console.log(`[dp-order] Decrypted record from ${tokenProgram}`);
+          return String(plaintext);
+        } catch {
+          // Try all outputs as fallback
+          for (let ri = 0; ri < records.length; ri++) {
+            if (ri === recordIndex) continue;
+            try {
+              const pt = String((account as any).decryptRecord(records[ri].value));
+              if (pt.includes('amount')) return pt;
+            } catch { /* skip */ }
+          }
+        }
+      }
+    }
+  }
+  throw new Error(`Timed out waiting for record from tx ${txId}`);
+}
+
+// POST /api/darkpool/order — submit buy/sell order via backend relay
+router.post('/order', async (req, res) => {
+  try {
+    const { market, direction, amount, limitPrice } = req.body as {
+      market?: string;
+      direction?: string;
+      amount?: number;
+      limitPrice?: number;
+    };
+
+    if (!market || !direction || !amount || amount <= 0) {
+      res.status(400).json({ error: 'Required: market, direction (buy|sell), amount (> 0)' });
+      return;
+    }
+    if (direction !== 'buy' && direction !== 'sell') {
+      res.status(400).json({ error: 'direction must be "buy" or "sell"' });
+      return;
+    }
+    if (!Number.isFinite(amount) || amount > 1e15) {
+      res.status(400).json({ error: 'Invalid amount' });
+      return;
+    }
+
+    const mkt = darkpoolMarkets.find(m => m.id === market);
+    if (!mkt) {
+      res.status(400).json({ error: `Invalid market. Options: ${darkpoolMarkets.map(m => m.id).join(', ')}` });
+      return;
+    }
+
+    const limit = limitPrice && Number.isFinite(limitPrice) && limitPrice > 0 ? Math.floor(limitPrice) : 0;
+    console.log(`[dp-order] ${direction.toUpperCase()} ${amount} on ${market}, limit=${limit}`);
+
+    const result = await new Promise<{ orderTxId: string; recordTxId: string }>((resolve, reject) => {
+      orderQueue = orderQueue
+        .then(() => processOrder(mkt, direction as 'buy' | 'sell', Math.floor(amount), limit))
+        .then(resolve)
+        .catch(reject);
+    });
+
+    res.json({ ...result, status: 'submitted' });
+  } catch (err: any) {
+    console.error('[dp-order] Failed:', err);
+    res.status(500).json({ error: err?.message || 'Order submission failed' });
+  }
+});
+
+async function processOrder(
+  market: typeof darkpoolMarkets[0],
+  direction: 'buy' | 'sell',
+  microAmount: number,
+  limitPriceMicro: number,
+): Promise<{ orderTxId: string; recordTxId: string }> {
+  const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+
+  if (direction === 'buy') {
+    // Buy: lock USDCx → need private USDCx Token record
+    const effectiveLimit = limitPriceMicro > 0 ? limitPriceMicro : 50_000_000;
+    const lockAmount = Math.ceil((microAmount * effectiveLimit) / PRECISION);
+    const recordAmount = lockAmount + Math.max(Math.ceil(lockAmount * 0.05), 100_000);
+
+    console.log(`[dp-order] Creating USDCx record: ${recordAmount} (lock=${lockAmount})`);
+    const recordTxId = await buildAndBroadcastTransaction(
+      USDCX_PROGRAM, 'transfer_public_to_private',
+      [config.adminAddress, `${recordAmount}u128`], 500_000,
+    );
+    if (!recordTxId) throw new Error('Failed to create USDCx record');
+
+    const recordPlaintext = await waitForRecordFromTx(recordTxId, USDCX_PROGRAM, 1);
+
+    console.log(`[dp-order] Submitting buy on ${market.programId}...`);
+    const orderTxId = await buildAndBroadcastTransaction(
+      market.programId, 'submit_buy_order',
+      [recordPlaintext, FREEZE_LIST_PROOF, `${microAmount}u128`,
+       `${limitPriceMicro}u64`, '999999999u32', config.adminAddress, `${nonce}field`],
+      500_000,
+    );
+    if (!orderTxId) throw new Error('Buy order DPS failed');
+    return { orderTxId, recordTxId };
+
+  } else {
+    // Sell: lock base token → need private token record
+    console.log(`[dp-order] Creating ${market.baseAsset} record: ${microAmount}`);
+    const recordTxId = await buildAndBroadcastTransaction(
+      market.tokenProgramId, 'transfer_public_to_private',
+      [config.adminAddress, `${microAmount}u64`], 500_000,
+    );
+    if (!recordTxId) throw new Error(`Failed to create ${market.baseAsset} record`);
+
+    const recordPlaintext = await waitForRecordFromTx(recordTxId, market.tokenProgramId, 0);
+
+    console.log(`[dp-order] Submitting sell on ${market.programId}...`);
+    const orderTxId = await buildAndBroadcastTransaction(
+      market.programId, 'submit_sell_order',
+      [recordPlaintext, `${microAmount}u64`, `${limitPriceMicro}u64`,
+       '999999999u32', config.adminAddress, `${nonce}field`],
+      500_000,
+    );
+    if (!orderTxId) throw new Error('Sell order DPS failed');
+    return { orderTxId, recordTxId };
+  }
+}
 
 const cleanAleo = (raw: string): string => raw.replace(/["\s]/g, '').replace(/u\d+$/i, '');
 const safeParse = (raw: string | undefined): string => {
