@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTransaction } from '@/hooks/useTransaction';
 import { useWalletRecords } from '@/hooks/useWalletRecords';
 import {
@@ -54,7 +54,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   const { creditsRecords, usdcxRecords, btcRecords, ethRecords, solRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const [selectedMarket, setSelectedMarket] = useState<DarkPoolMarket>(DARK_POOL_MARKETS[0]);
-  const [batchData, setBatchData] = useState<BatchData | null>(null);
+  const [allBatchData, setAllBatchData] = useState<Record<string, BatchData>>({});
+  const batchData = allBatchData[selectedMarket.id] ?? null;
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('');
@@ -68,6 +69,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   const [faucetLoading, setFaucetLoading] = useState<string | null>(null);
   const [faucetStatus, setFaucetStatus] = useState<Record<string, number>>({ BTC: 5, ETH: 5, SOL: 5 });
   const [currentBlock, setCurrentBlock] = useState(0);
+  const blockFetchedAt = useRef(0);
   const [batchCountdown, setBatchCountdown] = useState('');
 
   const activeProgramId = selectedMarket.programId;
@@ -119,43 +121,54 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     }).catch(() => { /* best-effort, non-blocking */ });
   };
 
-  const fetchBatchData = useCallback(async () => {
+  const fetchAllMarkets = useCallback(async () => {
     try {
-      const marketId = selectedMarket.id;
-      const [batchRes, statsRes, twapRes] = await Promise.all([
-        fetch(`${BACKEND_API}/darkpool/${marketId}/batch`).then(r => r.json()).catch(() => null),
-        fetch(`${BACKEND_API}/darkpool/${marketId}/stats`).then(r => r.json()).catch(() => null),
-        fetch(`${BACKEND_API}/darkpool/${marketId}/twap`).then(r => r.json()).catch(() => null),
-      ]);
-      setBatchData({
-        currentBatch: batchRes?.currentBatch ?? 1,
-        paused: batchRes?.paused ?? false,
-        approved: batchRes?.approved ?? false,
-        proposedPrice: batchRes?.proposedPrice ?? '0',
-        approvalCount: batchRes?.approvalCount ?? 0,
-        oraclePrice: statsRes?.oraclePrice ?? '0',
-        oracleRound: statsRes?.oracleRound ?? '0',
-        twap: twapRes?.twap ?? '0',
-        feeBps: statsRes?.feeBps ?? '0',
-        feeVault: statsRes?.feeVault ?? '0',
-        totalTrades: statsRes?.totalTrades ?? '0',
-        totalVolume: statsRes?.totalVolume ?? '0',
-        realPrice: statsRes?.realPrice ?? 0,
-        startBlock: parseInt(batchRes?.startBlock ?? '0', 10),
-        minBatchBlocks: batchRes?.minBatchBlocks ?? 100,
+      const results = await Promise.all(
+        DARK_POOL_MARKETS.map(async (market) => {
+          const [batchRes, statsRes, twapRes] = await Promise.all([
+            fetch(`${BACKEND_API}/darkpool/${market.id}/batch`).then(r => r.json()).catch(() => null),
+            fetch(`${BACKEND_API}/darkpool/${market.id}/stats`).then(r => r.json()).catch(() => null),
+            fetch(`${BACKEND_API}/darkpool/${market.id}/twap`).then(r => r.json()).catch(() => null),
+          ]);
+          return {
+            id: market.id,
+            data: {
+              currentBatch: batchRes?.currentBatch ?? 1,
+              paused: batchRes?.paused ?? false,
+              approved: batchRes?.approved ?? false,
+              proposedPrice: batchRes?.proposedPrice ?? '0',
+              approvalCount: batchRes?.approvalCount ?? 0,
+              oraclePrice: statsRes?.oraclePrice ?? '0',
+              oracleRound: statsRes?.oracleRound ?? '0',
+              twap: twapRes?.twap ?? '0',
+              feeBps: statsRes?.feeBps ?? '0',
+              feeVault: statsRes?.feeVault ?? '0',
+              totalTrades: statsRes?.totalTrades ?? '0',
+              totalVolume: statsRes?.totalVolume ?? '0',
+              realPrice: statsRes?.realPrice ?? 0,
+              startBlock: parseInt(batchRes?.startBlock ?? '0', 10),
+              minBatchBlocks: batchRes?.minBatchBlocks ?? 100,
+            } as BatchData,
+          };
+        })
+      );
+      setAllBatchData((prev) => {
+        const next = { ...prev };
+        for (const r of results) next[r.id] = r.data;
+        return next;
       });
     } catch {
       // silent
     } finally {
       setLoading(false);
     }
-  }, [selectedMarket]);
+  }, []);
 
   useEffect(() => {
-    fetchBatchData();
-    const interval = setInterval(fetchBatchData, 30000);
+    fetchAllMarkets();
+    const interval = setInterval(fetchAllMarkets, 30000);
     return () => clearInterval(interval);
-  }, [fetchBatchData]);
+  }, [fetchAllMarkets]);
 
   // Fetch current block height for countdown timer
   useEffect(() => {
@@ -163,7 +176,10 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       try {
         const res = await fetch(`${ALEO_TESTNET_API}/block/height/latest`);
         const height = await res.json();
-        if (typeof height === 'number') setCurrentBlock(height);
+        if (typeof height === 'number') {
+          setCurrentBlock(height);
+          blockFetchedAt.current = Date.now();
+        }
       } catch { /* silent */ }
     };
     fetchBlock();
@@ -171,28 +187,29 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Countdown timer for batch settlement eligibility
+  // Countdown timer for batch settlement eligibility — real-time tick
   useEffect(() => {
-    if (!batchData || !currentBlock) {
+    if (!batchData || !currentBlock || !blockFetchedAt.current) {
       setBatchCountdown('');
       return;
     }
-    // Determine state inline to avoid forward reference to batchState
     const isCollecting = !batchData.approved && Number(batchData.proposedPrice) <= 0;
     if (!isCollecting) {
       setBatchCountdown('');
       return;
     }
     const endBlock = batchData.startBlock + batchData.minBatchBlocks;
+    // Compute baseline seconds remaining at the moment we fetched the block height
+    const baseSecondsLeft = (endBlock - currentBlock) * SECONDS_PER_BLOCK;
     const updateCountdown = () => {
-      const blocksLeft = endBlock - currentBlock;
-      if (blocksLeft <= 0) {
+      const elapsed = (Date.now() - blockFetchedAt.current) / 1000;
+      const secsLeft = Math.max(0, Math.round(baseSecondsLeft - elapsed));
+      if (secsLeft <= 0) {
         setBatchCountdown('Settlement eligible');
         return;
       }
-      const totalSeconds = blocksLeft * SECONDS_PER_BLOCK;
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
+      const minutes = Math.floor(secsLeft / 60);
+      const seconds = secsLeft % 60;
       setBatchCountdown(`~${minutes}m ${seconds}s`);
     };
     updateCountdown();
@@ -320,7 +337,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         await cancelSellOrder(order.plaintext, activeProgramId);
       }
       toast.success('Order cancelled! Funds returned.');
-      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
+      setTimeout(() => { fetchAllMarkets(); refetchRecords(); refetchOrderRecords(); }, 3000);
       setTimeout(refetchOrderRecords, 8000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -392,7 +409,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         toast.success(`Buy order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}!`);
         // Report order to backend for settlement bot tracking
         reportOrderToBackend(txId, activeProgramId, 'buy', wallet.address || '', buySize, limitMicro);
-        setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
+        setTimeout(() => { fetchAllMarkets(); refetchRecords(); refetchOrderRecords(); }, 3000);
         setTimeout(refetchOrderRecords, 8000);
       }
     } else {
@@ -409,7 +426,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         toast.success(`Sell order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}!`);
         // Report order to backend for settlement bot tracking
         reportOrderToBackend(txId, activeProgramId, 'sell', wallet.address || '', microAmount, limitMicro);
-        setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
+        setTimeout(() => { fetchAllMarkets(); refetchRecords(); refetchOrderRecords(); }, 3000);
         setTimeout(refetchOrderRecords, 8000);
       }
     }
@@ -464,7 +481,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }}
+              onClick={() => { fetchAllMarkets(); refetchRecords(); refetchOrderRecords(); }}
               className="text-text-muted hover:text-primary text-xs font-label uppercase tracking-wider transition-colors"
             >
               Refresh
@@ -485,7 +502,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           {DARK_POOL_MARKETS.map((market) => (
             <button
               key={market.id}
-              onClick={() => { setBatchData(null); setOrderRecords([]); setSelectedMarket(market); setLoading(true); }}
+              onClick={() => { setOrderRecords([]); setSelectedMarket(market); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
                 selectedMarket.id === market.id
                   ? 'bg-primary/20 text-primary border border-primary/30'
