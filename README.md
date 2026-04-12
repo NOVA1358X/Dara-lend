@@ -83,7 +83,6 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 | `test_sol_v1.aleo` | 6 | ~277K | Test SOL token for SOL/USDCx market |
 | `dara_auction_v1.aleo` | 10 | ~679K | Sealed-bid liquidation auctions |
 | `dara_flash_v1.aleo` | 11 | ~943K | Collateral-backed flash loans |
-| ~~`dara_dark_pool_v1.aleo`~~ | ~~9~~ | ~~653K~~ | ~~Superseded by v2~~ |
 | **Total** | **149** | **~10M** | |
 
 ---
@@ -123,7 +122,7 @@ Multi-asset private OTC trading with batch-based TWAP pricing, 2-of-3 threshold 
 | ETH/USDCx | `dara_dp_eth_v5.aleo` | 7-source ETH | `test_eth_v1.aleo` |
 | SOL/USDCx | `dara_dp_sol_v5.aleo` | 7-source SOL | `test_sol_v1.aleo` |
 
-Each market has independent batch management, oracle pricing, and operator consensus — all running in parallel with per-market 7-source price aggregation from Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, and CoinMarketCap.
+Each market has independent batch management, oracle pricing, and operator consensus — all running in parallel with per-market 7-source price aggregation from Coinbase, Binance, MEXC, XT.com, CoinGecko, CryptoCompare, and CoinMarketCap.
 
 **Flow (fully automated by settlement bot):**
 1. **Submit Order**  Trader creates encrypted `OrderCommitment` (buy or sell) with optional limit price
@@ -269,10 +268,10 @@ The vault contract provides a ZK-shielded relay that atomically deposits tokens 
 
 7-source price aggregation with on-chain manipulation resistance.
 
-**Sources:** Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap
+**Sources:** Coinbase, Binance, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap
 
 ```
-CoinGecko - CryptoCompare - Coinbase - Gate.io - CoinMarketCap
+CoinGecko - CryptoCompare - Coinbase - Binance - CoinMarketCap
                           |
               Median filter + outlier rejection (>2 sigma)
                           |
@@ -315,7 +314,7 @@ Seven bots managed by a unified orchestrator, all deployed on **Provable DPS** (
 The dark pool bot manages real-time oracle feeds AND complete batch settlement across 4 independent markets:
 
 **Oracle Flow:**
-1. **Fetch real prices** from 7 sources (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap) per asset
+1. **Fetch real prices** from 7 sources (Coinbase, Binance, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap) per asset
 2. **Median filter** with outlier rejection (>2 sigma) to resist manipulation
 3. **Scale price** by market's `priceScale` divisor (BTC÷1000, ETH÷100, SOL÷10, ALEO÷1) to fit contract's `MAX_PRICE` (100,000,000u64 = $100 at 6 decimals)
 4. **Clamp to ±14.5%** of current on-chain price (contract enforces `MAX_DEVIATION_BPS = 1500` = 15% anti-manipulation cap)
@@ -360,7 +359,7 @@ Users can claim free test tokens (BTC, ETH, SOL) to trade on the dark pool:
 
 **Design:** Obsidian Ledger luxury dark theme  Gilda Display headings, Inter body, Space Grotesk monospace. Gold (#D4AF37) accents on deep black (#0A0A0A). Glass-morphism panels, Framer Motion animations.
 
-**Wallet:** Shield Wallet browser extension with 8-program authorization on connect.
+**Wallet:** Shield Wallet browser extension with 14-program authorization on connect.
 
 ---
 
@@ -407,13 +406,6 @@ All 14 programs are deployed on **Aleo Testnet**.
 | `test_sol_v1.aleo` | `at1azee54349kq0ccgdkxtxrrd0nzpynnz82gwe9qpvudmeae0xhuzq2zcl4q` |
 | `dara_auction_v1.aleo` | `at1xjkazhxpy76m97lvkj3ex0l3lvn32vzwfv9vt09j6zvey9dlxqyqpkvxp6` |
 | `dara_flash_v1.aleo` | `at128zjzny542ty3z2kf74u2vne22gahemp2eadtjkurjf4dguxwgyquvuv7m` |
-| ~~`dara_dp_btc_v2.aleo`~~ | ~~superseded by v5 (Shield wallet fix)~~ |
-| ~~`dara_dp_eth_v2.aleo`~~ | ~~superseded by v5 (Shield wallet fix)~~ |
-| ~~`dara_dp_sol_v2.aleo`~~ | ~~superseded by v5 (Shield wallet fix)~~ |
-| ~~`dara_dark_pool_v2.aleo`~~ | ~~superseded by v3 (oracle fix)~~ |
-| ~~`dara_dark_pool_v1.aleo`~~ | ~~superseded by v2~~ |
-| `dara_auction_v1.aleo` | `at1xjkazhxpy76m97lvkj3ex0l3lvn32vzwfv9vt09j6zvey9dlxqyqpkvxp6` |
-| `dara_flash_v1.aleo` | `at128zjzny542ty3z2kf74u2vne22gahemp2eadtjkurjf4dguxwgyquvuv7m` |
 
 **Explorer:** All programs verifiable at `https://testnet.aleo.info/program/<program_id>`
 
@@ -434,7 +426,7 @@ All 14 programs are deployed on **Aleo Testnet**.
 | Backend | Node.js, Express.js, TypeScript |
 | Automation | Provable DPS (Decentralized Private Sequencer) |
 | Wallet | Shield Wallet (Aleo browser extension) |
-| Oracle Sources | CoinGecko, CryptoCompare, Coinbase, Gate.io, CoinMarketCap |
+| Oracle Sources | Coinbase, Binance, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap |
 | Hosting | Vercel (frontend), Render (backend) |
 
 ---
@@ -498,9 +490,9 @@ DARA-Lend/
 |   |-- dara_lend_v8_vault/ # Yield vault + transfers (10 transitions)
 |   |-- dara_lend_v8_gov_v3/ # Governance (12 transitions)
 |   |-- dara_dark_pool_v3/  # Dark pool v3 — ALEO/USDCx (16 transitions)
-|   |-- dara_dp_btc_v2/     # Dark pool — BTC/USDCx (16 transitions, superseded by v5)
-|   |-- dara_dp_eth_v2/     # Dark pool — ETH/USDCx (16 transitions, superseded by v5)
-|   |-- dara_dp_sol_v2/     # Dark pool — SOL/USDCx (16 transitions, superseded by v5)
+|   |-- dara_dp_btc_v5/     # Dark pool — BTC/USDCx (16 transitions)
+|   |-- dara_dp_eth_v5/     # Dark pool — ETH/USDCx (16 transitions)
+|   |-- dara_dp_sol_v5/     # Dark pool — SOL/USDCx (16 transitions)
 |   |-- test_btc_v1/        # Test BTC token (6 transitions)
 |   |-- test_eth_v1/        # Test ETH token (6 transitions)
 |   |-- test_sol_v1/        # Test SOL token (6 transitions)

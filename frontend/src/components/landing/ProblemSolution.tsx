@@ -16,7 +16,7 @@ const features = [
   {
     icon: 'shield',
     title: 'Complete DeFi Suite',
-    description: 'Lend, borrow, earn yield, trade privately, bid in auctions, take flash loans, and govern the protocol — 7 contracts, 76 transitions, all with ZK privacy.',
+    description: 'Lend, borrow, earn yield, trade on 4 dark pool markets, bid in auctions, take flash loans, and govern the protocol — 14 contracts, 149 transitions, all with ZK privacy.',
   },
 ];
 

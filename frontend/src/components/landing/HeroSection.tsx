@@ -77,8 +77,8 @@ export function HeroSection() {
             transition={{ delay: 0.4, duration: 0.7 }}
             className="text-[17px] leading-relaxed text-text-secondary max-w-[480px] mb-10 font-light"
           >
-            Lend, trade, auction, and flash-borrow — all with zero-knowledge privacy.
-            7 smart contracts, 76 transitions, and every position fully encrypted.
+            Lend, trade on 4 dark pool markets, auction, and flash-borrow — all with zero-knowledge privacy.
+            14 smart contracts, 149 transitions, and every position fully encrypted.
             No bots. No trackers. No exposure.
           </motion.p>
 

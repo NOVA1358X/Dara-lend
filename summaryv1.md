@@ -1,51 +1,21 @@
-﻿DARA — The Invisible Protocol
-Encrypted DeFi Fortress on Aleo | 7 Contracts · 76 Transitions · ~5M ZK Variables
-Every position sealed. Every trade hidden. Every vote untraceable.
+# DARA - The Invisible Protocol
+## Privacy-First DeFi Suite on Aleo | 14 Contracts | 149 Transitions
 
-live:https://dara-lend.vercel.app 
-docs:https://dara-lend.vercel.app/docs
+DARA is a full-stack decentralized finance protocol built on Aleo where every position, trade, bid, flash loan, and governance vote is encrypted inside zero-knowledge proofs. The protocol deploys 14 smart contracts with 149 transitions and approximately 10 million compiled variables on Aleo Testnet, making it one of the largest single-project deployments on the network.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-◆ 7 CONTRACTS · 76 TRANSITIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### Core Architecture
+The protocol operates across three integrated layers: 14 Leo smart contracts handling lending, borrowing, multi-asset dark pool trading, sealed-bid auctions, flash loans, yield vaults, and private governance; a React frontend with Shield Wallet integration across all 14 programs; and an Express.js backend running 7 automated bots via Provable DPS with zero-gas proving.
 
-[1] dara_lend_v8.aleo · 12 tx — Core lending. ALEO collateral → USDCx/USAD at 50% LTV. Kink rate (base 2%, slope1 4%, slope2 75%, optimal 80%). 7-source oracle (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CMC). BHP256-hashed borrowers.
+### Multi-Asset Dark Pool (4 Markets)
+Four independent dark pool markets (ALEO, BTC, ETH, SOL vs USDCx) run batch-based TWAP settlement with 2-of-3 threshold operator consensus. Each market is a standalone contract with 16 transitions, independent oracle feeds from 7 sources (Coinbase, Binance, MEXC, XT.com, CoinGecko, CoinMarketCap, CryptoCompare), limit orders, partial fills with residual carry-forward, and configurable BPS fees. Settlement requires two separate operator keys - no single party can manipulate prices. A test token faucet allows any wallet to claim BTC, ETH, or SOL for dark pool trading.
 
-[2] dara_lend_v8_credits.aleo · 12 tx — Reverse lending. USDCx/USAD collateral → borrow ALEO credits. Own oracle. Bidirectional liquidation.
+### Privacy Model
+All user data lives in 15+ encrypted record types including DebtPosition, OrderCommitment, OrderAuth, FillReceipt, ResidualOrder, SealedBid, FlashLoanReceipt, and GovernanceToken. Borrower addresses are BHP256-hashed. Health factors are computed client-side only. The governance vote() transition has NO finalize function, leaving zero on-chain trace. Only aggregate protocol metrics remain public for solvency verification.
 
-[3] dara_lend_v8_vault.aleo · 10 tx — Yield vault. PoolShare records. ZK private transfers — untraceable.
+### Automation
+Seven bots run 24/7 via Provable DPS with JWT authentication and useFeeMaster zero-gas proving: Oracle (30 min, 7-source median per asset), Interest (1 hr), Yield (6 hr), Liquidation (1 min scanning), Dark Pool (5 min with 15s catch-up mode when deviation exceeds 20%), Auction (5 min), and Flash Oracle (30 min). The dark pool bot manages the complete settlement pipeline across all 4 markets: oracle update, propose, approve, match, and advance.
 
-[4] dara_lend_v8_gov_v3.aleo · 12 tx — First private DAO on Aleo. vote() has NO finalize, zero trace. 1–30 day voting, delegation, 20% quorum, timelock, 5 proposal types.
+### Key Parameters
+50% LTV ratio, 5% liquidation bonus, 0.5% origination fee, 0.09% flash loan fee (lowest on Aleo), 5 BPS configurable dark pool trading fee, 15% max oracle deviation per update, kink interest model (base 2% + slope1 4% + slope2 75% at 80% utilization), 102% flash collateral ratio, and 6-decimal precision (1,000,000 = 1.0 token) across all contracts.
 
-[5] dara_dark_pool_v1.aleo · 9 tx — Private OTC. Encrypted TradeIntent, epoch batch settlement. Zero MEV.
-
-[6] dara_auction_v1.aleo · 10 tx — First sealed-bid auction on Aleo. BHP256: hash(hash(bid)+secret). 15min–7day.
-
-[7] dara_flash_v1.aleo · 11 tx — Flash loans. 102% collateral, 0.09% fee. ALEO↔USDCx. 4-step atomic.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-◆ PRIVACY · 12+ ENCRYPTED RECORD TYPES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-DebtPosition · PoolShare · GovernanceToken · TradeIntent · FillReceipt · SealedBid · AuctionWin · FlashLoanReceipt + more
-Health factors client-side only. Aggregate totals on-chain only.
-
-7 Bots via Provable DPS (JWT · zero-gas · nonce queue):
-Oracle 30min · Interest 1hr · Yield 6hr · Liquidation 1min · Dark Pool 5min · Auction 5min · Flash Oracle 30min
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-◆ WAVE 5 — FULL DeFi SUITE EXPANSION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-+ Dark Pool · 15.99 cr — private OTC, epoch settlements, zero MEV
-+ Sealed-Bid Auctions · 18.44 cr — first commit-reveal on Aleo
-+ Flash Loans · 20.30 cr — bidirectional ALEO↔USDCx collateral-backed
-+ Governance v1→v2→v3 — vote() fully private, NO finalize
-+ Kink rate curve — configurable set_rate_params on-chain
-+ 18 pages: Dashboard, Supply, Borrow, Repay, Withdraw, Positions, Vault, Transfer, Dark Pool, Auctions, Flash, Governance, Analytics, Rate Curve, History, Stats, Liquidate, Admin
-+ 18 bugs fixed: vote leak, BHP256 mismatch, oracle sync, flash pool funding
-
-
-Leo 4.0 · React 18 · Vite · TypeScript · Tailwind · Express.js · Provable DPS · Shield Wallet · Vercel + Render
-
-DeFi Without Being Watched.
+Live: dara-lend.vercel.app | GitHub: github.com/NOVA1358X/Dara-lend

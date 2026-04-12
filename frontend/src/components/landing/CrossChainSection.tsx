@@ -8,10 +8,10 @@ export function CrossChainSection() {
   const { ref, inView } = useScrollReveal({ threshold: 0.3 });
 
   const numbers = [
-    { value: 100, label: 'Privacy Score', suffix: '%', decimals: 0 },
-    { value: 5, label: 'Independent Price Sources', suffix: '', decimals: 0 },
-    { value: 3, label: 'Supported Collateral Types', suffix: '', decimals: 0 },
-    { value: 0, label: 'Data Leaked — Ever', suffix: '', decimals: 0 },
+    { value: 14, label: 'Smart Contracts', suffix: '', decimals: 0 },
+    { value: 149, label: 'On-Chain Transitions', suffix: '', decimals: 0 },
+    { value: 4, label: 'Dark Pool Markets', suffix: '', decimals: 0 },
+    { value: 7, label: 'Oracle Sources', suffix: '', decimals: 0 },
   ];
 
   return (

@@ -26,7 +26,7 @@ const comparisons = [
 const trustFactors = [
   { icon: 'verified_user', title: 'Verified On-Chain', desc: 'Smart contracts deployed and verifiable on Aleo Testnet.' },
   { icon: 'open_in_new', title: 'Open Source', desc: 'Full codebase available for review — nothing hidden.' },
-  { icon: 'hub', title: 'Decentralized Oracles', desc: 'Prices sourced from 5 independent feeds with outlier rejection.' },
+  { icon: 'hub', title: 'Decentralized Oracles', desc: 'Prices sourced from 7 independent feeds per asset with outlier rejection.' },
 ];
 
 export function SecuritySection() {

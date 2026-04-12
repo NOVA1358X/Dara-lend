@@ -29,8 +29,8 @@ export function StatsBar() {
       <div className="mt-2" />
 
       <VelocityScroll baseVelocity={0.4} damping={0.92}>
-        {['7 CONTRACTS', '·', '76 TRANSITIONS', '·', 'YIELD VAULT', '·', 'PRIVATE GOVERNANCE', '·',
-          'ENCRYPTED POSITIONS', '·', 'INVISIBLE TRANSFERS', '·', 'ORACLE SECURED', '·',
+        {['14 CONTRACTS', '·', '149 TRANSITIONS', '·', '4 DARK POOL MARKETS', '·', 'YIELD VAULT', '·', 'PRIVATE GOVERNANCE', '·',
+          'ENCRYPTED POSITIONS', '·', 'INVISIBLE TRANSFERS', '·', '7-SOURCE ORACLE', '·',
         ].map((item, i) => (
           <span
             key={i}

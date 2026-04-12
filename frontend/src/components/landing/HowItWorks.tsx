@@ -5,7 +5,7 @@ import { SpotlightCard } from '@/components/shared/SpotlightCard';
 const steps = [
   { num: '01', title: 'Supply & Borrow', desc: 'Deposit ALEO or stablecoins as collateral, then borrow instantly. Your position is encrypted — no one sees your balance or liquidation price.' },
   { num: '02', title: 'Earn Yield', desc: 'Deposit stablecoins into the Yield Vault. Your deposits grow automatically with protocol fees, all in zero-knowledge privacy.' },
-  { num: '03', title: 'Dark Pool Trading', desc: 'Submit buy or sell intents into the private dark pool. Trades batch-settle at oracle mid-price — no front-running, no MEV.' },
+  { num: '03', title: 'Dark Pool Trading', desc: 'Trade across 4 private markets (ALEO, BTC, ETH, SOL). Batch-based TWAP settlement with 2-of-3 threshold operators — no front-running, no MEV.' },
   { num: '04', title: 'Flash Loans', desc: 'Borrow instantly with 102% collateral and just 0.09% fee. Four atomic steps: lock → claim → repay → withdraw. All private.' },
   { num: '05', title: 'Sealed-Bid Auctions', desc: 'Bid on liquidated collateral using BHP256 commitments. No one sees your bid until reveal — the first anti-MEV auction on Aleo.' },
   { num: '06', title: 'Govern & Vote', desc: 'Claim governance tokens, create proposals, and vote with ZK privacy. Your vote is never exposed on-chain — true private governance.' },
