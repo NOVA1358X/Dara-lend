@@ -109,7 +109,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             <a href="https://testnet.aleo.info/program/dara_lend_v8_gov_v3.aleo" target="_blank" rel="noopener noreferrer" className="font-mono text-primary hover:underline">_gov_v3</a>
             <br />
             <strong className="text-primary">Dark Pools:</strong>{' '}
-            <a href="https://testnet.aleo.info/program/dara_dark_pool_v3.aleo" target="_blank" rel="noopener noreferrer" className="font-mono text-primary hover:underline">dark_pool_v3</a>
+            <a href="https://testnet.aleo.info/program/dara_dp_credit_v5.aleo" target="_blank" rel="noopener noreferrer" className="font-mono text-primary hover:underline">dp_credit_v5</a>
             {' \u00b7 '}
             <a href="https://testnet.aleo.info/program/dara_dp_btc_v5.aleo" target="_blank" rel="noopener noreferrer" className="font-mono text-primary hover:underline">dp_btc_v5</a>
             {' \u00b7 '}
@@ -237,7 +237,7 @@ export function DocsContent({ onSectionVisible }: DocsContentProps) {
             { name: 'dara_lend_v8_credits.aleo', tx: '12', vars: '~1.31M', role: 'Reverse lending \u2014 supply stablecoin collateral, borrow ALEO credits' },
             { name: 'dara_lend_v8_vault.aleo', tx: '10', vars: '~822K', role: 'Yield vault \u2014 USDCx/USAD deposits, yield distribution, ZK private transfers' },
             { name: 'dara_lend_v8_gov_v3.aleo', tx: '12', vars: '~404K', role: 'Private governance \u2014 vote() has NO finalize, delegation, configurable 1-30 day voting' },
-            { name: 'dara_dark_pool_v3.aleo', tx: '16', vars: '~1.40M', role: 'ALEO/USDCx dark pool \u2014 batch TWAP, 2-of-3 threshold operators, partial fills' },
+            { name: 'dara_dp_credit_v5.aleo', tx: '16', vars: '~1.41M', role: 'ALEO/USDCx dark pool \u2014 batch TWAP, 2-of-3 threshold operators, partial fills' },
             { name: 'dara_dp_btc_v5.aleo', tx: '16', vars: '~1.40M', role: 'BTC/USDCx dark pool \u2014 7-source BTC oracle, same batch architecture' },
             { name: 'dara_dp_eth_v5.aleo', tx: '16', vars: '~1.40M', role: 'ETH/USDCx dark pool \u2014 7-source ETH oracle' },
             { name: 'dara_dp_sol_v5.aleo', tx: '16', vars: '~1.40M', role: 'SOL/USDCx dark pool \u2014 7-source SOL oracle' },
@@ -325,7 +325,7 @@ PoolShare          { token_type, share_amount, deposit_amount }`}</CodeBlock>
         </h3>
         <div className="space-y-2 mb-6">
           {[
-            { market: 'ALEO/USDCx', program: 'dara_dark_pool_v3.aleo', scale: '\u00f71', example: '$0.05 \u2192 50,000u64' },
+            { market: 'ALEO/USDCx', program: 'dara_dp_credit_v5.aleo', scale: '\u00f71', example: '$0.05 \u2192 50,000u64' },
             { market: 'BTC/USDCx', program: 'dara_dp_btc_v5.aleo', scale: '\u00f71000', example: '$100K \u2192 100,000u64' },
             { market: 'ETH/USDCx', program: 'dara_dp_eth_v5.aleo', scale: '\u00f7100', example: '$2.5K \u2192 25,000,000u64' },
             { market: 'SOL/USDCx', program: 'dara_dp_sol_v5.aleo', scale: '\u00f710', example: '$150 \u2192 15,000,000u64' },

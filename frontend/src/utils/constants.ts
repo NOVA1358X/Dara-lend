@@ -2,7 +2,7 @@ export const PROGRAM_ID = 'dara_lend_v8.aleo';
 export const VAULT_PROGRAM_ID = 'dara_lend_v8_vault.aleo';
 export const CREDITS_PROGRAM_ID = 'dara_lend_v8_credits.aleo';
 export const GOV_PROGRAM_ID = 'dara_lend_v8_gov_v3.aleo';
-export const DARKPOOL_PROGRAM_ID = 'dara_dark_pool_v3.aleo';
+export const DARKPOOL_PROGRAM_ID = 'dara_dp_credit_v5.aleo';
 export const DP_BTC_PROGRAM_ID = 'dara_dp_btc_v5.aleo';
 export const DP_ETH_PROGRAM_ID = 'dara_dp_eth_v5.aleo';
 export const DP_SOL_PROGRAM_ID = 'dara_dp_sol_v5.aleo';
@@ -33,7 +33,7 @@ export const DARK_POOL_MARKETS: DarkPoolMarket[] = [
     id: 'aleo-usdcx',
     label: 'ALEO/USDCx',
     programId: DARKPOOL_PROGRAM_ID,
-    programAddress: 'aleo1x5rmx8awkpq9v7kpyepvh38q2ym52yjg6hev96ce0l0pxrxnkg8qkqguva',
+    programAddress: 'aleo1rt9w2lqxmg355zcps9mgj5w8h29a0f3960a0plmxdqyvh35mws9q9r7e6v',
     baseAsset: 'ALEO',
     quoteAsset: 'USDCx',
     tokenProgramId: CREDITS_PROGRAM,

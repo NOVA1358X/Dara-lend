@@ -1,0 +1,11 @@
+{
+  "program": "dara_dp_credit_v5.aleo",
+  "version": "0.0.0",
+  "description": "DARA ALEO/USDCx Dark Pool v5 — Shield-compatible (empty constructor)",
+  "license": "MIT",
+  "dependencies": [
+    { "name": "credits.aleo", "location": "network", "network": "testnet" },
+    { "name": "merkle_tree.aleo", "location": "network", "network": "testnet" },
+    { "name": "test_usdcx_stablecoin.aleo", "location": "network", "network": "testnet" }
+  ]
+}
