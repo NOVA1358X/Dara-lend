@@ -1209,7 +1209,7 @@ assert(deviation_bps <= MAX_PRICE_DEVIATION_BPS); // manipulation guard`}</CodeB
             },
             {
               q: 'What network is DARA deployed on?',
-              a: 'Currently on Aleo Testnet with 14 deployed contracts: dara_lend_v8, dara_lend_v8_credits, dara_lend_v8_vault, dara_lend_v8_gov_v3, dara_dark_pool_v3, dara_dp_btc_v4, dara_dp_eth_v4, dara_dp_sol_v4, dara_auction_v1, dara_flash_v1, test_btc_v1, test_eth_v1, test_sol_v1, and test_usdcx_stablecoin. All are live and verifiable on the Aleo explorer. Mainnet deployment planned after audits.',
+              a: 'Currently on Aleo Testnet with 14 deployed contracts: dara_lend_v8, dara_lend_v8_credits, dara_lend_v8_vault, dara_lend_v8_gov_v3, dara_dark_pool_v3, dara_dp_btc_v5, dara_dp_eth_v5, dara_dp_sol_v5, dara_auction_v1, dara_flash_v1, test_btc_v1, test_eth_v1, test_sol_v1, and test_usdcx_stablecoin. All are live and verifiable on the Aleo explorer. Mainnet deployment planned after audits.',
             },
             {
               q: 'What is the Yield Vault?',
