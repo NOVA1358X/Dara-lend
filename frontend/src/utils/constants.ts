@@ -19,6 +19,7 @@ export interface DarkPoolMarket {
   id: string;
   label: string;
   programId: string;
+  programAddress: string;   // on-chain address that holds pooled funds
   baseAsset: string;
   quoteAsset: string;
   tokenProgramId: string;
@@ -32,6 +33,7 @@ export const DARK_POOL_MARKETS: DarkPoolMarket[] = [
     id: 'aleo-usdcx',
     label: 'ALEO/USDCx',
     programId: DARKPOOL_PROGRAM_ID,
+    programAddress: 'aleo1x5rmx8awkpq9v7kpyepvh38q2ym52yjg6hev96ce0l0pxrxnkg8qkqguva',
     baseAsset: 'ALEO',
     quoteAsset: 'USDCx',
     tokenProgramId: CREDITS_PROGRAM,
@@ -43,6 +45,7 @@ export const DARK_POOL_MARKETS: DarkPoolMarket[] = [
     id: 'btc-usdcx',
     label: 'BTC/USDCx',
     programId: DP_BTC_PROGRAM_ID,
+    programAddress: 'aleo1wkp5l49p5k4vddlp8x7z9njlz0cp35veq6ph7evftta3us57rqrs5t4dny',
     baseAsset: 'BTC',
     quoteAsset: 'USDCx',
     tokenProgramId: TEST_BTC_PROGRAM,
@@ -54,6 +57,7 @@ export const DARK_POOL_MARKETS: DarkPoolMarket[] = [
     id: 'eth-usdcx',
     label: 'ETH/USDCx',
     programId: DP_ETH_PROGRAM_ID,
+    programAddress: 'aleo1s4sl3xkqhw525r2mdlyzkecjuka79aa08n5fq886snvlceppng8sz6dyhw',
     baseAsset: 'ETH',
     quoteAsset: 'USDCx',
     tokenProgramId: TEST_ETH_PROGRAM,
@@ -65,12 +69,13 @@ export const DARK_POOL_MARKETS: DarkPoolMarket[] = [
     id: 'sol-usdcx',
     label: 'SOL/USDCx',
     programId: DP_SOL_PROGRAM_ID,
+    programAddress: 'aleo1r4phj4vm9x7cna5tnm95a4tmjev8q7ulumdvw7xhmedjn9u69vfq6qw54z',
     baseAsset: 'SOL',
     quoteAsset: 'USDCx',
     tokenProgramId: TEST_SOL_PROGRAM,
     sellAmountType: 'u64',
     buyAmountType: 'u128',
-    priceScale: 10,
+    priceScale: 1,  // SOL ~$82 * 1M = 82M fits within MAX_PRICE (100M)
   },
 ];
 

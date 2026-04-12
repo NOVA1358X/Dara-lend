@@ -114,6 +114,6 @@ export const darkpoolMarkets: DarkPoolMarketConfig[] = [
     tokenProgramId: config.testSolProgramId,
     tokenBalanceMapping: 'balances',
     precision: 1_000_000,
-    priceScale: 10,           // SOL ~$150 / 10 = $15 fits MAX_PRICE
+    priceScale: 1,            // SOL ~$82 * 1M = 82M fits MAX_PRICE (100M) directly
   },
 ];

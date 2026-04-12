@@ -50,7 +50,7 @@ const SECONDS_PER_BLOCK = 10;
 const OPERATOR_ADDRESS = ADMIN_ADDRESS;
 
 export function DarkPool({ wallet }: DarkPoolProps) {
-  const { submitBuyOrder, submitSellOrder, cancelBuyOrder, cancelSellOrder, resubmitResidual, fundDarkPoolAleo, fundDarkPoolUsdcx, resetTransaction } = useTransaction(wallet as any);
+  const { submitBuyOrder, submitSellOrder, cancelBuyOrder, cancelSellOrder, resubmitResidual, fundDarkPoolAleo, fundDarkPoolUsdcx, fundMarketPool, resetTransaction } = useTransaction(wallet as any);
   const { creditsRecords, usdcxRecords, btcRecords, ethRecords, solRecords, refetch: refetchRecords } = useWalletRecords(wallet);
   const { transactionStep, transactionId, transactionPending } = useAppStore();
   const [selectedMarket, setSelectedMarket] = useState<DarkPoolMarket>(DARK_POOL_MARKETS[0]);
@@ -427,6 +427,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       }
     }
 
+    // Min order size: contract requires MIN_ORDER_TOKEN = 100_000 (0.1 token)
+    if (tab === 'sell' && microAmount < 100_000) {
+      toast.error(`Minimum sell is 0.1 ${selectedMarket.baseAsset}. You entered ${parsedAmount.toFixed(4)} — please enter at least 0.1.`);
+      return;
+    }
+
     setActiveAction('submit');
 
     // Submit via Shield wallet directly
@@ -434,8 +440,9 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       // For buy orders: user enters USDCx amount to spend; contract size = base asset quantity
       // size = usdcx_amount * SCALE / limit_price (converts USDCx → base asset quantity)
       const buySize = Math.floor(microAmount * SCALE / limitMicro);
-      if (buySize <= 0) {
-        toast.error('Order too small at this price');
+      if (buySize < 100_000) {
+        const minUsdcx = ((100_000 * limitMicro) / SCALE / PRECISION).toFixed(2);
+        toast.error(`Enter at least ${minUsdcx} USDCx to meet the 0.1 ${selectedMarket.baseAsset} minimum order size.`);
         return;
       }
       const record = parsedUsdcx.find(r => r.amount >= microAmount);
@@ -1010,19 +1017,20 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       {isAdmin && (
         <FadeInView delay={0.5}>
           <SpotlightCard className="p-6 border border-primary/20">
-            <h3 className="font-headline text-lg text-primary mb-4">Admin — Fund Dark Pool</h3>
+            <h3 className="font-headline text-lg text-primary mb-1">Admin — Fund {selectedMarket.label} Pool</h3>
             <p className="text-text-muted text-xs mb-4">
-              Transfer ALEO or USDCx to the dark pool's on-chain balance. The pool must hold liquidity for operator-executed matches.
+              Transfer tokens from your <strong>public</strong> balance to fund this market's pool.
+              The pool needs <strong>{selectedMarket.baseAsset}</strong> to pay buyers and <strong>USDCx</strong> to pay sellers.
             </p>
 
             {/* Pool Balance Display */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-white/[0.02] rounded-lg p-3">
-                <p className="text-text-muted text-xs font-label uppercase tracking-wider">{selectedMarket.baseAsset} Pool Balance</p>
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">{selectedMarket.baseAsset} in Pool</p>
                 <p className="text-lg font-headline text-accent-success mt-1">{(poolLiquidity.token / PRECISION).toFixed(6)}</p>
               </div>
               <div className="bg-white/[0.02] rounded-lg p-3">
-                <p className="text-text-muted text-xs font-label uppercase tracking-wider">USDCx Pool Balance</p>
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">USDCx in Pool</p>
                 <p className="text-lg font-headline text-primary mt-1">{(poolLiquidity.usdcx / PRECISION).toFixed(2)}</p>
               </div>
             </div>
@@ -1035,7 +1043,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                   fundToken === 'aleo' ? 'bg-accent-success/20 text-accent-success border border-accent-success/30' : 'bg-white/[0.03] text-text-muted hover:text-text-secondary'
                 }`}
               >
-                Fund ALEO
+                Fund {selectedMarket.baseAsset}
               </button>
               <button
                 onClick={() => setFundToken('usdcx')}
@@ -1052,7 +1060,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 type="number"
                 value={fundAmount}
                 onChange={(e) => setFundAmount(e.target.value)}
-                placeholder={fundToken === 'aleo' ? 'ALEO amount (e.g. 5.0)' : 'USDCx amount (e.g. 10.0)'}
+                placeholder={fundToken === 'aleo' ? `${selectedMarket.baseAsset} amount (e.g. 5.0)` : 'USDCx amount (e.g. 10.0)'}
                 className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-primary/30 transition-colors"
               />
               <button
@@ -1060,10 +1068,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                   const parsed = parseFloat(fundAmount);
                   if (!parsed || parsed <= 0) { toast.error('Enter a valid amount'); return; }
                   const micro = Math.floor(parsed * PRECISION);
-                  if (fundToken === 'aleo') {
-                    await fundDarkPoolAleo(micro);
+                  if (fundToken === 'usdcx') {
+                    // USDCx uses u128
+                    await fundMarketPool(USDCX_PROGRAM, selectedMarket.programAddress, micro, 'u128');
                   } else {
-                    await fundDarkPoolUsdcx(micro);
+                    // Base token: ALEO uses u64, test tokens use u64
+                    await fundMarketPool(selectedMarket.tokenProgramId, selectedMarket.programAddress, micro, 'u64');
                   }
                   setFundAmount('');
                   setTimeout(() => refetchRecords(), 3000);
@@ -1071,10 +1081,15 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 disabled={!wallet.connected || !fundAmount}
                 className="px-6 py-3 rounded-lg font-label text-xs uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                Fund {fundToken === 'aleo' ? 'ALEO' : 'USDCx'}
+                Fund {fundToken === 'aleo' ? selectedMarket.baseAsset : 'USDCx'}
               </button>
             </div>
-            <p className="text-text-muted text-[10px] mt-2 font-mono break-all">Program: {activeProgramId}</p>
+            <p className="text-text-muted text-[10px] mt-2 font-mono break-all">
+              Pool address: {selectedMarket.programAddress}
+            </p>
+            <p className="text-text-muted text-[10px] mt-1 opacity-60">
+              Note: You need public token balance to fund. Convert private records first via your wallet.
+            </p>
           </SpotlightCard>
         </FadeInView>
       )}

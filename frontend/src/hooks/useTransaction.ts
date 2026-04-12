@@ -940,6 +940,52 @@ export function useTransaction(wallet: WalletExecute) {
 
   // ── Auction Transactions ──
 
+  /** Generic: fund any dark pool market with any token (public transfer to pool address) */
+  const fundMarketPool = useCallback(
+    async (tokenProgramId: string, poolAddress: string, amountMicro: number, amountType: 'u64' | 'u128') => {
+      if (!wallet.connected || !wallet.requestTransaction) {
+        toast.error('Please connect your wallet first');
+        return null;
+      }
+      try {
+        setTransactionPending(true);
+        setTransactionStep('encrypting');
+        const tx = createAleoTransaction(
+          tokenProgramId,
+          'transfer_public',
+          [poolAddress, `${amountMicro}${amountType}`],
+          TX_FEE,
+        );
+        setTransactionStep('proving');
+        const result = await wallet.requestTransaction(tx);
+        const txId = result?.transactionId ?? '';
+        if (!txId) throw new Error('No transaction ID returned');
+        setTransactionId(txId);
+        setTransactionStep('broadcasting');
+        toast.success('Pool fund transaction submitted');
+        const pollResult = await pollTransactionStatus(txId, wallet);
+        if (pollResult.confirmed === true) {
+          setTransactionStep('confirmed');
+          toast.success('Pool funded!');
+        } else if (pollResult.confirmed === false) {
+          setTransactionStep('failed');
+          toast.error('Fund rejected. Check your public token balance.');
+        } else {
+          setTransactionStep('confirmed');
+          toast.success(`Fund broadcast. Check explorer: ${txId}`);
+        }
+        setTransactionPending(false);
+        return txId;
+      } catch (error) {
+        setTransactionStep('failed');
+        setTransactionPending(false);
+        toast.error(error instanceof Error ? error.message : 'Fund transaction failed');
+        return null;
+      }
+    },
+    [wallet, setTransactionPending, setTransactionStep, setTransactionId],
+  );
+
   const startAuction = useCallback(
     async (creditsRecord: string, collateralAmount: number, minBid: number, bidBlocks: number, revealBlocks: number) => {
       return executeTransaction(AUCTION_TRANSITIONS.START_AUCTION, [
@@ -1242,6 +1288,7 @@ export function useTransaction(wallet: WalletExecute) {
     resubmitResidual,
     fundDarkPoolAleo,
     fundDarkPoolUsdcx,
+    fundMarketPool,
     // Auction operations
     startAuction,
     submitSealedBid,
