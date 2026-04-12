@@ -195,6 +195,9 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       if (data.success) {
         toast.success(data.message || `10 ${token} claimed!`);
         setFaucetStatus(prev => ({ ...prev, [token]: data.remaining ?? (prev[token] - 1) }));
+        // Refetch records after a delay to pick up the new private token record
+        setTimeout(refetchRecords, 5000);
+        setTimeout(refetchRecords, 15000);
       } else {
         toast.error(data.error || 'Claim failed');
       }

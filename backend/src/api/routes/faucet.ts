@@ -82,18 +82,18 @@ router.post('/claim', async (req, res) => {
       return;
     }
 
-    // Queue the transfer to avoid nonce conflicts
+    // Queue the mint to avoid nonce conflicts
     const result = await (faucetQueue = faucetQueue.then(async () => {
-      console.log(`[faucet] Transferring 10 ${tokenConfig.symbol} to ${address.slice(0, 20)}...`);
+      console.log(`[faucet] Minting 10 ${tokenConfig.symbol} privately to ${address.slice(0, 20)}...`);
       const txId = await buildAndBroadcastTransaction(
         tokenConfig.programId,
-        'transfer_public',
+        'mint_private',
         [address, CLAIM_AMOUNT],
         500_000,
       );
       return txId;
     }).catch(err => {
-      console.error(`[faucet] Transfer failed:`, err);
+      console.error(`[faucet] Mint failed:`, err);
       return null;
     }));
 
