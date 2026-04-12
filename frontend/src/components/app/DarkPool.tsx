@@ -280,10 +280,14 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       return;
     }
 
-    // Limit price: default to 0 (market order — no limit)
+    // Limit price: if empty, use MAX_PRICE for buys (any price) or 1 for sells (any price)
+    // Contract requires limit_price > 0, so 0 is invalid
     // Scale down by priceScale to fit contract's MAX_PRICE range
+    const MAX_PRICE = 100_000_000;
     const parsedLimit = parseFloat(limitPrice || '0');
-    const limitMicro = Math.floor(parsedLimit * PRECISION / selectedMarket.priceScale);
+    const limitMicro = parsedLimit > 0
+      ? Math.floor(parsedLimit * PRECISION / selectedMarket.priceScale)
+      : (tab === 'buy' ? MAX_PRICE : 1);
 
     // Expiry block: default to current + 1000 blocks (~50 min)
     const expiryBlock = 999_999_999;
