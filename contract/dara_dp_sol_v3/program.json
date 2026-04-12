@@ -1,0 +1,23 @@
+{
+  "program": "dara_dp_sol_v3.aleo",
+  "version": "1.0.0",
+  "description": "DARA Dark Pool — SOL/USDCx Market v3 (Shield-compatible constructor)",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "merkle_tree.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_usdcx_stablecoin.aleo",
+      "location": "network",
+      "network": "testnet"
+    },
+    {
+      "name": "test_sol_v1.aleo",
+      "location": "network",
+      "network": "testnet"
+    }
+  ]
+}
