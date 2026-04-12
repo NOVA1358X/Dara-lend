@@ -580,7 +580,11 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 <span className="text-text-muted text-xs">
                   {tab === 'buy'
                     ? `Balance: ${parsedUsdcx.length > 0 ? (parsedUsdcx.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(2) : '0.00'} USDCx (${parsedUsdcx.length} records)`
-                    : `Balance: ${parsedCredits.length > 0 ? (parsedCredits.reduce((s, r) => s + r.amount, 0) / PRECISION).toFixed(6) : '0.000000'} ${selectedMarket.baseAsset} (${parsedCredits.length} records)`
+                    : (() => {
+                        const recs = getSellRecords();
+                        const total = recs.reduce((s, r) => s + r.amount, 0);
+                        return `Balance: ${recs.length > 0 ? (total / PRECISION).toFixed(6) : '0.000000'} ${selectedMarket.baseAsset} (${recs.length} records)`;
+                      })()
                   }
                 </span>
               </div>
