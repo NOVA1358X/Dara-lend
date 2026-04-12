@@ -328,7 +328,7 @@ PoolShare          { token_type, share_amount, deposit_amount }`}</CodeBlock>
             { market: 'ALEO/USDCx', program: 'dara_dp_credit_v5.aleo', scale: '\u00f71', example: '$0.05 \u2192 50,000u64' },
             { market: 'BTC/USDCx', program: 'dara_dp_btc_v5.aleo', scale: '\u00f71000', example: '$100K \u2192 100,000u64' },
             { market: 'ETH/USDCx', program: 'dara_dp_eth_v5.aleo', scale: '\u00f7100', example: '$2.5K \u2192 25,000,000u64' },
-            { market: 'SOL/USDCx', program: 'dara_dp_sol_v5.aleo', scale: '\u00f710', example: '$150 \u2192 15,000,000u64' },
+            { market: 'SOL/USDCx', program: 'dara_dp_sol_v5.aleo', scale: '\u00f71', example: '$82 \u2192 82,000,000u64' },
           ].map((m) => (
             <div key={m.market} className="flex items-center gap-3 p-3 rounded bg-white/[0.03] border border-white/[0.06]">
               <span className="font-mono text-sm text-primary font-bold min-w-[100px]">{m.market}</span>

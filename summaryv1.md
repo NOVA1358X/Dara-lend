@@ -20,7 +20,7 @@ video: https://youtu.be/UiHQ59vRUGg
 [4] dara_lend_v8_gov_v3 · 12 tx — Private DAO. vote() NO finalize — zero trace. 1–30 day voting, delegation, 20% quorum.
 
 [5–8] Dark Pool · 4 markets · 16 tx each:
-  dark_pool_v3 ALEO/USDCx · dp_btc_v5 BTC/USDCx (÷1000) · dp_eth_v5 ETH/USDCx (÷100) · dp_sol_v5 SOL/USDCx (÷10)
+  dp_credit_v5 ALEO/USDCx · dp_btc_v5 BTC/USDCx (÷1000) · dp_eth_v5 ETH/USDCx (÷100) · dp_sol_v5 SOL/USDCx (÷1)
   Batch TWAP, 2-of-3 threshold operators, limit orders, partial fills, residual carry-forward, BPS fees, anti-MEV. Independent 7-source oracle each.
 
 [9–11] Faucets · 6 tx each:
