@@ -161,7 +161,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   useEffect(() => {
     const fetchBlock = async () => {
       try {
-        const res = await fetch(`${ALEO_TESTNET_API}/latest/height`);
+        const res = await fetch(`${ALEO_TESTNET_API}/block/height/latest`);
         const height = await res.json();
         if (typeof height === 'number') setCurrentBlock(height);
       } catch { /* silent */ }

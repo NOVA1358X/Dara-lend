@@ -272,7 +272,7 @@ router.get('/pool-balance', async (_req, res) => {
   try {
     const [aleoRaw, usdcxRaw] = await Promise.all([
       fetchMapping('account', DARKPOOL_PROGRAM_ADDRESS, 'credits.aleo'),
-      fetchMapping('account', DARKPOOL_PROGRAM_ADDRESS, USDCX_PROGRAM),
+      fetchMapping('balances', DARKPOOL_PROGRAM_ADDRESS, USDCX_PROGRAM),
     ]);
     res.json({
       aleo: safeParse(aleoRaw),
