@@ -347,20 +347,39 @@ async function stepProposeSettlement(programId: string, state: DarkPoolBotState,
     return false;
   }
 
-  // Use oracle price as proposed settlement price
-  const priceRaw = await getMappingValue('oracle_price', '0u8', programId);
-  const oraclePrice = parseAleoU64(priceRaw);
-  if (!oraclePrice || oraclePrice <= 0) {
-    console.log(`${tag} No oracle price set, cannot propose`);
+  // Compute TWAP from on-chain accumulators — contract checks proposed_price is within
+  // twap_max_deviation_bps (5%) of TWAP average. Using TWAP directly guarantees acceptance.
+  const [cumPriceRaw, cumCountRaw, oraclePriceRaw] = await Promise.all([
+    getMappingValue('twap_cum_price', '0u8', programId),
+    getMappingValue('twap_cum_count', '0u8', programId),
+    getMappingValue('oracle_price', '0u8', programId),
+  ]);
+
+  const cumPrice = BigInt(cumPriceRaw?.replace(/u\d+/g, '').replace(/"/g, '').trim() || '0');
+  const cumCount = BigInt(cumCountRaw?.replace(/u\d+/g, '').replace(/"/g, '').trim() || '0');
+  const oraclePrice = parseAleoU64(oraclePriceRaw);
+
+  // Use TWAP average if available, otherwise fall back to oracle price
+  let proposedPrice = oraclePrice;
+  if (cumCount > 0n) {
+    proposedPrice = Number(cumPrice / cumCount);
+    console.log(`${tag} TWAP: ${proposedPrice} (cumPrice=${cumPrice}, count=${cumCount}), oracle: ${oraclePrice}`);
+  }
+
+  if (!proposedPrice || proposedPrice <= 0) {
+    console.log(`${tag} No TWAP/oracle price set, cannot propose`);
     return false;
   }
 
-  console.log(`${tag} Proposing settlement for batch ${currentBatch} at price ${oraclePrice}`);
+  // Clamp to valid price range
+  proposedPrice = Math.max(1, Math.min(proposedPrice, 100_000_000));
+
+  console.log(`${tag} Proposing settlement for batch ${currentBatch} at TWAP price ${proposedPrice}`);
 
   const tx = await buildAndBroadcastTransaction(
     programId,
     'propose_settlement',
-    [`${currentBatch}u64`, `${oraclePrice}u64`],
+    [`${currentBatch}u64`, `${proposedPrice}u64`],
   );
 
   if (tx) {

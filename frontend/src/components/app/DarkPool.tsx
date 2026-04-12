@@ -387,7 +387,9 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   };
 
   const getOrderStatus = (order: typeof commitments[0]) => {
-    if (batchData && order.batchId < batchData.currentBatch) {
+    // batch_id=0 is a placeholder in OrderCommitment records — not a real batch indicator
+    // Only show "Matched" if we have fill receipts for this order or the batch was truly advanced past
+    if (batchData && order.batchId > 0 && order.batchId < batchData.currentBatch) {
       return { label: 'Matched', detail: 'Operator has settled this batch', color: 'text-accent-success', bgColor: 'bg-accent-success/10', canCancel: false };
     }
     if (batchState === 'approved') {
@@ -701,7 +703,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                         {order.limitPrice > 0 && (
                           <span className="text-text-muted text-xs">@ ${(order.limitPrice / PRECISION).toFixed(4)}</span>
                         )}
-                        <span className="text-text-muted text-xs">Batch #{order.batchId}</span>
+                        <span className="text-text-muted text-xs">Batch #{order.batchId || batchData?.currentBatch || '?'}</span>
                       </div>
                       <div className="flex gap-2">
                         {status.canCancel && (

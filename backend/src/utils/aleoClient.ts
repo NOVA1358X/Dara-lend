@@ -44,7 +44,7 @@ export async function getLatestBlockHeight(): Promise<number | null> {
 
 export function parseAleoU64(value: string | null): number {
   if (!value) return 0;
-  const cleaned = value.replace('u64', '').replace('.public', '').replace('.private', '').trim();
+  const cleaned = value.replace(/u\d+/g, '').replace('.public', '').replace('.private', '').replace(/"/g, '').trim();
   return parseInt(cleaned, 10) || 0;
 }
 

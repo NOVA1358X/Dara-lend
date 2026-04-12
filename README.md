@@ -4,15 +4,15 @@
 
 **The Privacy-First DeFi Suite on Aleo**
 
-DeFi Without Being Watched. Fourteen smart contracts, 131 transitions, and ~10 million compiled variables deliver private lending, multi-asset dark-pool trading across 4 markets (ALEO, BTC, ETH, SOL), sealed-bid auctions, flash loans, yield vaults, and ZK governance  all shielded by zero-knowledge proofs.
+DeFi Without Being Watched. Fourteen smart contracts, 149 transitions, and ~10 million compiled variables deliver private lending, multi-asset dark-pool trading across 4 markets (ALEO, BTC, ETH, SOL) with fully automated settlement, sealed-bid auctions, flash loans, yield vaults, and ZK governance  all shielded by zero-knowledge proofs.
 
 [![Aleo Testnet](https://img.shields.io/badge/Aleo-Testnet-C9DDFF?style=flat-square)](https://testnet.aleo.info/program/dara_lend_v8.aleo)
 [![Leo](https://img.shields.io/badge/Leo-4.0.0-blue?style=flat-square)](https://leo-lang.org)
 [![Programs](https://img.shields.io/badge/Programs-14_Deployed-D6C5A1?style=flat-square)](#smart-contracts)
-[![Transitions](https://img.shields.io/badge/Transitions-131-C9DDFF?style=flat-square)](#smart-contracts)
+[![Transitions](https://img.shields.io/badge/Transitions-149-C9DDFF?style=flat-square)](#smart-contracts)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](#license)
 
-[Live App](https://dara-lend.vercel.app)  [API](https://dara-lend-api.onrender.com/api/health)  [Docs](https://dara-lend.vercel.app/docs)  [Main](https://testnet.aleo.info/program/dara_lend_v8.aleo)  [Credits](https://testnet.aleo.info/program/dara_lend_v8_credits.aleo)  [Vault](https://testnet.aleo.info/program/dara_lend_v8_vault.aleo)  [Gov](https://testnet.aleo.info/program/dara_lend_v8_gov_v3.aleo)  [Dark Pool v3](https://testnet.aleo.info/program/dara_dark_pool_v3.aleo)  [DP-BTC](https://testnet.aleo.info/program/dara_dp_btc_v2.aleo)  [DP-ETH](https://testnet.aleo.info/program/dara_dp_eth_v2.aleo)  [DP-SOL](https://testnet.aleo.info/program/dara_dp_sol_v2.aleo)  [Auctions](https://testnet.aleo.info/program/dara_auction_v1.aleo)  [Flash](https://testnet.aleo.info/program/dara_flash_v1.aleo)
+[Live App](https://dara-lend.vercel.app)  [API](https://dara-lend-api.onrender.com/api/health)  [Docs](https://dara-lend.vercel.app/docs)  [Main](https://testnet.aleo.info/program/dara_lend_v8.aleo)  [Credits](https://testnet.aleo.info/program/dara_lend_v8_credits.aleo)  [Vault](https://testnet.aleo.info/program/dara_lend_v8_vault.aleo)  [Gov](https://testnet.aleo.info/program/dara_lend_v8_gov_v3.aleo)  [Dark Pool v3](https://testnet.aleo.info/program/dara_dark_pool_v3.aleo)  [DP-BTC](https://testnet.aleo.info/program/dara_dp_btc_v5.aleo)  [DP-ETH](https://testnet.aleo.info/program/dara_dp_eth_v5.aleo)  [DP-SOL](https://testnet.aleo.info/program/dara_dp_sol_v5.aleo)  [Auctions](https://testnet.aleo.info/program/dara_auction_v1.aleo)  [Flash](https://testnet.aleo.info/program/dara_flash_v1.aleo)
 
 </div>
 
@@ -39,7 +39,7 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 |  7 Bots - 7-Source Oracle - Provable DPS Automation          |
 +-------------------------------------------------------------+
 |                  Aleo Blockchain (Testnet)                    |
-|  14 Programs - 131 Transitions - ~10M Compiled Variables     |
+|  14 Programs - 149 Transitions - ~10M Compiled Variables     |
 |                                                              |
 |  +---------------+ +---------------+ +---------------+       |
 |  | dara_lend_v8  | |   _credits    | |    _vault     |       |
@@ -50,7 +50,7 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 |  |  12 trans.    | |  16 trans.   |                         |
 |  +---------------+ +---------------+                         |
 |  +---------------+ +---------------+ +---------------+       |
-|  | _dp_btc_v2   | |  _dp_eth_v2  | |  _dp_sol_v2  |       |
+|  | _dp_btc_v5   | |  _dp_eth_v5  | |  _dp_sol_v5  |       |
 |  |  16 trans.    | |  16 trans.   | |  16 trans.   |       |
 |  +---------------+ +---------------+ +---------------+       |
 |  +---------------+ +---------------+ +---------------+       |
@@ -75,16 +75,16 @@ On transparent chains, every DeFi position is public  collateral, debt, liquidat
 | `dara_lend_v8_vault.aleo` | 10 | ~575K | Yield vault, private transfers, PoolShare management |
 | `dara_lend_v8_gov_v3.aleo` | 12 | ~860K | Governance proposals, delegation, ZK voting |
 | `dara_dark_pool_v3.aleo` | 16 | ~1.4M | ALEO/USDCx dark pool  batch TWAP settlement, threshold operators |
-| `dara_dp_btc_v2.aleo` | 16 | ~1.4M | BTC/USDCx dark pool  7-source BTC oracle, same architecture |
-| `dara_dp_eth_v2.aleo` | 16 | ~1.4M | ETH/USDCx dark pool  7-source ETH oracle, same architecture |
-| `dara_dp_sol_v2.aleo` | 16 | ~1.4M | SOL/USDCx dark pool  7-source SOL oracle, same architecture |
+| `dara_dp_btc_v5.aleo` | 16 | ~1.4M | BTC/USDCx dark pool  7-source BTC oracle, same architecture |
+| `dara_dp_eth_v5.aleo` | 16 | ~1.4M | ETH/USDCx dark pool  7-source ETH oracle, same architecture |
+| `dara_dp_sol_v5.aleo` | 16 | ~1.4M | SOL/USDCx dark pool  7-source SOL oracle, same architecture |
 | `test_btc_v1.aleo` | 6 | ~277K | Test BTC token for BTC/USDCx market |
 | `test_eth_v1.aleo` | 6 | ~277K | Test ETH token for ETH/USDCx market |
 | `test_sol_v1.aleo` | 6 | ~277K | Test SOL token for SOL/USDCx market |
 | `dara_auction_v1.aleo` | 10 | ~679K | Sealed-bid liquidation auctions |
 | `dara_flash_v1.aleo` | 11 | ~943K | Collateral-backed flash loans |
 | ~~`dara_dark_pool_v1.aleo`~~ | ~~9~~ | ~~653K~~ | ~~Superseded by v2~~ |
-| **Total** | **131** | **~10M** | |
+| **Total** | **149** | **~10M** | |
 
 ---
 
@@ -119,24 +119,26 @@ Multi-asset private OTC trading with batch-based TWAP pricing, 2-of-3 threshold 
 | Market | Program | Oracle | Base Token |
 |--------|---------|--------|------------|
 | ALEO/USDCx | `dara_dark_pool_v3.aleo` | 7-source ALEO | `credits.aleo` |
-| BTC/USDCx | `dara_dp_btc_v2.aleo` | 7-source BTC | `test_btc_v1.aleo` |
-| ETH/USDCx | `dara_dp_eth_v2.aleo` | 7-source ETH | `test_eth_v1.aleo` |
-| SOL/USDCx | `dara_dp_sol_v2.aleo` | 7-source SOL | `test_sol_v1.aleo` |
+| BTC/USDCx | `dara_dp_btc_v5.aleo` | 7-source BTC | `test_btc_v1.aleo` |
+| ETH/USDCx | `dara_dp_eth_v5.aleo` | 7-source ETH | `test_eth_v1.aleo` |
+| SOL/USDCx | `dara_dp_sol_v5.aleo` | 7-source SOL | `test_sol_v1.aleo` |
 
 Each market has independent batch management, oracle pricing, and operator consensus — all running in parallel with per-market 7-source price aggregation from Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, and CoinMarketCap.
 
-**Flow:**
-1. **Submit Order**  Trader creates encrypted `OrderCommitment` (buy or sell ALEO/USDCx) with optional limit price
+**Flow (fully automated by settlement bot):**
+1. **Submit Order**  Trader creates encrypted `OrderCommitment` (buy or sell) with optional limit price
 2. **Batch Collection**  Orders accumulate in the current batch window
-3. **Oracle Update**  Operator updates TWAP oracle price for the batch
-4. **Propose Settlement**  First operator proposes batch settlement parameters
-5. **Approve Settlement**  Second operator approves (2-of-3 threshold) -> auto-matching executes
-6. **Advance Batch**  Third operator advances to next batch, generating `FillReceipt` for matched orders and `ResidualOrder` for partial fills
-7. **Cancel**  Traders can cancel unfilled orders at any time
+3. **Oracle Update**  Bot pushes 7-source TWAP oracle price via Provable DPS
+4. **Propose Settlement**  Bot proposes batch settlement at TWAP-validated price (operator 1)
+5. **Approve Settlement**  Bot approves with 2nd operator key (operator 2) → 2-of-3 threshold met
+6. **Execute Match**  Bot decrypts OrderAuth records, pairs buy/sell orders, executes matches at clearing price
+7. **Advance Batch**  Bot advances to next batch after all matches complete
+8. **Cancel**  Traders can cancel unfilled orders at any time
 
 **Key Features:**
 - **TWAP Oracle**: Time-weighted average price accumulator prevents single-point manipulation
-- **2-of-3 Threshold Operators**: No single operator can settle a batch alone — requires multi-party approval
+- **2-of-3 Threshold Operators**: No single operator can settle a batch alone — requires multi-party approval with separate private keys
+- **Fully Automated Settlement**: Bot runs complete propose→approve→match→advance pipeline using 2-operator architecture
 - **Limit Orders**: Optional price limits — orders only fill at or better than the specified price
 - **Partial Fills**: Large orders partially match against available liquidity, with residuals carried forward
 - **Residual Carry-Forward**: Unfilled portions automatically re-enter the next batch via `resubmit_residual`
@@ -297,7 +299,7 @@ Seven bots managed by a unified orchestrator, all deployed on **Provable DPS** (
 | Interest Bot | 1 hr | `accrue_interest` | `dara_lend_v8.aleo` |
 | Yield Bot | 6 hr | `distribute_yield` | `dara_lend_v8_vault.aleo` |
 | Liquidation Bot | 1 min | `liquidate_*` | `dara_lend_v8.aleo` |
-| Dark Pool Bot | 5 min / 15s catch-up | Oracle updates across 4 markets with ±14.5% convergence clamping. 7-source median price per asset (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CMC). Catch-up mode when deviation > 20% | All 4 dark pool programs |
+| Dark Pool Bot | 5 min / 15s catch-up | Full settlement pipeline: oracle updates + propose/approve/match/advance across 4 markets. TWAP-based pricing, 2-operator settlement, order tracking | All 4 dark pool programs |
 | Auction Bot | 5 min | `settle_auction` | `dara_auction_v1.aleo` |
 | Flash Oracle Bot | 30 min | `update_oracle_price` | `dara_flash_v1.aleo` |
 
@@ -308,17 +310,25 @@ Seven bots managed by a unified orchestrator, all deployed on **Provable DPS** (
 - Sequential nonce queue prevents transaction conflicts across all 7 bots
 - WASM SDK warmed at startup for instant first-transaction readiness
 
-### Dark Pool Bot — Detailed Oracle Flow
+### Dark Pool Bot — Fully Automated Settlement Pipeline
 
-The dark pool bot manages real-time oracle price feeds across 4 independent markets:
+The dark pool bot manages real-time oracle feeds AND complete batch settlement across 4 independent markets:
 
+**Oracle Flow:**
 1. **Fetch real prices** from 7 sources (Coinbase, Gate.io, MEXC, XT.com, CoinGecko, CryptoCompare, CoinMarketCap) per asset
 2. **Median filter** with outlier rejection (>2 sigma) to resist manipulation
 3. **Scale price** by market's `priceScale` divisor (BTC÷1000, ETH÷100, SOL÷10, ALEO÷1) to fit contract's `MAX_PRICE` (100,000,000u64 = $100 at 6 decimals)
 4. **Clamp to ±14.5%** of current on-chain price (contract enforces `MAX_DEVIATION_BPS = 1500` = 15% anti-manipulation cap)
 5. **Push `update_oracle_price`** via Provable DPS to the correct market program with incremented round counter
-6. **Catch-up mode**: When price deviation > 20%, interval drops from 5 min → 15s for rapid convergence to real market price
-7. **Turbo convergence**: `backend/src/turboConverge.ts` utility pushes consecutive 14.5% changes with 3s delay for emergency convergence (e.g., BTC $100 → $73,512 in 29 rounds)
+6. **Catch-up mode**: When price deviation > 20%, interval drops from 5 min → 15s for rapid convergence
+
+**Settlement Flow (2-operator architecture):**
+1. **Propose Settlement** — Compute TWAP from on-chain accumulators, propose batch at TWAP price (operator 1 = admin key)
+2. **Approve Settlement** — 2nd operator confirms with separate private key (operator 2)
+3. **Execute Match** — Decrypt `OrderAuth` records from tracked orders, pair buy/sell orders, call `execute_match` at clearing price
+4. **Advance Batch** — Move to next batch after all matches complete, clean up matched orders
+
+**Order Tracking:** Frontend reports orders to backend via `POST /api/darkpool/report-order`. Bot decrypts `OrderAuth` records from on-chain transactions, tracks matched/unmatched state, and pairs eligible buy/sell orders for execution.
 
 ### Test Token Faucet
 
@@ -388,22 +398,20 @@ All 14 programs are deployed on **Aleo Testnet**.
 | `dara_lend_v8_credits.aleo` | `at1h7q8lz544wsakfw3u3gtyqt7u0ynkhmkvvu9ay9hvl9dank5g5rsuq3cwp` |
 | `dara_lend_v8_vault.aleo` | `at1y0ghwhs6hdm5vr92pp3lcj442hvpgrytn87cpmp3nlyulaykg5pqurm94t` |
 | `dara_lend_v8_gov_v3.aleo` | `at13czejw57h7930qxhl28dpc57r49qqjjq7vt5muf73xjg40ed7vzqz2296d` |
-| `dara_dark_pool_v2.aleo` | `at1emu8kcs4q8yj6jx9med4v2hamzajsw6dsc0nwcaa5dzyhfpzqvpsm39w68` |
 | `dara_dark_pool_v3.aleo` | `at17wenhr6jgjydaussmkmt467hedkw0awugsyqp9sl6tx3dmgs9yxs7jeywg` |
-| `dara_dp_btc_v2.aleo` | `at1zms0sahft6su2xvtdem8djq5uza97gv9zc2cuq8rfe828aca3qrqv9cqkj` |
-| `dara_dp_eth_v2.aleo` | `at1l2aewv0je0fpp26h5pj8zg9ykkwuw0z9guffnzhntzg3hdnlqvxs2y0ysg` |
-| `dara_dp_sol_v2.aleo` | `at1qmuqlsvm2kwqghgda24amc2jry0w3vsehevzje60c97yc3sktqqqe4ynzt` |
-| `dara_dp_btc_v1.aleo` | `at1h75lfvpc2avxha2dg5l589j7z42w9f56nfm4n4560h5fwqvasvzqdmxkpf` |
-| `dara_dp_eth_v1.aleo` | `at10jcztp884yg6ua6kz39u2akl04t6r2kkmwns5kgzrmxpnsr2msrqs2w4g4` |
-| `dara_dp_sol_v1.aleo` | `at123gqgtm2p2qm3ajuupneff00qhh3cylssdtjs5q333zfqp2flyrspg0ff2` |
+| `dara_dp_btc_v5.aleo` | `at138mc5kfcfnlp2u06k27tnaucfv528r4tapy0f4hgchxz9ch9kyqq297frt` |
+| `dara_dp_eth_v5.aleo` | `at138mc5kfcfnlp2u06k27tnaucfv528r4tapy0f4hgchxz9ch9kyqq297frt` |
+| `dara_dp_sol_v5.aleo` | `at13d382lq94v8f4elcvz2ecpcrl4t9rrflsl9esfdzrzccvvgasvrq4m0a62` |
 | `test_btc_v1.aleo` | `at19a4ylpeyjykqf84z586r869wvy6hmxlnpnyw8kvr6um8huu3u5gsxpfuzg` |
 | `test_eth_v1.aleo` | `at1uvwm5p53r445vc9xzjgynee6msdxu7zaframt96tf5rvl40e8q8q26ucxr` |
 | `test_sol_v1.aleo` | `at1azee54349kq0ccgdkxtxrrd0nzpynnz82gwe9qpvudmeae0xhuzq2zcl4q` |
-| ~~`dara_dark_pool_v1.aleo`~~ | ~~`at1xr06dkaermzl6hfm5syqzkrtw950hhe0rsttl06qp9gksuey2vxqh0ww4l`~~ (superseded by v2) |
+| `dara_auction_v1.aleo` | `at1xjkazhxpy76m97lvkj3ex0l3lvn32vzwfv9vt09j6zvey9dlxqyqpkvxp6` |
+| `dara_flash_v1.aleo` | `at128zjzny542ty3z2kf74u2vne22gahemp2eadtjkurjf4dguxwgyquvuv7m` |
+| ~~`dara_dp_btc_v2.aleo`~~ | ~~superseded by v5 (Shield wallet fix)~~ |
+| ~~`dara_dp_eth_v2.aleo`~~ | ~~superseded by v5 (Shield wallet fix)~~ |
+| ~~`dara_dp_sol_v2.aleo`~~ | ~~superseded by v5 (Shield wallet fix)~~ |
 | ~~`dara_dark_pool_v2.aleo`~~ | ~~superseded by v3 (oracle fix)~~ |
-| ~~`dara_dp_btc_v1.aleo`~~ | ~~superseded by v2 (oracle fix)~~ |
-| ~~`dara_dp_eth_v1.aleo`~~ | ~~superseded by v2 (oracle fix)~~ |
-| ~~`dara_dp_sol_v1.aleo`~~ | ~~superseded by v2 (oracle fix)~~ |
+| ~~`dara_dark_pool_v1.aleo`~~ | ~~superseded by v2~~ |
 | `dara_auction_v1.aleo` | `at1xjkazhxpy76m97lvkj3ex0l3lvn32vzwfv9vt09j6zvey9dlxqyqpkvxp6` |
 | `dara_flash_v1.aleo` | `at128zjzny542ty3z2kf74u2vne22gahemp2eadtjkurjf4dguxwgyquvuv7m` |
 
@@ -421,7 +429,7 @@ All 14 programs are deployed on **Aleo Testnet**.
 | Layer | Technology |
 |-------|-----------|
 | Blockchain | Aleo Testnet (Leo v4.0, snarkVM) |
-| Smart Contracts | Leo language (14 programs, 131 transitions) |
+| Smart Contracts | Leo language (14 programs, 149 transitions) |
 | Frontend | React 18, Vite, TypeScript, Tailwind CSS, Framer Motion |
 | Backend | Node.js, Express.js, TypeScript |
 | Automation | Provable DPS (Decentralized Private Sequencer) |
@@ -490,9 +498,9 @@ DARA-Lend/
 |   |-- dara_lend_v8_vault/ # Yield vault + transfers (10 transitions)
 |   |-- dara_lend_v8_gov_v3/ # Governance (12 transitions)
 |   |-- dara_dark_pool_v3/  # Dark pool v3 — ALEO/USDCx (16 transitions)
-|   |-- dara_dp_btc_v2/     # Dark pool — BTC/USDCx (16 transitions)
-|   |-- dara_dp_eth_v2/     # Dark pool — ETH/USDCx (16 transitions)
-|   |-- dara_dp_sol_v2/     # Dark pool — SOL/USDCx (16 transitions)
+|   |-- dara_dp_btc_v2/     # Dark pool — BTC/USDCx (16 transitions, superseded by v5)
+|   |-- dara_dp_eth_v2/     # Dark pool — ETH/USDCx (16 transitions, superseded by v5)
+|   |-- dara_dp_sol_v2/     # Dark pool — SOL/USDCx (16 transitions, superseded by v5)
 |   |-- test_btc_v1/        # Test BTC token (6 transitions)
 |   |-- test_eth_v1/        # Test ETH token (6 transitions)
 |   |-- test_sol_v1/        # Test SOL token (6 transitions)
