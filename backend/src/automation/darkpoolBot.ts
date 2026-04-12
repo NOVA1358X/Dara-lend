@@ -411,6 +411,16 @@ async function stepProposeSettlement(programId: string, state: DarkPoolBotState,
     return false;
   }
 
+  // Safety: skip proposal if TWAP deviates >15% from oracle (stale TWAP window)
+  // This prevents settlements at incorrect prices after priceScale changes
+  if (oraclePrice > 0) {
+    const twapDeviation = Math.abs(proposedPrice - oraclePrice) / oraclePrice;
+    if (twapDeviation > 0.15) {
+      console.warn(`${tag} TWAP ${proposedPrice} deviates ${(twapDeviation * 100).toFixed(1)}% from oracle ${oraclePrice} — skipping proposal (wait for TWAP window reset)`);
+      return false;
+    }
+  }
+
   // Clamp to valid price range
   proposedPrice = Math.max(1, Math.min(proposedPrice, 100_000_000));
 
@@ -464,10 +474,23 @@ async function stepApproveSettlement(programId: string, state: DarkPoolBotState,
     return false; // Already submitted, waiting for on-chain confirmation
   }
 
-  // Get proposed price
-  const priceRaw = await getMappingValue('batch_proposed_price', `${currentBatch}u64`, programId);
+  // Get proposed price and verify it against current oracle
+  const [priceRaw, oraclePriceRaw] = await Promise.all([
+    getMappingValue('batch_proposed_price', `${currentBatch}u64`, programId),
+    getMappingValue('oracle_price', '0u8', programId),
+  ]);
   const proposedPrice = parseAleoU64(priceRaw);
   if (!proposedPrice) return false;
+
+  // Safety: warn if proposed price deviates >15% from oracle (stale TWAP)
+  // Still approve to advance pipeline — matches won't execute at bad prices anyway
+  const currentOraclePrice = parseAleoU64(oraclePriceRaw);
+  if (currentOraclePrice > 0) {
+    const priceDeviation = Math.abs(proposedPrice - currentOraclePrice) / currentOraclePrice;
+    if (priceDeviation > 0.15) {
+      console.warn(`${tag} Proposed price ${proposedPrice} deviates ${(priceDeviation * 100).toFixed(1)}% from oracle ${currentOraclePrice} — approving to advance past stale batch`);
+    }
+  }
 
   console.log(`${tag} Approving batch ${currentBatch} at price ${proposedPrice} (operator 2)`);
 
