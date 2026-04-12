@@ -188,14 +188,15 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Countdown timer for batch settlement eligibility — real-time tick
+  // Countdown timer for batch settlement eligibility — stable wallclock approach
+  // Compute a target timestamp once per batch, then tick down from it.
+  const countdownTargetRef = useRef<{ batch: number; startBlock: number; targetMs: number }>({ batch: 0, startBlock: 0, targetMs: 0 });
   useEffect(() => {
     if (!batchData || !currentBlock || !blockFetchedAt.current) {
       setBatchCountdown('');
       return;
     }
     const isCollecting = !batchData.approved && Number(batchData.proposedPrice) <= 0;
-    // When proposed or approved, show settlement status instead of timer
     if (!isCollecting) {
       if (batchData.approved) {
         setBatchCountdown('Executing matches');
@@ -204,18 +205,27 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       }
       return;
     }
-    const endBlock = batchData.startBlock + batchData.minBatchBlocks;
-    const baseSecondsLeft = (endBlock - currentBlock) * SECONDS_PER_BLOCK;
+    // Only recompute target when batch or startBlock actually changes
+    const batchNum = batchData.currentBatch;
+    const startBlock = batchData.startBlock;
+    if (countdownTargetRef.current.batch !== batchNum || countdownTargetRef.current.startBlock !== startBlock) {
+      const endBlock = startBlock + batchData.minBatchBlocks;
+      const secsLeft = (endBlock - currentBlock) * SECONDS_PER_BLOCK;
+      countdownTargetRef.current = {
+        batch: batchNum,
+        startBlock,
+        targetMs: Date.now() + secsLeft * 1000,
+      };
+    }
     const updateCountdown = () => {
-      const elapsed = (Date.now() - blockFetchedAt.current) / 1000;
-      const secsLeft = Math.max(0, Math.round(baseSecondsLeft - elapsed));
-      if (secsLeft <= 0) {
+      const remaining = Math.max(0, Math.round((countdownTargetRef.current.targetMs - Date.now()) / 1000));
+      if (remaining <= 0) {
         setBatchCountdown('Settlement eligible');
         return;
       }
-      const minutes = Math.floor(secsLeft / 60);
-      const seconds = secsLeft % 60;
-      setBatchCountdown(`~${minutes}m ${seconds}s`);
+      const minutes = Math.floor(remaining / 60);
+      const seconds = remaining % 60;
+      setBatchCountdown(`~${minutes}m ${seconds.toString().padStart(2, '0')}s`);
     };
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
@@ -224,13 +234,13 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
   // Fetch per-market pool liquidity (USDCx + base token balance for THIS market's program)
   useEffect(() => {
-    // Reset on market switch so stale data from another market doesn't show
-    setPoolLiquidity({ usdcx: 0, token: 0 });
+    // Mark as loading on market switch (don't reset values — show stale briefly rather than flash to 0)
     setLiquidityLoaded(false);
+    let cancelled = false;
     const fetchLiquidity = async () => {
       try {
         const res = await fetch(`${BACKEND_API}/darkpool/${selectedMarket.id}/pool-liquidity`).then(r => r.json()).catch(() => null);
-        if (res) {
+        if (res && !cancelled) {
           setPoolLiquidity({
             usdcx: parseInt(res.usdcx ?? '0', 10),
             token: parseInt(res.token ?? '0', 10),
@@ -241,7 +251,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     };
     fetchLiquidity();
     const interval = setInterval(fetchLiquidity, 30000);
-    return () => clearInterval(interval);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [selectedMarket.id]);
 
   const refetchOrderRecords = useCallback(() => {
@@ -587,11 +597,16 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           <SpotlightCard className="p-4">
             <p className="text-text-muted text-xs font-label uppercase tracking-wider">On-Chain Oracle</p>
             {loading ? <LoadingSkeleton className="h-6 w-24 mt-1" /> : (
-              <p className="text-xl font-headline text-accent-warning mt-1">
-                {oraclePrice > 0
-                  ? `$${oraclePrice.toLocaleString(undefined, { minimumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4, maximumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4 })}`
-                  : '—'}
-              </p>
+              <>
+                <p className="text-xl font-headline text-accent-warning mt-1">
+                  {oraclePrice > 0
+                    ? `$${oraclePrice.toLocaleString(undefined, { minimumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4, maximumFractionDigits: selectedMarket.priceScale >= 100 ? 2 : 4 })}`
+                    : '—'}
+                </p>
+                {oraclePrice > 0 && realPrice > 0 && Math.abs(oraclePrice - realPrice) / realPrice > 0.10 && (
+                  <p className="text-[9px] text-accent-warning/70 mt-0.5">↻ Converging to ${realPrice.toFixed(2)}</p>
+                )}
+              </>
             )}
           </SpotlightCard>
           <SpotlightCard className="p-4">
@@ -616,12 +631,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             <div className="flex items-center gap-4">
               <div>
                 <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">{selectedMarket.baseAsset} in Pool</p>
-                <p className="text-sm font-headline text-accent-success">{(poolLiquidity.token / PRECISION).toFixed(4)}</p>
+                <p className="text-sm font-headline text-accent-success">{liquidityLoaded ? (poolLiquidity.token / PRECISION).toFixed(4) : '...'}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
                 <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">USDCx in Pool</p>
-                <p className="text-sm font-headline text-primary">{(poolLiquidity.usdcx / PRECISION).toFixed(2)}</p>
+                <p className="text-sm font-headline text-primary">{liquidityLoaded ? (poolLiquidity.usdcx / PRECISION).toFixed(2) : '...'}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
