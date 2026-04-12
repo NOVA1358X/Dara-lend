@@ -260,7 +260,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
       setTimeout(refetchOrderRecords, 8000);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Cancel failed');
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('parse') || msg.includes('constructor') || msg.includes('Remaining invalid string')) {
+        toast.error('Shield wallet needs an update to cancel directly. Please contact the operator to cancel your order.');
+      } else {
+        toast.error(msg || 'Cancel failed');
+      }
     }
   };
 
@@ -289,6 +294,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     const microAmount = Math.floor(parsedAmount * PRECISION);
     setActiveAction('submit');
 
+    // Try Shield wallet first
+    let walletTxId: string | null = null;
     try {
       if (tab === 'buy') {
         const record = parsedUsdcx.find(r => r.amount >= microAmount);
@@ -296,7 +303,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           toast.error(`No USDCx record with enough balance. Largest: ${parsedUsdcx.length > 0 ? (Math.max(...parsedUsdcx.map(r => r.amount)) / PRECISION).toFixed(2) : '0'} USDCx`);
           return;
         }
-        await submitBuyOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
+        walletTxId = await submitBuyOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
       } else {
         const sellRecords = getSellRecords();
         const record = sellRecords.find(r => r.amount >= microAmount);
@@ -304,17 +311,55 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           toast.error(`No ${selectedMarket.baseAsset} record with enough balance. Largest: ${sellRecords.length > 0 ? (Math.max(...sellRecords.map(r => r.amount)) / PRECISION).toFixed(6) : '0'} ${selectedMarket.baseAsset}`);
           return;
         }
-        await submitSellOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
+        walletTxId = await submitSellOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
+      }
+    } catch {
+      walletTxId = null;
+    }
+
+    if (walletTxId) {
+      // Wallet succeeded
+      setAmount('');
+      setLimitPrice('');
+      toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}!`);
+      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
+      setTimeout(refetchOrderRecords, 8000);
+      return;
+    }
+
+    // Wallet failed (Shield can't parse constructor blocks — Aleo V9 feature)
+    // Fall back to backend operator relay
+    toast.dismiss();
+    resetTransaction();
+    const relayId = toast.loading(`Wallet can't process this program yet — routing through secure operator relay...`);
+    try {
+      const res = await fetch(`${BACKEND_API}/darkpool/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          market: selectedMarket.id,
+          direction: tab,
+          amount: microAmount,
+          limitPrice: limitMicro,
+        }),
+      });
+
+      const data = await res.json();
+      toast.dismiss(relayId);
+
+      if (!res.ok) {
+        toast.error(data.error || 'Relay order submission failed');
+        return;
       }
 
       setAmount('');
       setLimitPrice('');
-      toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}! The operator will match when the batch settles.`);
-      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
-      setTimeout(refetchOrderRecords, 8000);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Transaction failed';
-      toast.error(msg);
+      toast.success(`${tab === 'buy' ? 'Buy' : 'Sell'} order submitted via operator relay! TX: ${(data.orderTxId || '').substring(0, 16)}...`);
+      setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 5000);
+      setTimeout(refetchOrderRecords, 10000);
+    } catch (relayErr) {
+      toast.dismiss(relayId);
+      toast.error(relayErr instanceof Error ? relayErr.message : 'Relay failed — check that backend is running');
     }
   };
 
