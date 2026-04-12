@@ -264,6 +264,25 @@ router.get('/markets', (_req, res) => {
   });
 });
 
+// Dark pool program address (where funds are sent via transfer_public)
+const DARKPOOL_PROGRAM_ADDRESS = 'aleo1yrxw370zssfmulgk33c0hzm0asj6rqjc9dxdtt2v8t8y7x3ez5fqx8quh0';
+
+// GET /api/darkpool/pool-balance — actual on-chain ALEO + USDCx balances of the dark pool
+router.get('/pool-balance', async (_req, res) => {
+  try {
+    const [aleoRaw, usdcxRaw] = await Promise.all([
+      fetchMapping('account', DARKPOOL_PROGRAM_ADDRESS, 'credits.aleo'),
+      fetchMapping('account', DARKPOOL_PROGRAM_ADDRESS, USDCX_PROGRAM),
+    ]);
+    res.json({
+      aleo: safeParse(aleoRaw),
+      usdcx: safeParse(usdcxRaw),
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch pool balance' });
+  }
+});
+
 // GET /api/darkpool/batch — current batch info
 router.get('/batch', async (_req, res) => {
   try {
@@ -414,11 +433,12 @@ router.get('/:market/batch', async (req, res) => {
     const currentBatch = parseInt(safeParse(batchRaw), 10) || 1;
     const paused = pausedRaw?.includes('true') || false;
 
-    const [approvedRaw, priceRaw, countRaw, startBlockRaw] = await Promise.all([
+    const [approvedRaw, priceRaw, countRaw, startBlockRaw, minBlocksRaw] = await Promise.all([
       fetchMapping('batch_approved', `${currentBatch}u64`, pid),
       fetchMapping('batch_proposed_price', `${currentBatch}u64`, pid),
       fetchMapping('batch_approval_count', `${currentBatch}u64`, pid),
       fetchMapping('batch_start_block', `${currentBatch}u64`, pid),
+      fetchMapping('min_batch_blocks', '0u8', pid),
     ]);
 
     res.json({
@@ -430,6 +450,7 @@ router.get('/:market/batch', async (req, res) => {
       proposedPrice: safeParse(priceRaw),
       approvalCount: parseInt(safeParse(countRaw), 10) || 0,
       startBlock: safeParse(startBlockRaw),
+      minBatchBlocks: parseInt(safeParse(minBlocksRaw), 10) || 100,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch dark pool batch data' });

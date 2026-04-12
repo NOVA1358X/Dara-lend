@@ -41,7 +41,11 @@ interface BatchData {
   totalTrades: string;
   totalVolume: string;
   realPrice: number;
+  startBlock: number;
+  minBatchBlocks: number;
 }
+
+const SECONDS_PER_BLOCK = 10;
 
 const OPERATOR_ADDRESS = ADMIN_ADDRESS;
 
@@ -63,6 +67,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
   const [activeAction, setActiveAction] = useState<'submit' | 'cancel' | null>(null);
   const [faucetLoading, setFaucetLoading] = useState<string | null>(null);
   const [faucetStatus, setFaucetStatus] = useState<Record<string, number>>({ BTC: 5, ETH: 5, SOL: 5 });
+  const [currentBlock, setCurrentBlock] = useState(0);
+  const [batchCountdown, setBatchCountdown] = useState('');
 
   const activeProgramId = selectedMarket.programId;
 
@@ -135,6 +141,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         totalTrades: statsRes?.totalTrades ?? '0',
         totalVolume: statsRes?.totalVolume ?? '0',
         realPrice: statsRes?.realPrice ?? 0,
+        startBlock: parseInt(batchRes?.startBlock ?? '0', 10),
+        minBatchBlocks: batchRes?.minBatchBlocks ?? 100,
       });
     } catch {
       // silent
@@ -149,21 +157,64 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     return () => clearInterval(interval);
   }, [fetchBatchData]);
 
-  // Fetch dark pool on-chain balances (base token + USDCx) via backend stats
+  // Fetch current block height for countdown timer
+  useEffect(() => {
+    const fetchBlock = async () => {
+      try {
+        const res = await fetch(`${ALEO_TESTNET_API}/latest/height`);
+        const height = await res.json();
+        if (typeof height === 'number') setCurrentBlock(height);
+      } catch { /* silent */ }
+    };
+    fetchBlock();
+    const interval = setInterval(fetchBlock, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Countdown timer for batch settlement eligibility
+  useEffect(() => {
+    if (!batchData || !currentBlock) {
+      setBatchCountdown('');
+      return;
+    }
+    // Determine state inline to avoid forward reference to batchState
+    const isCollecting = !batchData.approved && Number(batchData.proposedPrice) <= 0;
+    if (!isCollecting) {
+      setBatchCountdown('');
+      return;
+    }
+    const endBlock = batchData.startBlock + batchData.minBatchBlocks;
+    const updateCountdown = () => {
+      const blocksLeft = endBlock - currentBlock;
+      if (blocksLeft <= 0) {
+        setBatchCountdown('Settlement eligible');
+        return;
+      }
+      const totalSeconds = blocksLeft * SECONDS_PER_BLOCK;
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      setBatchCountdown(`~${minutes}m ${seconds}s`);
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [batchData, currentBlock]);
+
+  // Fetch dark pool on-chain balances (ALEO credits + USDCx) from public account mappings
   useEffect(() => {
     const fetchPoolBalance = async () => {
       try {
-        const statsRes = await fetch(`${BACKEND_API}/darkpool/${selectedMarket.id}/stats`).then(r => r.json()).catch(() => null);
+        const res = await fetch(`${BACKEND_API}/darkpool/pool-balance`).then(r => r.json()).catch(() => null);
         setPoolBalance({
-          aleo: parseInt(statsRes?.feeVault ?? '0', 10),
-          usdcx: parseInt(statsRes?.totalVolume ?? '0', 10),
+          aleo: parseInt(res?.aleo ?? '0', 10),
+          usdcx: parseInt(res?.usdcx ?? '0', 10),
         });
       } catch { /* silent */ }
     };
     fetchPoolBalance();
     const interval = setInterval(fetchPoolBalance, 30000);
     return () => clearInterval(interval);
-  }, [selectedMarket]);
+  }, []);
 
   const refetchOrderRecords = useCallback(() => {
     if (!wallet.connected || !wallet.requestRecords) return;
@@ -496,12 +547,12 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex items-center gap-4">
               <div>
-                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Fee Vault</p>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">ALEO Balance</p>
                 <p className="text-sm font-headline text-accent-success">{(poolBalance.aleo / PRECISION).toFixed(4)}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
-                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Volume</p>
+                <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">USDCx Balance</p>
                 <p className="text-sm font-headline text-primary">{(poolBalance.usdcx / PRECISION).toFixed(2)}</p>
               </div>
               <div className="h-6 w-px bg-white/[0.06]" />
@@ -509,6 +560,17 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Approval</p>
                 <p className="text-sm font-headline text-text-primary">{batchData?.approvalCount ?? 0}/2</p>
               </div>
+              {batchCountdown && (
+                <>
+                  <div className="h-6 w-px bg-white/[0.06]" />
+                  <div>
+                    <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Settlement In</p>
+                    <p className={`text-sm font-headline ${batchCountdown === 'Settlement eligible' ? 'text-accent-success' : 'text-accent-warning'}`}>
+                      {batchCountdown}
+                    </p>
+                  </div>
+                </>
+              )}
               <div className="h-6 w-px bg-white/[0.06]" />
               <div>
                 <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Batch #{batchData?.currentBatch ?? '—'}</p>
@@ -859,11 +921,11 @@ export function DarkPool({ wallet }: DarkPoolProps) {
             {/* Pool Balance Display */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-white/[0.02] rounded-lg p-3">
-                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Fee Vault Balance</p>
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">ALEO Pool Balance</p>
                 <p className="text-lg font-headline text-accent-success mt-1">{(poolBalance.aleo / PRECISION).toFixed(6)}</p>
               </div>
               <div className="bg-white/[0.02] rounded-lg p-3">
-                <p className="text-text-muted text-xs font-label uppercase tracking-wider">Total Volume</p>
+                <p className="text-text-muted text-xs font-label uppercase tracking-wider">USDCx Pool Balance</p>
                 <p className="text-lg font-headline text-primary mt-1">{(poolBalance.usdcx / PRECISION).toFixed(2)}</p>
               </div>
             </div>
