@@ -23,6 +23,8 @@ export interface DarkPoolBotState {
   settlementCount: number;
   lastError: string | null;
   isRunning: boolean;
+  pendingApprovalBatch: number;    // batch we submitted an approval TX for
+  pendingApprovalTimestamp: number; // when we submitted it
 }
 
 // ─── Order Auth Record Tracking ─────────────────────────────────
@@ -148,6 +150,8 @@ function getOrCreateState(marketId: string): DarkPoolBotState {
       settlementCount: 0,
       lastError: null,
       isRunning: false,
+      pendingApprovalBatch: 0,
+      pendingApprovalTimestamp: 0,
     };
     marketStates.set(marketId, s);
   }
@@ -403,13 +407,26 @@ async function stepApproveSettlement(programId: string, state: DarkPoolBotState,
 
   // Check if already fully approved
   const approvedRaw = await getMappingValue('batch_approved', `${currentBatch}u64`, programId);
-  if (approvedRaw?.replace(/["\s]/g, '') === 'true') return false;
+  if (approvedRaw?.replace(/["\s]/g, '') === 'true') {
+    state.pendingApprovalBatch = 0; // Clear pending — it worked
+    return false;
+  }
 
   // Check approval count — need to approve if count is 1 (proposed but not confirmed)
   const countRaw = await getMappingValue('batch_approval_count', `${currentBatch}u64`, programId);
   const approvalCount = parseAleoU64(countRaw);
   if (approvalCount < 1) return false; // Not yet proposed
-  if (approvalCount >= 2) return false; // Already has 2 approvals
+  if (approvalCount >= 2) {
+    state.pendingApprovalBatch = 0;
+    return false; // Already has 2 approvals
+  }
+
+  // Skip if we already submitted an approval TX for this batch (wait 5 min for confirmation)
+  const PENDING_TIMEOUT_MS = 300_000; // 5 minutes
+  if (state.pendingApprovalBatch === currentBatch &&
+      Date.now() - state.pendingApprovalTimestamp < PENDING_TIMEOUT_MS) {
+    return false; // Already submitted, waiting for on-chain confirmation
+  }
 
   // Get proposed price
   const priceRaw = await getMappingValue('batch_proposed_price', `${currentBatch}u64`, programId);
@@ -428,6 +445,8 @@ async function stepApproveSettlement(programId: string, state: DarkPoolBotState,
 
   if (tx) {
     state.lastApprovalTimestamp = Date.now();
+    state.pendingApprovalBatch = currentBatch;
+    state.pendingApprovalTimestamp = Date.now();
     console.log(`${tag} Batch ${currentBatch} approved: ${tx}`);
     return true;
   }

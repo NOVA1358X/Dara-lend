@@ -28,6 +28,23 @@ const FETCHERS: PriceFetcher[] = [
 
 const OUTLIER_THRESHOLD = 0.10; // 10% from median triggers outlier removal
 
+// Rate-limit cooldown: skip sources that recently failed with 429/rate-limit for 10 minutes
+const SOURCE_COOLDOWNS: Map<string, number> = new Map();
+const COOLDOWN_MS = 600_000; // 10 minutes
+
+function isRateLimited(sourceName: string): boolean {
+  const until = SOURCE_COOLDOWNS.get(sourceName);
+  if (!until) return false;
+  if (Date.now() >= until) { SOURCE_COOLDOWNS.delete(sourceName); return false; }
+  return true;
+}
+
+function markRateLimited(sourceName: string, reason: string): void {
+  if (reason.includes('429') || reason.includes('rate limit') || reason.includes('upgrade your account')) {
+    SOURCE_COOLDOWNS.set(sourceName, Date.now() + COOLDOWN_MS);
+  }
+}
+
 function computeMedian(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -53,18 +70,37 @@ function getConfidence(successCount: number, totalSources: number): Confidence {
 }
 
 export async function aggregatePrices(symbol: string = 'ALEO'): Promise<AggregatedPrice> {
-  const results = await Promise.allSettled(FETCHERS.map((fn) => fn(symbol)));
+  const sourceNames = ['coinmarketcap', 'coingecko', 'cryptocompare', 'coinbase', 'binance', 'mexc', 'xt'];
+
+  // Skip rate-limited sources entirely
+  const activeFetchers: { fetcher: PriceFetcher; name: string }[] = [];
+  const skippedSources: string[] = [];
+
+  FETCHERS.forEach((fn, i) => {
+    if (isRateLimited(sourceNames[i])) {
+      skippedSources.push(sourceNames[i]);
+    } else {
+      activeFetchers.push({ fetcher: fn, name: sourceNames[i] });
+    }
+  });
+
+  const results = await Promise.allSettled(activeFetchers.map(({ fetcher }) => fetcher(symbol)));
 
   const successful: PriceResult[] = [];
-  const failedSources: string[] = [];
-  const sourceNames = ['coinmarketcap', 'coingecko', 'cryptocompare', 'coinbase', 'gateio', 'mexc', 'xt'];
+  const failedSources: string[] = [...skippedSources];
 
   results.forEach((result, i) => {
     if (result.status === 'fulfilled') {
       successful.push(result.value);
     } else {
-      failedSources.push(sourceNames[i]);
-      console.warn(`[oracle] ${sourceNames[i]} failed: ${result.reason}`);
+      const name = activeFetchers[i].name;
+      const reason = String(result.reason);
+      failedSources.push(name);
+      markRateLimited(name, reason);
+      // Only log non-rate-limited failures (rate-limited ones are muted during cooldown)
+      if (!reason.includes('429') && !reason.includes('rate limit') && !reason.includes('upgrade your account')) {
+        console.warn(`[oracle] ${name} failed: ${result.reason}`);
+      }
     }
   });
 

@@ -434,7 +434,7 @@ export function DarkPool({ wallet }: DarkPoolProps) {
           {DARK_POOL_MARKETS.map((market) => (
             <button
               key={market.id}
-              onClick={() => { setBatchData(null); setSelectedMarket(market); setLoading(true); }}
+              onClick={() => { setBatchData(null); setOrderRecords([]); setSelectedMarket(market); setLoading(true); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-label text-xs uppercase tracking-wider transition-all ${
                 selectedMarket.id === market.id
                   ? 'bg-primary/20 text-primary border border-primary/30'
