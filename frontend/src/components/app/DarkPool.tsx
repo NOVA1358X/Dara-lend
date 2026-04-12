@@ -280,14 +280,24 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       return;
     }
 
-    // Limit price: if empty, use MAX_PRICE for buys (any price) or 1 for sells (any price)
-    // Contract requires limit_price > 0, so 0 is invalid
+    // Limit price: contract requires limit_price > 0
+    // For market orders, use oracle price + 5% slippage (buys) or - 5% (sells)
     // Scale down by priceScale to fit contract's MAX_PRICE range
-    const MAX_PRICE = 100_000_000;
+    const SCALE = 1_000_000;
     const parsedLimit = parseFloat(limitPrice || '0');
-    const limitMicro = parsedLimit > 0
-      ? Math.floor(parsedLimit * PRECISION / selectedMarket.priceScale)
-      : (tab === 'buy' ? MAX_PRICE : 1);
+    const onChainOracle = Number(batchData?.oraclePrice) || 0;
+    let limitMicro: number;
+    if (parsedLimit > 0) {
+      limitMicro = Math.floor(parsedLimit * PRECISION / selectedMarket.priceScale);
+    } else if (onChainOracle > 0) {
+      // Market order: use oracle price with 5% slippage
+      limitMicro = tab === 'buy'
+        ? Math.ceil(onChainOracle * 1.05)
+        : Math.max(Math.floor(onChainOracle * 0.95), 1);
+    } else {
+      toast.error('Oracle price not available. Please enter a limit price.');
+      return;
+    }
 
     // Expiry block: default to current + 1000 blocks (~50 min)
     const expiryBlock = 999_999_999;
@@ -300,12 +310,19 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
     // Submit via Shield wallet directly
     if (tab === 'buy') {
+      // For buy orders: user enters USDCx amount to spend; contract size = base asset quantity
+      // size = usdcx_amount * SCALE / limit_price (converts USDCx → base asset quantity)
+      const buySize = Math.floor(microAmount * SCALE / limitMicro);
+      if (buySize <= 0) {
+        toast.error('Order too small at this price');
+        return;
+      }
       const record = parsedUsdcx.find(r => r.amount >= microAmount);
       if (!record) {
         toast.error(`No USDCx record with enough balance. Largest: ${parsedUsdcx.length > 0 ? (Math.max(...parsedUsdcx.map(r => r.amount)) / PRECISION).toFixed(2) : '0'} USDCx`);
         return;
       }
-      const txId = await submitBuyOrder(record.plaintext, microAmount, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
+      const txId = await submitBuyOrder(record.plaintext, buySize, limitMicro, expiryBlock, OPERATOR_ADDRESS, nonce, activeProgramId);
       if (txId) {
         setAmount('');
         setLimitPrice('');
