@@ -194,12 +194,16 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       return;
     }
     const isCollecting = !batchData.approved && Number(batchData.proposedPrice) <= 0;
+    // When proposed or approved, show settlement status instead of timer
     if (!isCollecting) {
-      setBatchCountdown('');
+      if (batchData.approved) {
+        setBatchCountdown('Executing matches');
+      } else {
+        setBatchCountdown('Awaiting approval');
+      }
       return;
     }
     const endBlock = batchData.startBlock + batchData.minBatchBlocks;
-    // Compute baseline seconds remaining at the moment we fetched the block height
     const baseSecondsLeft = (endBlock - currentBlock) * SECONDS_PER_BLOCK;
     const updateCountdown = () => {
       const elapsed = (Date.now() - blockFetchedAt.current) / 1000;
@@ -447,6 +451,9 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     return 'collecting';
   })();
 
+  // Whether trading is disabled (batch is being settled)
+  const tradingDisabled = batchState === 'proposed' || batchState === 'approved';
+
   const batchStatusConfig = {
     collecting: { color: 'bg-primary', text: 'Collecting orders — submit your order now', textColor: 'text-primary' },
     proposed: { color: 'bg-accent-warning', text: `Settlement proposed at $${((Number(batchData?.proposedPrice || 0) / PRECISION) * selectedMarket.priceScale).toFixed(2)} — awaiting 2-of-3 approval`, textColor: 'text-accent-warning' },
@@ -581,8 +588,15 @@ export function DarkPool({ wallet }: DarkPoolProps) {
                 <>
                   <div className="h-6 w-px bg-white/[0.06]" />
                   <div>
-                    <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">Settlement In</p>
-                    <p className={`text-sm font-headline ${batchCountdown === 'Settlement eligible' ? 'text-accent-success' : 'text-accent-warning'}`}>
+                    <p className="text-text-muted text-[10px] font-label uppercase tracking-wider">
+                      {batchState === 'collecting' ? 'Settlement In' : 'Status'}
+                    </p>
+                    <p className={`text-sm font-headline ${
+                      batchCountdown === 'Settlement eligible' ? 'text-accent-success'
+                        : batchCountdown === 'Executing matches' ? 'text-accent-success'
+                        : batchCountdown === 'Awaiting approval' ? 'text-accent-warning'
+                        : 'text-accent-warning'
+                    }`}>
                       {batchCountdown}
                     </p>
                   </div>
@@ -649,6 +663,22 @@ export function DarkPool({ wallet }: DarkPoolProps) {
       {/* Trade Form */}
       <FadeInView delay={0.2}>
         <SpotlightCard className="p-6">
+          {/* Settlement in progress banner */}
+          {tradingDisabled && (
+            <div className={`mb-4 p-3 rounded-lg border ${
+              batchState === 'approved'
+                ? 'bg-accent-success/10 border-accent-success/30'
+                : 'bg-accent-warning/10 border-accent-warning/30'
+            }`}>
+              <p className={`text-xs font-label uppercase tracking-wider ${
+                batchState === 'approved' ? 'text-accent-success' : 'text-accent-warning'
+              }`}>
+                {batchState === 'approved'
+                  ? '⏳ Batch approved — operator is executing matches. Trading resumes in the next batch.'
+                  : '⏳ Settlement proposed — awaiting 2-of-3 operator approval. Orders are paused until the next batch.'}
+              </p>
+            </div>
+          )}
           <div className="flex gap-2 mb-6">
             <button
               onClick={() => setTab('buy')}
@@ -742,10 +772,16 @@ export function DarkPool({ wallet }: DarkPoolProps) {
 
             <button
               onClick={handleSubmitOrder}
-              disabled={!wallet.connected || !amount || transactionPending}
-              className="w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!wallet.connected || !amount || transactionPending || tradingDisabled}
+              className={`w-full py-3 rounded-lg font-label text-sm uppercase tracking-wider transition-all ${
+                tradingDisabled
+                  ? 'bg-white/[0.04] text-text-muted border border-white/[0.08] cursor-not-allowed'
+                  : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed'
+              }`}
             >
-              {transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : `Submit ${tab === 'buy' ? 'Buy' : 'Sell'} ${selectedMarket.baseAsset} Order`}
+              {tradingDisabled
+                ? `Trading paused — ${batchState === 'approved' ? 'batch settling' : 'awaiting approval'}`
+                : transactionPending ? 'Processing...' : !wallet.connected ? 'Connect Wallet' : `Submit ${tab === 'buy' ? 'Buy' : 'Sell'} ${selectedMarket.baseAsset} Order`}
             </button>
 
             {transactionStep === 'confirmed' && activeAction === 'submit' && (
