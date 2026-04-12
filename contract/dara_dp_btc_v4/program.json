@@ -1,0 +1,11 @@
+{
+  "program": "dara_dp_btc_v4.aleo",
+  "version": "0.0.0",
+  "description": "DARA BTC/USDCx Dark Pool v4",
+  "license": "MIT",
+  "dependencies": [
+    { "name": "merkle_tree.aleo", "location": "network", "network": "testnet" },
+    { "name": "test_usdcx_stablecoin.aleo", "location": "network", "network": "testnet" },
+    { "name": "test_btc_v1.aleo", "location": "network", "network": "testnet" }
+  ]
+}
