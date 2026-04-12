@@ -3,6 +3,8 @@ import 'dotenv/config';
 export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   privateKey: process.env.PRIVATE_KEY || '',
+  operator2PrivateKey: process.env.OPERATOR2_PRIVATE_KEY || '',
+  operator2Address: process.env.OPERATOR2_ADDRESS || '',
   adminAddress: process.env.ADMIN_ADDRESS || '',
   aleoRpcUrl: process.env.ALEO_RPC_URL || 'https://api.provable.com/v2',
   aleoApiUrl: (process.env.ALEO_RPC_URL || 'https://api.provable.com/v2') + '/testnet',

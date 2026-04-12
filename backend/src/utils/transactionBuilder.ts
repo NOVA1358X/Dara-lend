@@ -84,25 +84,28 @@ export function getRecentSubmissions() {
 /**
  * Build and broadcast a transaction via Provable Delegated Proving Service (DPS).
  * Falls back to local execution if DPS is not configured.
+ * @param privateKey Optional alternate private key (defaults to config.privateKey)
  */
 export async function buildAndBroadcastTransaction(
   programId: string,
   transition: string,
   inputs: string[],
   fee: number = 500_000,
+  privateKey?: string,
 ): Promise<string | null> {
-  if (!config.privateKey) {
+  const key = privateKey || config.privateKey;
+  if (!key) {
     console.warn('[tx-builder] No PRIVATE_KEY configured');
     return null;
   }
 
   // Use DPS if enabled and configured
   if (config.dpsEnabled && config.provableApiKey && config.provableConsumerId) {
-    return executeDps(programId, transition, inputs, fee);
+    return executeDps(programId, transition, inputs, fee, key);
   }
 
   // Fallback: local proving via SDK
-  return executeLocal(programId, transition, inputs, fee);
+  return executeLocal(programId, transition, inputs, fee, key);
 }
 
 /**
@@ -114,12 +117,13 @@ async function executeDps(
   transition: string,
   inputs: string[],
   fee: number,
+  privateKey: string,
 ): Promise<string | null> {
   try {
     console.log(`[dps] Building proving request for ${programId}/${transition}...`);
 
     const sdk = await getSdk();
-    const account = new sdk.Account({ privateKey: config.privateKey });
+    const account = new sdk.Account({ privateKey });
     const networkClient = new sdk.AleoNetworkClient(config.aleoRpcUrl);
 
     // Build the proving request — retry once on cold-start failure
@@ -262,10 +266,11 @@ async function executeLocal(
   transition: string,
   inputs: string[],
   fee: number,
+  privateKey: string,
 ): Promise<string | null> {
   try {
     const sdk = await getSdk();
-    const account = new sdk.Account({ privateKey: config.privateKey });
+    const account = new sdk.Account({ privateKey });
     const pm = new sdk.ProgramManager(config.aleoRpcUrl, undefined, undefined);
     pm.setAccount(account);
 

@@ -3,6 +3,7 @@ import { config, darkpoolMarkets } from '../../utils/config.js';
 import { aggregatePrices } from '../../oracle/aggregator.js';
 import { buildAndBroadcastTransaction } from '../../utils/transactionBuilder.js';
 import { getTransaction } from '../../utils/aleoClient.js';
+import { registerOrder, getTrackedOrders } from '../../automation/darkpoolBot.js';
 
 const router = Router();
 
@@ -115,6 +116,61 @@ router.post('/order', async (req, res) => {
     console.error('[dp-order] Failed:', err);
     res.status(500).json({ error: err?.message || 'Order submission failed' });
   }
+});
+
+// POST /api/darkpool/report-order — frontend reports an order TX for settlement tracking
+router.post('/report-order', (req, res) => {
+  try {
+    const { txId, programId, direction, trader, size, limitPrice } = req.body as {
+      txId?: string;
+      programId?: string;
+      direction?: string;
+      trader?: string;
+      size?: number;
+      limitPrice?: number;
+    };
+
+    if (!txId || !programId || !direction || !trader) {
+      res.status(400).json({ error: 'Required: txId, programId, direction, trader' });
+      return;
+    }
+    if (direction !== 'buy' && direction !== 'sell') {
+      res.status(400).json({ error: 'direction must be "buy" or "sell"' });
+      return;
+    }
+    // Validate txId format (Aleo TX IDs start with "at1")
+    if (!txId.startsWith('at1') || txId.length < 50) {
+      res.status(400).json({ error: 'Invalid txId format' });
+      return;
+    }
+
+    registerOrder(txId, programId, direction as 'buy' | 'sell', trader, size || 0, limitPrice || 0);
+    res.json({ status: 'registered', txId });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to register order' });
+  }
+});
+
+// GET /api/darkpool/tracked-orders/:market — view tracked orders for a market
+router.get('/tracked-orders/:market', (req, res) => {
+  const marketId = req.params.market;
+  const orders = getTrackedOrders(marketId);
+  res.json({
+    market: marketId,
+    total: orders.length,
+    resolved: orders.filter(o => o.recordPlaintext).length,
+    matched: orders.filter(o => o.matched).length,
+    orders: orders.map(o => ({
+      txId: o.txId,
+      direction: o.direction,
+      trader: o.trader.slice(0, 20) + '...',
+      size: o.size,
+      limitPrice: o.limitPrice,
+      resolved: !!o.recordPlaintext,
+      matched: o.matched,
+      createdAt: o.createdAt,
+    })),
+  });
 });
 
 async function processOrder(

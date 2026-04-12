@@ -1,17 +1,15 @@
 import { config, darkpoolMarkets, type DarkPoolMarketConfig } from '../utils/config.js';
-import { getMappingValue, parseAleoU64, getLatestBlockHeight } from '../utils/aleoClient.js';
+import { getMappingValue, parseAleoU64, getLatestBlockHeight, getTransaction } from '../utils/aleoClient.js';
 import { buildAndBroadcastTransaction } from '../utils/transactionBuilder.js';
 import { aggregatePrices } from '../oracle/aggregator.js';
 
 // ─── Multi-Market Batch-Based Dark Pool Bot ─────────────────────
 // Flow per tick per market:
 //   1. update_oracle_price  — push fresh price + TWAP accumulator
-//      Price is clamped to ±14% per step for gradual convergence
-//      when on-chain seed diverges from real market price.
-//   2–4: Settlement steps (propose/approve/advance) DISABLED —
-//      single-key bot cannot complete 2-of-3 operator approval.
-//      approve_settlement requires a DIFFERENT operator from the
-//      proposer; re-enable when multi-key setup is deployed.
+//   2. propose_settlement   — propose batch settlement at oracle price (operator 1)
+//   3. approve_settlement   — confirm with 2nd operator key (operator 2)
+//   4. execute_match         — match buy/sell orders from approved batch
+//   5. advance_batch         — move to next batch after matches executed
 
 export interface DarkPoolBotState {
   lastOracleUpdateTimestamp: number;
@@ -25,6 +23,111 @@ export interface DarkPoolBotState {
   settlementCount: number;
   lastError: string | null;
   isRunning: boolean;
+}
+
+// ─── Order Auth Record Tracking ─────────────────────────────────
+// Tracks OrderAuth records for execute_match. Records are decrypted
+// from on-chain transactions reported by the frontend or scanned.
+
+export interface TrackedOrder {
+  txId: string;
+  programId: string;
+  direction: 'buy' | 'sell';      // 0=buy, 1=sell
+  trader: string;                  // user address
+  recordPlaintext: string | null;  // decrypted OrderAuth record string (null = pending)
+  orderId: string | null;          // order_id field
+  size: number;
+  limitPrice: number;
+  batchId: number;
+  matched: boolean;
+  createdAt: number;
+}
+
+// Per-market order store (in-memory)
+const pendingOrders: Map<string, TrackedOrder[]> = new Map();
+
+// SDK cache for record decryption
+let sdkModule: typeof import('@provablehq/sdk') | null = null;
+async function getSdkModule() {
+  if (!sdkModule) sdkModule = await import('@provablehq/sdk');
+  return sdkModule;
+}
+
+/**
+ * Register an order for tracking (called by API route when frontend reports an order).
+ */
+export function registerOrder(
+  txId: string,
+  programId: string,
+  direction: 'buy' | 'sell',
+  trader: string,
+  size: number,
+  limitPrice: number,
+): void {
+  const market = darkpoolMarkets.find(m => m.programId === programId);
+  const marketId = market?.id || programId;
+  if (!pendingOrders.has(marketId)) pendingOrders.set(marketId, []);
+  const list = pendingOrders.get(marketId)!;
+
+  // Avoid duplicates
+  if (list.some(o => o.txId === txId)) return;
+
+  list.push({
+    txId, programId, direction, trader,
+    recordPlaintext: null, orderId: null,
+    size, limitPrice, batchId: 0,
+    matched: false, createdAt: Date.now(),
+  });
+  console.log(`[dp-bot] Registered ${direction} order ${txId} on ${marketId}`);
+}
+
+/**
+ * Try to decrypt OrderAuth records from pending (unresolved) orders.
+ */
+async function resolveOrderRecords(marketId: string): Promise<void> {
+  const orders = pendingOrders.get(marketId);
+  if (!orders) return;
+
+  const unresolved = orders.filter(o => !o.recordPlaintext);
+  if (unresolved.length === 0) return;
+
+  const sdk = await getSdkModule();
+  const account = new sdk.Account({ privateKey: config.privateKey });
+
+  for (const order of unresolved) {
+    try {
+      const tx = await getTransaction(order.txId);
+      if (!tx) continue; // TX not yet confirmed
+
+      const execution = (tx as any).execution;
+      if (!execution?.transitions) continue;
+
+      for (const transition of execution.transitions) {
+        if (transition.program !== order.programId) continue;
+        const records = (transition.outputs || []).filter((o: any) => o.type === 'record');
+
+        for (const rec of records) {
+          try {
+            const plaintext = String((account as any).decryptRecord(rec.value));
+            // OrderAuth records contain "trader:" field, OrderCommitment has "batch_id:"
+            if (plaintext.includes('trader:') && plaintext.includes('order_id:')) {
+              order.recordPlaintext = plaintext;
+
+              // Parse fields from plaintext
+              const orderIdMatch = plaintext.match(/order_id:\s*(\S+?)\.private/);
+              if (orderIdMatch) order.orderId = orderIdMatch[1];
+
+              console.log(`[dp-bot] Resolved OrderAuth for ${order.direction} order ${order.txId}`);
+              break;
+            }
+          } catch { /* not our record, skip */ }
+        }
+        if (order.recordPlaintext) break;
+      }
+    } catch (err) {
+      console.warn(`[dp-bot] Failed to resolve order ${order.txId}:`, err);
+    }
+  }
 }
 
 // Per-market state tracking
@@ -108,9 +211,29 @@ async function runSingleMarketCycle(market: DarkPoolMarketConfig): Promise<boole
     const oracleSubmitted = await stepOracleUpdate(programId, market, state, tag);
     if (oracleSubmitted) submitted = true;
 
-    // Steps 2–4 disabled: single-key bot cannot complete 2-of-3 approval.
-    // approve_settlement rejects when caller === proposer (operator_approved_batch hash collision).
-    // Re-enable when multi-key operator setup is deployed.
+    // ─── Step 2: Propose Settlement ──────────────────────────
+    if (!oracleSubmitted) { // Only attempt if no oracle TX this tick (avoid nonce conflicts)
+      const proposed = await stepProposeSettlement(programId, state, tag);
+      if (proposed) { submitted = true; }
+      else {
+        // ─── Step 3: Approve Settlement (2nd operator key) ──────
+        const approved = await stepApproveSettlement(programId, state, tag);
+        if (approved) { submitted = true; }
+        else {
+          // ─── Step 4: Execute Matches ──────────────────────────
+          const market_ = darkpoolMarkets.find(m => m.programId === programId);
+          if (market_) {
+            const matched = await stepExecuteMatch(programId, market_.id, state, tag);
+            if (matched) { submitted = true; }
+            else {
+              // ─── Step 5: Advance Batch ──────────────────────────
+              const advanced = await stepAdvanceBatch(programId, state, tag);
+              if (advanced) submitted = true;
+            }
+          }
+        }
+      }
+    }
 
   } catch (err) {
     const msg = `${tag} cycle failed: ${err}`;
@@ -251,6 +374,11 @@ async function stepProposeSettlement(programId: string, state: DarkPoolBotState,
 
 // ─── Step 3: Approve settlement (2nd operator confirms) ─────────
 async function stepApproveSettlement(programId: string, state: DarkPoolBotState, tag: string): Promise<boolean> {
+  if (!config.operator2PrivateKey) {
+    console.log(`${tag} No OPERATOR2_PRIVATE_KEY configured, skipping approval`);
+    return false;
+  }
+
   const batchRaw = await getMappingValue('current_batch', '0u8', programId);
   const currentBatch = parseAleoU64(batchRaw) || 1;
 
@@ -269,12 +397,14 @@ async function stepApproveSettlement(programId: string, state: DarkPoolBotState,
   const proposedPrice = parseAleoU64(priceRaw);
   if (!proposedPrice) return false;
 
-  console.log(`${tag} Approving batch ${currentBatch} at price ${proposedPrice}`);
+  console.log(`${tag} Approving batch ${currentBatch} at price ${proposedPrice} (operator 2)`);
 
   const tx = await buildAndBroadcastTransaction(
     programId,
     'approve_settlement',
     [`${currentBatch}u64`, `${proposedPrice}u64`],
+    500_000,
+    config.operator2PrivateKey,  // Use 2nd operator key — different from proposer
   );
 
   if (tx) {
@@ -285,7 +415,71 @@ async function stepApproveSettlement(programId: string, state: DarkPoolBotState,
   return false;
 }
 
-// ─── Step 4: Advance to next batch ──────────────────────────────
+// ─── Step 4: Execute matches for approved batch ─────────────────
+async function stepExecuteMatch(programId: string, marketId: string, state: DarkPoolBotState, tag: string): Promise<boolean> {
+  const batchRaw = await getMappingValue('current_batch', '0u8', programId);
+  const currentBatch = parseAleoU64(batchRaw) || 1;
+
+  // Only execute matches if batch is approved
+  const approvedRaw = await getMappingValue('batch_approved', `${currentBatch}u64`, programId);
+  if (approvedRaw?.replace(/["\s]/g, '') !== 'true') return false;
+
+  // Resolve any pending order records
+  await resolveOrderRecords(marketId);
+
+  const orders = pendingOrders.get(marketId);
+  if (!orders || orders.length === 0) return false;
+
+  // Get clearing price (the approved proposed price)
+  const priceRaw = await getMappingValue('batch_proposed_price', `${currentBatch}u64`, programId);
+  const clearingPrice = parseAleoU64(priceRaw);
+  if (!clearingPrice) return false;
+
+  // Find unmatched buy and sell orders with resolved record plaintexts
+  const buys = orders.filter(o =>
+    o.direction === 'buy' && !o.matched && o.recordPlaintext &&
+    o.limitPrice >= clearingPrice);
+  const sells = orders.filter(o =>
+    o.direction === 'sell' && !o.matched && o.recordPlaintext &&
+    o.limitPrice <= clearingPrice);
+
+  if (buys.length === 0 || sells.length === 0) {
+    if (buys.length === 0 && sells.length === 0) return false; // No orders at all
+    console.log(`${tag} Batch ${currentBatch}: ${buys.length} buys, ${sells.length} sells (need both)`);
+    return false;
+  }
+
+  // Match the first available buy with the first available sell
+  const buy = buys[0];
+  const sell = sells[0];
+
+  console.log(`${tag} Executing match: buy ${buy.txId.slice(0, 12)} vs sell ${sell.txId.slice(0, 12)} at price ${clearingPrice}`);
+
+  const tx = await buildAndBroadcastTransaction(
+    programId,
+    'execute_match',
+    [
+      buy.recordPlaintext!,
+      sell.recordPlaintext!,
+      `${clearingPrice}u64`,
+      `${currentBatch}u64`,
+      buy.trader,
+      sell.trader,
+    ],
+    800_000, // Higher fee for execute_match (cross-program calls)
+  );
+
+  if (tx) {
+    buy.matched = true;
+    sell.matched = true;
+    state.settlementCount++;
+    console.log(`${tag} Match executed: ${tx}`);
+    return true;
+  }
+  return false;
+}
+
+// ─── Step 5: Advance to next batch ──────────────────────────────
 async function stepAdvanceBatch(programId: string, state: DarkPoolBotState, tag: string): Promise<boolean> {
   const batchRaw = await getMappingValue('current_batch', '0u8', programId);
   const currentBatch = parseAleoU64(batchRaw) || 1;
@@ -293,6 +487,22 @@ async function stepAdvanceBatch(programId: string, state: DarkPoolBotState, tag:
   // Only advance if current batch is approved
   const approvedRaw = await getMappingValue('batch_approved', `${currentBatch}u64`, programId);
   if (approvedRaw?.replace(/["\s]/g, '') !== 'true') return false;
+
+  // Check if there are unmatched orders that still need execution
+  const market = darkpoolMarkets.find(m => m.programId === programId);
+  if (market) {
+    const orders = pendingOrders.get(market.id);
+    if (orders) {
+      const unmatched = orders.filter(o => !o.matched && o.recordPlaintext);
+      const unmatchedBuys = unmatched.filter(o => o.direction === 'buy').length;
+      const unmatchedSells = unmatched.filter(o => o.direction === 'sell').length;
+      // Don't advance if there are matchable pairs waiting
+      if (unmatchedBuys > 0 && unmatchedSells > 0) {
+        console.log(`${tag} Skipping advance — ${unmatchedBuys} buys and ${unmatchedSells} sells still need matching`);
+        return false;
+      }
+    }
+  }
 
   console.log(`${tag} Advancing from batch ${currentBatch} to ${currentBatch + 1}`);
 
@@ -305,8 +515,25 @@ async function stepAdvanceBatch(programId: string, state: DarkPoolBotState, tag:
   if (tx) {
     state.lastAdvanceTimestamp = Date.now();
     state.currentBatch = currentBatch + 1;
+
+    // Clean up matched orders from the completed batch
+    if (market) {
+      const orders = pendingOrders.get(market.id);
+      if (orders) {
+        const kept = orders.filter(o => !o.matched);
+        pendingOrders.set(market.id, kept);
+      }
+    }
+
     console.log(`${tag} Advanced to batch ${currentBatch + 1}: ${tx}`);
     return true;
   }
   return false;
+}
+
+/**
+ * Get tracked orders for a specific market (used by API).
+ */
+export function getTrackedOrders(marketId: string): TrackedOrder[] {
+  return pendingOrders.get(marketId) || [];
 }

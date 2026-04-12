@@ -104,6 +104,15 @@ export function DarkPool({ wallet }: DarkPoolProps) {
     }
   };
 
+  // Report order TX to backend for automated settlement
+  const reportOrderToBackend = (txId: string, programId: string, direction: string, trader: string, size: number, limitPrice: number) => {
+    fetch(`${BACKEND_API}/darkpool/report-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ txId, programId, direction, trader, size, limitPrice }),
+    }).catch(() => { /* best-effort, non-blocking */ });
+  };
+
   const fetchBatchData = useCallback(async () => {
     try {
       const marketId = selectedMarket.id;
@@ -330,6 +339,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         setAmount('');
         setLimitPrice('');
         toast.success(`Buy order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}!`);
+        // Report order to backend for settlement bot tracking
+        reportOrderToBackend(txId, activeProgramId, 'buy', wallet.address || '', buySize, limitMicro);
         setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
         setTimeout(refetchOrderRecords, 8000);
       }
@@ -345,6 +356,8 @@ export function DarkPool({ wallet }: DarkPoolProps) {
         setAmount('');
         setLimitPrice('');
         toast.success(`Sell order submitted to ${selectedMarket.label} Batch #${batchData?.currentBatch ?? 1}!`);
+        // Report order to backend for settlement bot tracking
+        reportOrderToBackend(txId, activeProgramId, 'sell', wallet.address || '', microAmount, limitMicro);
         setTimeout(() => { fetchBatchData(); refetchRecords(); refetchOrderRecords(); }, 3000);
         setTimeout(refetchOrderRecords, 8000);
       }
